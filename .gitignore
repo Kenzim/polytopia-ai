@@ -1,0 +1,19 @@
+# Build output and caches
+target/
+__pycache__/
+.pytest_cache/
+*.egg-info/
+.venv/
+
+# Data, checkpoints and run logs
+data/
+runs/
+checkpoints/
+*.pt
+*.pth
+*.ckpt
+
+# Saves hold the account id and name: never commit
+*.state
+*.bin
+.env
