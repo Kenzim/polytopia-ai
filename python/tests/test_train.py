@@ -57,14 +57,44 @@ def test_kl_is_zero_when_the_model_matches_the_candidate_distribution(batch):
     logits = torch.zeros(b, a)
     valid = batch["cand_idx"] >= 0
     assert valid.any()
+    scaled = (batch["cand_score"] / cfg.kl_temperature).nan_to_num(posinf=1e4)
     for i in range(b):
         for k in range(valid.shape[1]):
             if valid[i, k]:
-                logits[i, batch["cand_idx"][i, k]] = batch["cand_score"][i, k] / cfg.kl_temperature
+                logits[i, batch["cand_idx"][i, k]] = scaled[i, k]
     good = compute_losses(fake_output(batch, logits), batch, cfg)["policy_kl"].item()
     flat = compute_losses(fake_output(batch), batch, cfg)["policy_kl"].item()
     assert good == pytest.approx(0.0, abs=1e-5)
     assert flat > 0.01
+
+
+def test_kl_survives_infinite_candidate_scores(batch):
+    batch = dict(batch)
+    batch["cand_idx"] = batch["chosen"][:, None].repeat(1, 3)
+    batch["cand_idx"][:, 1] = (batch["chosen"] + 1) % batch["action_mask"].sum(1)
+    batch["cand_idx"][:, 2] = (batch["chosen"] + 2) % batch["action_mask"].sum(1)
+    batch["cand_score"] = torch.tensor([float("inf"), 1.0, 0.0]).repeat(len(batch["chosen"]), 1)
+    out = fake_output(batch, torch.randn(*batch["action_mask"].shape), None)
+    logits = out.policy_logits.clone().requires_grad_()
+    losses = compute_losses(out._replace(policy_logits=logits), batch, TrainConfig())
+    assert torch.isfinite(losses["policy_kl"]) and losses["policy_kl"].item() > 0
+    losses["loss"].backward()
+    assert torch.isfinite(logits.grad).all()
+
+
+def test_kl_target_follows_the_scores_not_the_chosen_move(batch):
+    """A model that puts all its mass on the best-scored candidate, which is not the played move, has zero KL."""
+    cfg = TrainConfig()
+    batch = dict(batch)
+    n = batch["action_mask"].sum(1)
+    batch["chosen"] = torch.zeros_like(batch["chosen"])
+    batch["cand_idx"] = torch.stack([torch.ones_like(n), 2 * torch.ones_like(n), 3 * torch.ones_like(n)], dim=1)
+    batch["cand_score"] = torch.tensor([5000.0, 0.0, -10.0]).repeat(len(n), 1)
+    logits = torch.zeros(len(n), batch["action_mask"].shape[1])
+    logits[:, 1] = 80.0
+    losses = compute_losses(fake_output(batch, logits), batch, cfg)
+    assert losses["policy_kl"].item() == pytest.approx(0.0, abs=1e-4)
+    assert losses["policy_ce"].item() > 10.0  # the label is still `chosen`
 
 
 def test_kl_ignores_positions_without_candidates(batch):
@@ -82,11 +112,11 @@ def test_unknown_winner_is_ignored(batch):
     assert torch.isfinite(losses["loss"])
 
 
-def test_margin_loss_uses_thousandths(batch):
+def test_margin_loss_uses_thousandths_and_is_robust(batch):
     batch = dict(batch)
     batch["margin"] = torch.full_like(batch["margin"], 2000.0)
     losses = compute_losses(fake_output(batch), batch, TrainConfig())
-    assert losses["margin_mse"].item() == pytest.approx(4.0)
+    assert losses["margin_loss"].item() == pytest.approx(1.5)  # Huber on a gap of 2.0: 2 - 0.5
 
 
 def test_brier_by_turn_and_agreement(batch):
@@ -209,3 +239,41 @@ def test_gpu_training_stays_under_the_memory_budget(tmp_path):
                       log_every=3, runs_dir=str(tmp_path / "runs"), warmup_steps=1, threads=2)
     summary = train(cfg)
     assert 0 < summary["peak_mem_mb"] < 2.5 * 1024
+
+
+def test_resume_continues_from_the_last_checkpoint(tmp_path):
+    shards = write_synthetic_shards(tmp_path / "train", 1, 96, size=11, seed=5, max_actions=20)
+    common = dict(name="res", model="tiny", train=[str(p) for p in shards], batch_size=32, log_every=5,
+                  eval_every=100, ckpt_every=10, warmup_steps=2, runs_dir=str(tmp_path / "runs"), device="cpu",
+                  bf16=False, threads=2)
+    train(TrainConfig(steps=10, **common))
+    run = tmp_path / "runs" / "res"
+    first = torch.load(run / "ckpt_last.pt", weights_only=False)
+    assert first["step"] == 10 and "optimizer" in first
+    summary = train(TrainConfig(steps=20, resume=True, **common))
+    assert summary["steps"] == 20
+    second = torch.load(run / "ckpt_last.pt", weights_only=False)
+    assert second["step"] == 20
+    # Optimiser moments carried over: Adam's step counter continues instead of restarting at 0.
+    steps = [float(v["step"]) for v in second["optimizer"]["state"].values()]
+    assert min(steps) == 20.0
+    lines = [json.loads(line) for line in (run / "metrics.jsonl").read_text().splitlines()]
+    assert [r["step"] for r in lines if r["kind"] == "train"] == [5, 10, 15, 20]
+    assert json.loads((run / "config.json").read_text())["started_at_step"] == 10
+
+
+def test_resume_without_a_checkpoint_fails_clearly(tmp_path):
+    shards = write_synthetic_shards(tmp_path / "train", 1, 32, size=11, seed=5, max_actions=20)
+    cfg = TrainConfig(name="none", model="tiny", train=[str(p) for p in shards], resume=True, device="cpu",
+                      runs_dir=str(tmp_path / "runs"), bf16=False, threads=1)
+    with pytest.raises(SystemExit, match="cannot resume"):
+        train(cfg)
+
+
+def test_resume_rejects_a_different_model(tmp_path):
+    shards = write_synthetic_shards(tmp_path / "train", 1, 64, size=11, seed=5, max_actions=20)
+    common = dict(name="mix", train=[str(p) for p in shards], batch_size=32, steps=4, log_every=2, eval_every=100,
+                  ckpt_every=2, warmup_steps=1, runs_dir=str(tmp_path / "runs"), device="cpu", bf16=False, threads=2)
+    train(TrainConfig(model="tiny", **common))
+    with pytest.raises(SystemExit, match="different model"):
+        train(TrainConfig(model="b6c96", resume=True, **common))

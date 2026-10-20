@@ -1,14 +1,15 @@
 """The one place that defines the tensor and shard layout the Python side expects.
 
-This follows design.md sections 3 and 4. When `ai/docs/encoding.md` (owned by polyai-core) lands, change the
-constants here; nothing else in the package hard-codes field names, vocabulary sizes or shapes.
+This follows `ai/docs/encoding.md` (version 1), which is the authority. `tests/test_schema.py` checks every
+constant here against the `polyai_engine` module (built from polyai-core) whenever that is installed; nothing else in
+the package hard-codes field names, vocabulary sizes or shapes.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 
-SCHEMA_VERSION = 1
+ENCODING_VERSION = 1  # stored in every record and shard
 
 # ---------------------------------------------------------------------------------------------------------------
 # Tile tensor: int16[H, W, F_TILE]
@@ -21,11 +22,11 @@ CAT_FIELDS: list[tuple[str, int]] = [
     ("climate", 19),
     ("resource", 11),
     ("owner", 10),
-    ("improvement", 50),
+    ("improvement", 56),
     ("capital_of", 10),
-    ("unit_type", 60),
+    ("unit_type", 63),
     ("unit_owner", 10),
-    ("passenger_type", 60),
+    ("passenger_type", 63),
 ]
 
 # Numeric fields: (name, divisor). The stored integer is divided by the divisor to get the network input.
@@ -78,18 +79,26 @@ COLUMN = {name: i for i, name in enumerate(CAT_NAMES + NUM_NAMES)}
 # Global vector: float32[G_DIM]
 # ---------------------------------------------------------------------------------------------------------------
 
-N_TRIBES = 13
-N_TECHS = 49
+# Tribe order (engine tribe idx) of the one-hots. The out-of-scope tribes (aquarion 3, elyrion 5, polaris 16) are zeros.
+TRIBES = [2, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17]
+N_TRIBES = len(TRIBES)
+N_SCALARS = 12  # stars, income, score, turn, turns left, has turn limit, mode, map width, living, start players, cities, units
+N_TECHS = 51  # a bit per engine tech idx 0..50 (idx 11 and 34 do not exist)
 N_OTHER_SLOTS = 7
-PER_SLOT = 1 + 1 + 1 + N_TRIBES + 1 + 1 + 4 + 1  # present, alive, met, tribe if met, score, cities, relation, embassy
-N_TRIGGER_KINDS = 8
-G_DIM = (
-    N_TRIBES  # my tribe, one-hot
-    + 8  # stars, income, score, turn, turns left, mode, map size, living players
-    + N_TECHS
-    + N_OTHER_SLOTS * PER_SLOT
-    + N_TRIGGER_KINDS
-)
+# present, alive, met, tribe if met, score, cities, relation (neutral, peace, war, cooldown), embassy mine, embassy theirs
+PER_SLOT = 1 + 1 + 1 + N_TRIBES + 1 + 1 + 4 + 1 + 1
+N_TRIGGER_KINDS = 3  # none, city reward, peace request
+
+G_TRIBE = 0
+G_SCALARS = G_TRIBE + N_TRIBES
+G_STARS, G_INCOME, G_SCORE = G_SCALARS, G_SCALARS + 1, G_SCALARS + 2
+G_TECHS = G_SCALARS + N_SCALARS
+G_SLOTS = G_TECHS + N_TECHS
+G_TRIGGER = G_SLOTS + N_OTHER_SLOTS * PER_SLOT
+G_DIM = G_TRIGGER + N_TRIGGER_KINDS
+SLOT_SCORE = 16  # offset of "score / 1000" inside a per-slot block
+# Entries that can be far above 1 (scores reach 25000 and more); the model compresses them with asinh.
+G_LARGE = [G_STARS, G_INCOME, G_SCORE] + [G_SLOTS + k * PER_SLOT + SLOT_SCORE for k in range(N_OTHER_SLOTS)]
 
 # ---------------------------------------------------------------------------------------------------------------
 # Actions: int16[n_actions, 4] = (kind, arg, src_tile, dst_tile); tiles are y * W + x, -1 means "none".
@@ -106,7 +115,8 @@ N_KINDS = 32  # embedding rows, with room for the engine to grow
 ARG_MAX = 64  # arguments are clipped to [0, ARG_MAX - 1]
 OFFSET_RADIUS = 4  # (dy, dx) between src and dst is clipped to +/- this; one more row means "no src or dst"
 
-N_SLOTS = 9  # winner head: me, 7 others, Nature
+N_SLOTS = 9  # winner head: me, 7 others, Nature (which never wins, so slot 8 stays unused)
+N_CANDIDATES = 16  # K candidate slots in a shard
 
 # ---------------------------------------------------------------------------------------------------------------
 # Shard (.npz). One shard holds one map size. N positions, T = sum of legal-list lengths, K candidate slots.
@@ -125,12 +135,18 @@ SHARD_FIELDS: dict[str, ShardField] = {
     "globals": ShardField("float32", "[N, G_DIM]", "global vector"),
     "act_off": ShardField("int32", "[N + 1]", "legal list of position i is actions[act_off[i]:act_off[i + 1]]"),
     "actions": ShardField("int16", "[T, 4]", "(kind, arg, src, dst)"),
-    "chosen": ShardField("int16", "[N]", "index of the chosen command inside its own legal list"),
-    "cand_idx": ShardField("int16", "[N, K]", "legal-list indices of the AI's top candidates, -1 padded"),
-    "cand_score": ShardField("float32", "[N, K]", "the AI's scores for those candidates"),
-    "winner": ShardField("int8", "[N]", "winning slot relative to the player to move, -1 for none (ignored)"),
+    "chosen": ShardField("int16", "[N]", "index of the played command inside its own legal list (the label)"),
+    "cand_idx": ShardField("int16", "[N, K]", "legal-list indices of the AI's best candidates, best first, -1 padded"),
+    "cand_score": ShardField("float32", "[N, K]", "their noise-free scores; may be +inf; 0 where padded"),
+    "winner": ShardField("int8", "[N]", "winning slot relative to the player to move, -1 for none"),
     "margin": ShardField("float32", "[N]", "final score of me minus best opponent, raw points"),
     "margin5": ShardField("float32", "[N]", "the same margin 5 turns later (final if the game ended sooner)"),
+    "final_scores": ShardField("float32", "[N, 8]", "final scores by slot, zeros for absent slots"),
+    "adjudicated": ShardField("int8", "[N]", "1 when the game ended at the turn limit with more than one player alive"),
     "turn": ShardField("int16", "[N]", "game turn of the position"),
+    "seed": ShardField("int32", "[N]", "game seed"),
+    "cmd_index": ShardField("int32", "[N]", "index of the command in the game record"),
+    "difficulty": ShardField("int8", "[N]", "mover's difficulty: 0 easy, 1 normal, 2 hard, 3 crazy"),
+    "version": ShardField("int32", "[1]", "ENCODING_VERSION"),
 }
 REQUIRED_FIELDS = tuple(SHARD_FIELDS)

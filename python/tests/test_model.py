@@ -155,3 +155,14 @@ def test_eval_pawns():
     assert float(eval_pawns(0.2)) == pytest.approx(-float(eval_pawns(0.8)), abs=1e-5)
     t = eval_pawns(torch.tensor([0.1, 0.5, 0.9]))
     assert t.shape == (3,) and t[0] < t[1] < t[2]
+
+
+def test_large_global_values_are_compressed_and_the_rest_are_not():
+    """Scores and stars reach the tens in the real data; asinh keeps them from swamping the other inputs."""
+    model = build_model("tiny").eval()
+    assert int(model.g_large.sum()) == len(S.G_LARGE) == 3 + S.N_OTHER_SLOTS
+    assert model.g_large[S.G_SCORE] and model.g_large[S.G_SLOTS + S.SLOT_SCORE]
+    assert not model.g_large[S.G_TECHS] and not model.g_large[S.G_TRIGGER]
+    b = batch_of(11, n=2)
+    b["globals"][:, S.G_SCORE] = 1e6
+    assert torch.isfinite(run(model, b).winner_logits).all()

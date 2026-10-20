@@ -98,6 +98,9 @@ class Shard:
             raise ValueError(f"tiles have {f} fields, schema says {S.F_TILE}")
         if arrays["globals"].shape != (n, S.G_DIM):
             raise ValueError(f"globals have shape {arrays['globals'].shape}, schema says ({n}, {S.G_DIM})")
+        version = int(np.asarray(arrays["version"]).reshape(-1)[0])
+        if version != S.ENCODING_VERSION:
+            raise ValueError(f"shard has encoding version {version}, this package reads {S.ENCODING_VERSION}")
         if arrays["act_off"].shape != (n + 1,):
             raise ValueError("act_off must have N + 1 entries")
         if arrays["actions"].shape != (int(arrays["act_off"][-1]), 4):
@@ -147,7 +150,7 @@ class Shard:
             "action_mask": mask,
             "chosen": a["chosen"][idx].astype(np.int64),
             "cand_idx": a["cand_idx"][idx].astype(np.int64),
-            "cand_score": a["cand_score"][idx],
+            "cand_score": a["cand_score"][idx],  # may hold +inf; compute_losses deals with it
             "winner": a["winner"][idx].astype(np.int64),
             "margin": a["margin"][idx],
             "margin5": a["margin5"][idx],
@@ -248,9 +251,13 @@ class BatchLoader:
 # ---------------------------------------------------------------------------------------------------------------
 
 
-def make_synthetic_shard(n: int, size: int = 16, seed: int = 0, n_cand: int = 4, max_actions: int = 40) -> dict:
+def make_synthetic_shard(
+    n: int, size: int = 16, seed: int = 0, n_cand: int = S.N_CANDIDATES, max_actions: int = 40
+) -> dict:
     """Random positions with a learnable structure: the chosen action is the legal one with the highest hidden score
-    that depends on its kind, argument and the terrain of its source tile; the winner is a function of the globals."""
+    that depends on its kind, argument and the terrain of its source tile; the winner is a function of the globals.
+    Like the real data, the candidate list holds only some of the positions' top actions, `chosen` is sometimes not
+    its first entry, some scores are +inf and padding scores are 0."""
     rng = np.random.default_rng(seed)
     h = w = size
     tiles = np.zeros((n, h, w, S.F_TILE), np.int16)
@@ -267,7 +274,7 @@ def make_synthetic_shard(n: int, size: int = 16, seed: int = 0, n_cand: int = 4,
     off[1:] = np.cumsum(lens)
     total = int(off[-1])
     kinds = rng.integers(1, len(S.ACTION_KINDS) + 1, size=total)
-    args = rng.integers(0, 12, size=total)
+    args = rng.integers(0, 12, size=total)  # real args reach 62 (unit and improvement idx); the embedding covers 63
     src = rng.integers(0, h * w, size=total)
     dst = rng.integers(0, h * w, size=total)
     pos_of = np.repeat(np.arange(n), lens)
@@ -285,21 +292,27 @@ def make_synthetic_shard(n: int, size: int = 16, seed: int = 0, n_cand: int = 4,
     for i in range(n):
         s = hidden[off[i] : off[i + 1]]
         order = np.argsort(-s)
-        chosen[i] = order[0]
+        chosen[i] = order[0] if i % 4 else order[min(1, len(order) - 1)]  # the played move is not always the best
         if i % 3:  # a third of the positions carry no candidate list
             k = min(n_cand, len(order))
             cand_idx[i, :k] = order[:k]
-            cand_score[i, :k] = s[order[:k]]
+            cand_score[i, :k] = s[order[:k]] * 20.0
+            if i % 7 == 0:
+                cand_score[i, 0] = np.inf
 
     winner = np.where(globals_[:, 0] > 0, 0, 1 + (globals_[:, 1] > 0)).astype(np.int8)
     winner[rng.random(n) < 0.05] = -1
     margin = (globals_[:, 2] * 3000 + rng.normal(0, 100, n)).astype(np.float32)
     margin5 = (margin * 0.6).astype(np.float32)
     turn = rng.integers(1, 50, size=n).astype(np.int16)
+    final_scores = np.zeros((n, 8), np.float32)
+    final_scores[:, 0] = np.abs(margin)
     return {
         "tiles": tiles, "globals": globals_, "act_off": off, "actions": actions, "chosen": chosen,
         "cand_idx": cand_idx, "cand_score": cand_score, "winner": winner, "margin": margin, "margin5": margin5,
-        "turn": turn,
+        "final_scores": final_scores, "adjudicated": (turn >= 50).astype(np.int8), "turn": turn,
+        "seed": rng.integers(1, 100000, size=n).astype(np.int32), "cmd_index": np.arange(n, dtype=np.int32),
+        "difficulty": rng.integers(0, 4, size=n).astype(np.int8), "version": np.array([S.ENCODING_VERSION], np.int32),
     }
 
 

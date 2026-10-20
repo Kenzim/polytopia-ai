@@ -18,7 +18,8 @@ from polyai.data import (
 def test_schema_dimensions():
     assert S.F_TILE == S.N_CAT + S.N_NUM == len(S.COLUMN)
     assert len(S.KIND_ID) == len(S.ACTION_KINDS) < S.N_KINDS
-    assert S.G_DIM == 13 + 8 + 49 + 7 * 23 + 8
+    assert S.G_DIM == 13 + 12 + 51 + 7 * 24 + 3 == 247
+    assert S.G_SLOTS + 7 * S.PER_SLOT == S.G_TRIGGER
 
 
 def test_synthetic_shard_matches_schema():

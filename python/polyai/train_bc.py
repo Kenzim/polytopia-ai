@@ -3,8 +3,10 @@
     nice python -m polyai.train_bc --name bc_b6 --model b6c96 --train DIR_OR_SHARDS --val DIR_OR_SHARDS
 
 Loss = CE(chosen action) + kl_weight * KL(softmax(candidate scores / T) || model, restricted to the candidates)
-     + winner CE + margin MSE (+ a smaller weight on the margin in 5 turns).
-Run directory: <runs-dir>/<name>/{config.json, metrics.jsonl, ckpt_last.pt, ckpt_final.pt}.
+     + winner CE + Huber loss on the margin (+ a smaller weight on the margin in 5 turns).
+`chosen` (the move the AI played, with its noise) is the label; the candidate scores are the AI's noise-free view of
+its best moves and only shape the distribution among them. Run directory:
+<runs-dir>/<name>/{config.json, metrics.jsonl, ckpt_last.pt, ckpt_final.pt}. `--resume` continues from ckpt_last.pt.
 """
 
 from __future__ import annotations
@@ -43,13 +45,14 @@ class TrainConfig:
     min_lr_frac: float = 0.02
     grad_clip: float = 1.0
     kl_weight: float = 0.5
-    kl_temperature: float = 1.0
+    kl_temperature: float = 50.0  # candidate scores run to tens of thousands; the median gap of the top two is ~45
     winner_weight: float = 1.0
     margin_weight: float = 0.25
     margin5_weight: float = 0.125
     augment: bool = True
     bf16: bool = True
     eval_every: int = 500
+    ckpt_every: int = 500
     eval_batches: int = 50
     log_every: int = 50
     seed: int = 0
@@ -57,6 +60,7 @@ class TrainConfig:
     need_gb: float = 2.5
     runs_dir: str = DEFAULT_RUNS_DIR
     device: str = "cuda"
+    resume: bool = False
 
 
 # ---------------------------------------------------------------------------------------------------------------
@@ -70,10 +74,13 @@ def compute_losses(out: ModelOutput, batch: dict[str, torch.Tensor], cfg: TrainC
     ce = -logp.gather(1, chosen[:, None]).squeeze(1).mean()
 
     cand_idx = batch["cand_idx"]
+    # Needs two candidates to say anything: with one the restricted distributions are both a point mass.
     valid = cand_idx >= 0
-    has = valid.any(dim=1)
+    has = valid.sum(dim=1) >= 2
     if bool(has.any()):
-        score = batch["cand_score"].float() / cfg.kl_temperature
+        # Scores can be +inf (a move the AI sees as decisive): cap them far above any finite score so that they take
+        # the whole mass, or share it when there are several.
+        score = (batch["cand_score"].float() / cfg.kl_temperature).nan_to_num(posinf=1e4, neginf=-1e4)
         score = score.masked_fill(~valid, -1e9)
         log_t = F.log_softmax(score, dim=-1)
         t = log_t.exp() * valid
@@ -90,8 +97,9 @@ def compute_losses(out: ModelOutput, batch: dict[str, torch.Tensor], cfg: TrainC
         winner_ce = F.cross_entropy(out.winner_logits.float(), winner, ignore_index=-1)
     else:
         winner_ce = out.winner_logits.new_zeros(())
-    margin = F.mse_loss(out.margin.float(), batch["margin"].float() / 1000.0)
-    margin5 = F.mse_loss(out.margin5.float(), batch["margin5"].float() / 1000.0)
+    # Margins are in thousands of points and run to +/-25, so a squared error would swamp every other term.
+    margin = F.smooth_l1_loss(out.margin.float(), batch["margin"].float() / 1000.0)
+    margin5 = F.smooth_l1_loss(out.margin5.float(), batch["margin5"].float() / 1000.0)
 
     total = (
         ce
@@ -100,8 +108,8 @@ def compute_losses(out: ModelOutput, batch: dict[str, torch.Tensor], cfg: TrainC
         + cfg.margin_weight * margin
         + cfg.margin5_weight * margin5
     )
-    return {"loss": total, "policy_ce": ce, "policy_kl": kl, "winner_ce": winner_ce, "margin_mse": margin,
-            "margin5_mse": margin5}
+    return {"loss": total, "policy_ce": ce, "policy_kl": kl, "winner_ce": winner_ce, "margin_loss": margin,
+            "margin5_loss": margin5}
 
 
 class Meter:
@@ -219,7 +227,7 @@ def expand_shards(specs: list[str]) -> list[Path]:
 
 def save_checkpoint(path: Path, model: PolyNet, step: int, opt: torch.optim.Optimizer | None = None) -> None:
     state = {"model": model.state_dict(), "model_config": model.cfg.to_dict(), "step": step,
-             "schema_version": S.SCHEMA_VERSION}
+             "encoding_version": S.ENCODING_VERSION}
     if opt is not None:
         state["optimizer"] = opt.state_dict()
     tmp = path.with_suffix(".tmp")
@@ -228,12 +236,27 @@ def save_checkpoint(path: Path, model: PolyNet, step: int, opt: torch.optim.Opti
 
 
 def load_checkpoint(path: str | Path, map_location: str = "cpu") -> PolyNet:
+    """The model alone, for evaluation or play. `resume_state` loads the optimiser state as well."""
     from .model import ModelConfig
 
     state = torch.load(path, map_location=map_location, weights_only=False)
     model = build_model(ModelConfig(**state["model_config"]))
     model.load_state_dict(state["model"])
     return model
+
+
+def resume_state(path: Path, model: PolyNet, opt: torch.optim.Optimizer, device: torch.device) -> int:
+    """Load model and optimiser state from a ckpt_last.pt written by this module and return its step."""
+    if not path.exists():
+        raise SystemExit(f"cannot resume: {path} does not exist")
+    state = torch.load(path, map_location=device, weights_only=False)
+    if state["model_config"] != model.cfg.to_dict():
+        raise SystemExit(f"cannot resume: {path} was written by a different model configuration")
+    if "optimizer" not in state:
+        raise SystemExit(f"cannot resume: {path} holds no optimiser state")
+    model.load_state_dict(state["model"])
+    opt.load_state_dict(state["optimizer"])
+    return int(state["step"])
 
 
 # ---------------------------------------------------------------------------------------------------------------
@@ -254,23 +277,28 @@ def train(cfg: TrainConfig) -> dict:
     run_dir = Path(cfg.runs_dir) / cfg.name
     run_dir.mkdir(parents=True, exist_ok=True)
     model = build_model(cfg.model).to(device).to(memory_format=torch.channels_last)
+    opt = make_optimizer(model, cfg)
+    step = 0
+    if cfg.resume:
+        step = resume_state(run_dir / "ckpt_last.pt", model, opt, device)
+        print(f"resumed {cfg.name} from step {step}", flush=True)
     (run_dir / "config.json").write_text(
         json.dumps({"train": asdict(cfg), "model": model.cfg.to_dict(), "params": model.n_params(),
-                    "schema_version": S.SCHEMA_VERSION}, indent=2)
+                    "encoding_version": S.ENCODING_VERSION, "started_at_step": step}, indent=2)
     )
     metrics = (run_dir / "metrics.jsonl").open("a", buffering=1)
 
     def log(rec: dict) -> None:
         metrics.write(json.dumps(rec) + "\n")
 
-    train_loader = BatchLoader(expand_shards(cfg.train), cfg.batch_size, augment=cfg.augment, seed=cfg.seed,
-                               device=device)
+    # A resumed run must not replay the batches it has already seen, so the order depends on the step as well.
+    train_loader = BatchLoader(expand_shards(cfg.train), cfg.batch_size, augment=cfg.augment,
+                               seed=cfg.seed + 1000 * step, device=device)
     val_loader = None
     if cfg.val:
         val_loader = BatchLoader(expand_shards(cfg.val), cfg.batch_size, augment=False, shuffle=False,
                                  drop_last=False, device=device)
 
-    opt = make_optimizer(model, cfg)
     model.train()
     print(f"{cfg.name}: {cfg.model} {model.n_params() / 1e6:.2f}M params, batch {cfg.batch_size}, "
           f"{cfg.steps} steps, cap {cap / 1024**3:.2f} GiB", flush=True)
@@ -278,10 +306,9 @@ def train(cfg: TrainConfig) -> dict:
     sums: dict[str, float] = {}
     count = 0
     t_mark = time.perf_counter()
-    steps_mark = 0
     last: dict = {}
     sps = 0.0
-    step = 0
+    steps_mark = step
     for batch in train_loader.iterate(epochs=None):
         if step >= cfg.steps:
             break
@@ -322,9 +349,10 @@ def train(cfg: TrainConfig) -> dict:
             log({"kind": "val", "step": step, **res})
             print(f"  val top1 {res['top1']:.3f} top3 {res['top3']:.3f} brier {res['brier']}", flush=True)
             last = {**last, "val": res}
-        if step % cfg.eval_every == 0:
+        if step % cfg.ckpt_every == 0 and step < cfg.steps:
             save_checkpoint(run_dir / "ckpt_last.pt", model, step, opt)
 
+    save_checkpoint(run_dir / "ckpt_last.pt", model, step, opt)
     save_checkpoint(run_dir / "ckpt_final.pt", model, step)
     peak = torch.cuda.max_memory_allocated(device) / 1024**2 if device.type == "cuda" else 0.0
     summary = {"name": cfg.name, "model": cfg.model, "params": model.n_params(), "steps": step,
@@ -341,11 +369,12 @@ def parse_args(argv: list[str] | None = None) -> TrainConfig:
     ap.add_argument("--model", default=d.model, choices=sorted(CONFIGS))
     ap.add_argument("--train", nargs="+", required=True, help="shard files or directories of .npz shards")
     ap.add_argument("--val", nargs="+", default=None)
-    for f in ("batch_size", "steps", "warmup_steps", "eval_every", "eval_batches", "log_every", "seed", "threads"):
+    for f in ("batch_size", "steps", "warmup_steps", "eval_every", "ckpt_every", "eval_batches", "log_every", "seed", "threads"):
         ap.add_argument(f"--{f.replace('_', '-')}", type=int, default=getattr(d, f))
     for f in ("lr", "weight_decay", "min_lr_frac", "grad_clip", "kl_weight", "kl_temperature", "winner_weight",
               "margin_weight", "margin5_weight", "need_gb"):
         ap.add_argument(f"--{f.replace('_', '-')}", type=float, default=getattr(d, f))
+    ap.add_argument("--resume", action="store_true", help="continue the run NAME from its ckpt_last.pt")
     ap.add_argument("--no-augment", action="store_true")
     ap.add_argument("--no-bf16", action="store_true")
     ap.add_argument("--runs-dir", default=d.runs_dir)

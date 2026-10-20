@@ -98,6 +98,9 @@ class PolyNet(nn.Module):
         self.num_proj = nn.Linear(S.N_NUM, c)
         self.global_mlp = nn.Sequential(nn.Linear(cfg.g_dim, c), nn.ReLU(), nn.Linear(c, c))
         self.register_buffer("num_scale", torch.tensor(S.NUM_SCALES, dtype=torch.float32), persistent=False)
+        large = torch.zeros(cfg.g_dim, dtype=torch.bool)
+        large[[i for i in S.G_LARGE if i < cfg.g_dim]] = True
+        self.register_buffer("g_large", large, persistent=False)
         self.blocks = nn.ModuleList(
             [ResBlock(c, gpool=cfg.gpool_every > 0 and (i + 1) % cfg.gpool_every == 0) for i in range(cfg.blocks)]
         )
@@ -144,7 +147,9 @@ class PolyNet(nn.Module):
             x = e if x is None else x + e
         num = tiles[..., S.N_CAT :].to(self.num_scale.dtype) / self.num_scale
         x = x + self.num_proj(num)
-        x = x + self.global_mlp(globals_.to(x.dtype))[:, None, None, :]
+        gl = globals_.float()
+        gl = torch.where(self.g_large, torch.asinh(gl), gl)  # stars, income and scores run into the tens
+        x = x + self.global_mlp(gl.to(x.dtype))[:, None, None, :]
         x = x.permute(0, 3, 1, 2).contiguous(memory_format=torch.channels_last)
         mask = None
         if board_mask is not None:
@@ -174,11 +179,13 @@ class PolyNet(nn.Module):
         src_f = self.src_proj(tok)
         dst_f = self.dst_proj(tok)
 
-        actions = actions.long()
-        kind = actions[..., 0].clamp(0, S.N_KINDS - 1)
-        arg = actions[..., 1].clamp(0, S.ARG_MAX - 1)
-        src = actions[..., 2]
-        dst = actions[..., 3]
+        # Only the real actions go through the policy MLP: legal lists are padded to the longest one in the batch
+        # (about 1000 against a mean of 200), so scoring the padding would cost most of the memory.
+        bi, ai = action_mask.nonzero(as_tuple=True)
+        act = actions[bi, ai].long()
+        kind = act[:, 0].clamp(0, S.N_KINDS - 1)
+        arg = act[:, 1].clamp(0, S.ARG_MAX - 1)
+        src, dst = act[:, 2], act[:, 3]
         none_tile = h * w
         src_i = torch.where(src < 0, torch.full_like(src, none_tile), src)
         dst_i = torch.where(dst < 0, torch.full_like(dst, none_tile), dst)
@@ -187,7 +194,6 @@ class PolyNet(nn.Module):
         dx = (dst % w - src % w).clamp(-r, r) + r
         off = torch.where((src < 0) | (dst < 0), torch.full_like(src, self.n_off), dy * (2 * r + 1) + dx)
 
-        bi = torch.arange(b, device=tiles.device)[:, None]
         z = (
             src_f[bi, src_i]
             + dst_f[bi, dst_i]
@@ -195,8 +201,9 @@ class PolyNet(nn.Module):
             + self.arg_embed(kind * S.ARG_MAX + arg).to(src_f.dtype)
             + self.off_embed(off).to(src_f.dtype)
         )
-        logits = self.policy_mlp(z).squeeze(-1).float()
-        logits = logits.masked_fill(~action_mask, MASK_FILL)
+        flat = self.policy_mlp(z).squeeze(-1).float()
+        logits = torch.full(action_mask.shape, MASK_FILL, dtype=torch.float32, device=tiles.device)
+        logits = logits.index_put((bi, ai), flat)
 
         v = self.value_mlp(F.relu(g)).float()
         return ModelOutput(logits, v[:, : S.N_SLOTS], v[:, S.N_SLOTS], v[:, S.N_SLOTS + 1])
