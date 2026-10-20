@@ -245,6 +245,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9f7c3e4beb33f85d45ae3e3a1792185706c8e16d043238c593331cc7cd313b50"
 
 [[package]]
+name = "polyai-arena"
+version = "0.1.0"
+dependencies = [
+ "polyai-core",
+ "polytopia-sim",
+ "polytopia-weekly",
+ "rayon",
+]
+
+[[package]]
 name = "polyai-core"
 version = "0.1.0"
 dependencies = [
@@ -274,6 +284,13 @@ dependencies = [
 [[package]]
 name = "polytopia-sim"
 version = "0.1.0"
+
+[[package]]
+name = "polytopia-weekly"
+version = "0.1.0"
+dependencies = [
+ "polytopia-sim",
+]
 
 [[package]]
 name = "portable-atomic"
