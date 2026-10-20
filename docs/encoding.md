@@ -215,7 +215,41 @@ turn limit and per seat tribe and difficulty; the command list holds every comma
 The engine commit is the `git rev-parse` of `../engine` at build time, with `-dirty` appended when it has local
 changes.
 
-## 8. Differences from `python/polyai/schema.py` (at commit 30ad097)
+## 8. `polyai-gen`
+
+`target/release/polyai-gen --out DIR --games N [--seed-start S] [--threads T] [--keep K] [--shard-size P]
+[--difficulty D]` plays games `S..S+N-1` (setup drawn from the seed by `GameSetup::sample`: 2 to 4 players, 13 tribes,
+Tiny/Small/Normal, five presets, per-seat difficulty weights 10/20/35/35 for easy/normal/hard/crazy, Domination, 50 turns)
+with every seat on the retail AI. `T` is capped at 24 and is the number of worker threads (shard writing happens on the
+workers, so there are no others). Seeds must lie in 1..=100000; evaluation seeds (>= 1,000,000) are refused. A shard
+is written whenever one map size has `P` positions (default 50000), so one run writes several shards per size and a
+final partial one. `--keep K` writes one position in `K` (default 4).
+
+## 9. `polyai_engine` (Python, built with `maturin develop --release` in `crates/polyai-py`)
+
+- Constants: `ENCODING_VERSION`, `F_TILE`, `G_DIM`, `N_KINDS`, `TRIBES`, `KIND_NAMES`, `CAT_VOCABS`, `ENGINE_COMMIT`.
+- `sample_setup(seed, n_players=None, sizes=None, presets=None, difficulty=None, turn_limit=50)` returns a setup dict
+  `{seed, size, preset, mode, turn_limit, seats: [(tribe, difficulty)]}`; size ids 1 tiny, 2 small, 3 normal.
+- `Game.sample(seed, ...)` / `Game.from_setup(dict)`: `legal_actions()` int16[N, 4], `encode()` (tiles, globals),
+  `step(index)`, `step_action((kind, arg, src, dst))`, `ai_move()`, `play_ai_move()`, `ai_candidates(k=16)`,
+  `current_seat()` (`None` on Nature's turn, call `play_ai_move()`), `scores()`, `winners()`, `is_over()`, `clone()`,
+  `record()` (bytes of the section 7 format). Seats are indices into the setup's seat list.
+- `VecEnv(n_games, seed_start=1, model_seats="rotate" | "all" | [seats], split="train" | "eval", n_players, sizes,
+  presets, difficulty, turn_limit=50, threads=24, auto_reset=True)`. Seats the model does not control (and Nature) are
+  played by the retail AI at their handicap on a rayon pool (at most 24 threads, GIL released in `step`). `"rotate"`
+  gives each game one model seat, `seed % n_players`. `split="train"` draws seeds from 1..=100000 (wrapping),
+  `"eval"` needs `seed_start >= 1000000`.
+  - `observe()` returns a list with one dict per map size of every game awaiting a decision; `step(games, choices)`
+    (int32 arrays, `choices[i]` an index into game `games[i]`'s legal list) returns `(observations of the stepped games,
+    finished games)`. A dict has `game`, `seat`, `n_players`, `turn`, `seed` (all `[B]`), `tiles` `[B, H, W, 41]`,
+    `globals` `[B, 247]`, `act_off` `[B + 1]`, `actions` `[T, 4]`.
+  - A finished game is a dict with `game, seed, n_players, tribes, difficulties, model_seats, winners` (seats),
+    `scores` (by seat), `turns, adjudicated, decisions, commands`. With `auto_reset` the slot restarts at once on the
+    next seed and shows up in the returned observations.
+  - Observations are only for games awaiting the model; it is up to the caller to give every awaiting game a choice
+    (a game that gets none simply waits).
+
+## 10. Differences from `python/polyai/schema.py` (at commit 30ad097)
 
 Everything not listed here matches: the 9 categorical then 32 numeric column order and names, divisors, slot
 convention (`0` none, `1 + slot`), action kind names and order, `KIND_PAD = 0`, `N_KINDS = 32`, `ARG_MAX = 64`, and the
