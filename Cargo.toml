@@ -1,0 +1,16 @@
+[workspace]
+resolver = "2"
+members = ["crates/*"]
+
+[workspace.package]
+edition = "2021"
+license = "AGPL-3.0-only"
+publish = false
+
+# Siblings: polytopia-engine at ../engine, polytopia-weekly at ../weekly (see README.md).
+[workspace.dependencies]
+polytopia-sim = { path = "../engine" }
+polytopia-weekly = { path = "../weekly" }
+
+[profile.release]
+debug = 1
