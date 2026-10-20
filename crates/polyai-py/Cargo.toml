@@ -1,0 +1,17 @@
+[package]
+name = "polyai-py"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+name = "polyai_engine"
+crate-type = ["cdylib"]
+
+[dependencies]
+polyai-core = { path = "../polyai-core" }
+polytopia-sim.workspace = true
+pyo3 = { version = "0.25", features = ["extension-module"] }
+numpy = "0.25"
+rayon = "1"
