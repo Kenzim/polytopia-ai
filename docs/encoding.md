@@ -1,0 +1,239 @@
+# polyai encoding spec (version 1)
+
+Authority for the tensor, action and shard layout. The Rust constants live in `crates/polyai-core/src/encoding.rs`
+and `action.rs`; this file is what `python/polyai/schema.py` must match. Where this file and `design.md` disagree,
+this file wins (the differences from `schema.py` are listed at the end). Ids come from the embedded rules data of game
+version 123 (logic data v28); `ENCODING_VERSION = 1` is stored in every record and shard.
+
+## 1. Player slots
+
+Everything is seen from the player to move ("me"). Slots are relative to the mover:
+
+- slot 0 is me;
+- slots 1..7 are the other human-or-bot players in turn order starting after me (slot 1 moves next after me);
+- slot 8 is Nature (units and nothing else; engine player id 255).
+
+Dead players keep their slot. A game has 2 to 4 players in v1 but the encoding allows up to 8. Slot-valued tile
+fields store `0` for "none / unknown" and `1 + slot` otherwise, so their vocabulary is 10.
+
+## 2. Tile tensor: `tiles: int16[H, W, 41]`
+
+`H, W` are the map's own size (Tiny 11, Small 14, Normal 16; the engine supports up to 30). Index `[y, x]`, tile
+number `y * W + x` (the engine's tile index). The last axis is 9 categorical columns (embedded by the model, id 0 =
+none / unknown) followed by 32 numeric columns (stored as integers, the model multiplies by `1 / divisor`).
+
+**Fog.** A tile is visible when `Engine::is_explored(me, idx)` (Polytopia never re-fogs). An unexplored tile is all
+zeros except `unexplored = 1`. Units are read the way `visible_unit_for` reads them: explored tile, and not an
+invisible enemy that is not at peace with me.
+
+### Categorical columns (index, name, vocabulary size)
+
+| col | name | vocab | value |
+|---|---|---|---|
+| 0 | terrain | 10 | engine terrain idx (1 water, 2 ocean, 3 field, 4 mountain, 5 forest, 6 ice, 7 wetland, 8 mangrove) |
+| 1 | climate | 19 | engine `Tile.climate` (tribe idx of the land, 1 to 17) |
+| 2 | resource | 11 | engine resource idx (1 game, 2 crop, 3 fish, 4 whale, 5 metal, 6 fruit, 7 spores, 8 starfish, 9 aquacrop), only when the resource is visible to me (`resource_visible_to`) |
+| 3 | owner | 10 | `1 + slot` of the tile owner, 0 unowned |
+| 4 | improvement | 56 | engine improvement idx (1 city, 2 ruin, 3 road, ..., 55 algaespawn) |
+| 5 | capital_of | 10 | `1 + slot` of the player this tile is a capital for, else 0 |
+| 6 | unit_type | 63 | engine unit idx (1 scout ... 62 larva) of the visible unit on the tile |
+| 7 | unit_owner | 10 | `1 + slot` of that unit's owner |
+| 8 | passenger_type | 63 | unit idx of the unit carried by a boat, else 0 |
+
+### Numeric columns (index, name, divisor, value)
+
+| col | name | divisor | value |
+|---|---|---|---|
+| 9 | unexplored | 1 | 1 when I have not explored the tile |
+| 10 | flooded | 1 | tile effect bit 1 |
+| 11 | swamped | 1 | effect bit 2 |
+| 12 | tentacle | 1 | effect bit 3 |
+| 13 | algae | 1 | effect bit 4 |
+| 14 | foam | 1 | effect bit 5 |
+| 15 | has_road | 1 | `Tile.has_road` |
+| 16 | has_route | 1 | `Tile.has_route` |
+| 17 | has_ruin | 1 | `Tile.has_ruin` |
+| 18 | ruling_city_mine | 1 | the tile's ruling city is owned by me |
+| 19 | in_my_border | 1 | `Tile.owner == me` |
+| 20 | improvement_level | 8 | `improvement_level(at)` for a non-city improvement, 0 otherwise |
+| 21 | is_city | 1 | improvement is a city |
+| 22 | is_capital | 1 | `Tile.is_capital` |
+| 23 | city_level | 8 | city level |
+| 24 | population | 8 | city xp towards the next level (my cities only, else 0) |
+| 25 | population_needed | 8 | `level + 1`, the xp at which the city levels up (my cities only, else 0) |
+| 26 | walls | 1 | city has the wall reward |
+| 27 | park | 1 | city has the park reward |
+| 28 | workshop | 1 | city has the workshop reward |
+| 29 | border_size | 3 | city border radius |
+| 30 | connected_to_capital | 1 | my city is connected to my capital (my cities only) |
+| 31 | under_siege | 1 | a visible enemy unit stands on the city tile |
+| 32 | health | 100 | `100 * health / max_health` of the visible unit (can exceed 100 after a promotion) |
+| 33 | veteran | 1 | unit has been promoted |
+| 34 | moved | 1 | `UnitState.moved` |
+| 35 | attacked | 1 | `UnitState.attacked` |
+| 36 | frozen | 1 | |
+| 37 | poisoned | 1 | |
+| 38 | boosted | 1 | |
+| 39 | invisible | 1 | unit is cloaked (only ever set on my own or allied units, enemy ones are hidden) |
+| 40 | can_act | 1 | my unit appears in the legal list with at least one command (Stay included) |
+
+So `F_TILE = 41`, columns 0..9 categorical, 9..41 numeric. This is the same column order as `schema.py`.
+
+## 3. Globals: `globals: float32[247]`
+
+| offset | size | content |
+|---|---|---|
+| 0 | 13 | my tribe, one-hot over `TRIBES` (below) |
+| 13 | 1 | my stars / 10 |
+| 14 | 1 | my income per turn / 10 |
+| 15 | 1 | my score / 1000 |
+| 16 | 1 | turn number / 50 |
+| 17 | 1 | turns left / 50 (0 when there is no limit) |
+| 18 | 1 | has a turn limit (0 / 1) |
+| 19 | 1 | game mode / 5 (Domination 2) |
+| 20 | 1 | map width / 30 |
+| 21 | 1 | living players / 8 |
+| 22 | 1 | players at the start / 8 |
+| 23 | 1 | my cities / 8 |
+| 24 | 1 | my units / 32 |
+| 25 | 51 | my techs, a bit per engine tech idx 0..50 (idx 11 and 34 do not exist and stay 0) |
+| 76 | 7 x 24 | slots 1..7, below |
+| 244 | 3 | pending trigger of the mover: [none, city reward, peace request] |
+
+Tribe order (engine tribe idx): aimo 2, bardur 4, hoodrick 6, imperius 7, kickoo 8, luxidoor 9, oumaji 10, quetzali
+11, vengir 12, xinxi 13, yadakk 14, zebasi 15, cymanti 17. The out-of-scope tribes (aquarion 3, elyrion 5, polaris
+16) are all zeros.
+
+Per other slot (24 values), zeros for a slot that has no player:
+
+| offset | size | content |
+|---|---|---|
+| 0 | 1 | present (the slot has a player) |
+| 1 | 1 | alive (known only once met, else 0) |
+| 2 | 1 | met (I know the player) |
+| 3 | 13 | tribe one-hot if met |
+| 16 | 1 | score / 1000 if met |
+| 17 | 1 | cities / 8 if met |
+| 18 | 4 | my relation to them: neutral, peace, war, cooldown (one-hot, if met) |
+| 22 | 1 | I have an embassy with them |
+| 23 | 1 | they have an embassy with me |
+
+Opponent stars and techs are not visible and are not encoded.
+
+## 4. Actions
+
+An action is `int16[4] = (kind, arg, src_tile, dst_tile)`; tiles are `y * W + x`, `-1` means none. The legal list
+(`legal_actions`) is the engine's `legal_commands()` plus one `Stay` per own unit that `can_move` (the retail AI
+chooses Stay about as often as a move and the engine does not list it; it is inserted just before `EndTurn`). While a
+trigger is pending the list is just the choices, no Stays.
+
+| kind id | name | arg | src | dst |
+|---|---|---|---|---|
+| 1 | Move | 0 | unit tile | target tile |
+| 2 | Attack | 0 | unit tile | target tile |
+| 3 | Capture | 0 | unit tile | city tile (same as src) |
+| 4 | Promote | 0 | unit tile | unit tile |
+| 5 | Recover | 0 | unit tile | unit tile |
+| 6 | HealOthers | 0 | unit tile | unit tile |
+| 7 | Explode | 0 | unit tile | unit tile |
+| 8 | Disband | 0 | unit tile | unit tile |
+| 9 | ExamineRuins | 0 | unit tile | unit tile |
+| 10 | Stay | 0 | unit tile | unit tile |
+| 11 | Swarm | 0 | unit tile | unit tile |
+| 12 | Boost | 0 | unit tile | unit tile |
+| 13 | Disembark | 0 | unit tile | unit tile |
+| 14 | Upgrade | target unit idx | unit tile | unit tile |
+| 15 | Train | unit idx | city tile | city tile |
+| 16 | Build | improvement idx | tile | tile |
+| 17 | Destroy | 0 | tile | tile |
+| 18 | Decompose | 0 | tile | tile |
+| 19 | ClearTileEffect | effect bit (1 flooded, 4 algae) | tile | tile |
+| 20 | CityReward | reward id (below) | city tile | city tile |
+| 21 | Research | tech idx | -1 | -1 |
+| 22 | BreakPeace | slot | -1 | -1 |
+| 23 | PeaceTreaty | slot | -1 | -1 |
+| 24 | EstablishEmbassy | slot | -1 | -1 |
+| 25 | PeaceResponse | `slot * 2 + accept` | -1 | -1 |
+| 26 | EndTurn | 0 | -1 | -1 |
+
+Kind 0 is padding in a batch. `N_KINDS = 32` embedding rows. City reward ids: 1 CityWall, 2 Park, 3 Workshop, 4
+Explorer, 5 BorderGrowth, 6 SuperUnit, 7 Resources, 8 PopulationGrowth, 9 Rebellion, 10 Poison, 11
+TutorialExplorer. All arguments are below 64.
+
+Units are named by their tile: the mover owns at most one unit per tile and a boat's passenger is inside the boat.
+`decode(encode(cmd)) == cmd` holds on every legal list (`cargo test -p polyai-core`, thousands of positions, all 13
+tribes), and two different commands never share a tuple.
+
+## 5. Outcome labels
+
+For every recorded position (a decision of a player who is not Nature):
+
+- `winner`: slot (relative to the mover) of the engine's winner, `-1` when nobody won;
+- `margin`: final score of me minus the best other player's final score, raw points (`Engine::score`);
+- `margin5`: the same difference measured at the start of the turn 5 turns later (the final value if the game ended
+  sooner);
+- `final_scores`: final scores by slot, float32[8], zeros for absent slots;
+- `adjudicated`: 1 when the game ended at the turn limit with more than one player alive.
+
+## 6. Shards (`.npz`, deflate)
+
+One shard holds one map size; `N` positions, `T` = total legal-list length, `K = 16` candidate slots. Written by
+`polyai-gen` to `/kvm/polytopia-ai-data/<dir>/shard-<n>-<H>x<W>.npz`.
+
+| key | dtype | shape | meaning |
+|---|---|---|---|
+| tiles | int16 | [N, H, W, 41] | section 2 |
+| globals | float32 | [N, 247] | section 3 |
+| act_off | int32 | [N + 1] | legal list of position i is `actions[act_off[i]:act_off[i+1]]` |
+| actions | int16 | [T, 4] | section 4 |
+| chosen | int16 | [N] | index of the played command inside its legal list |
+| cand_idx | int16 | [N, 16] | legal-list indices of the AI's best candidates, best first, -1 padded |
+| cand_score | float32 | [N, 16] | their scores (noise free) |
+| winner | int8 | [N] | section 5 |
+| margin | float32 | [N] | section 5 |
+| margin5 | float32 | [N] | section 5 |
+| final_scores | float32 | [N, 8] | section 5 |
+| adjudicated | int8 | [N] | section 5 |
+| turn | int16 | [N] | game turn of the position |
+| seed | int32 | [N] | game seed (training seeds 1..100000) |
+| cmd_index | int32 | [N] | index of the command in the game record |
+| difficulty | int8 | [N] | mover's difficulty: 0 easy, 1 normal, 2 hard, 3 crazy |
+| version | int32 | [1] | `ENCODING_VERSION` |
+
+Only a fraction of the positions of each game is written (default one in four, chosen by a seeded hash), because
+neighbouring commands of a turn are strongly correlated. `ai_candidates()` is only evaluated for written positions.
+
+## 7. Game records
+
+`GameRecord { format, engine_version, engine_commit, setup, commands, outcome }`, one binary file per generator
+thread batch (`records-<n>.polyrec`, a length-prefixed list). The setup holds the seed, map size, preset, game mode,
+turn limit and per seat tribe and difficulty; the command list holds every command of every player (Nature's
+`EndTurn` included) in order. `replay(&record)` rebuilds the game and must reproduce the final scores and winners.
+The engine commit is the `git rev-parse` of `../engine` at build time, with `-dirty` appended when it has local
+changes.
+
+## 8. Differences from `python/polyai/schema.py` (at commit 30ad097)
+
+Everything not listed here matches: the 9 categorical then 32 numeric column order and names, divisors, slot
+convention (`0` none, `1 + slot`), action kind names and order, `KIND_PAD = 0`, `N_KINDS = 32`, `ARG_MAX = 64`, and the
+shard keys and dtypes of the first eleven rows of the section 6 table.
+
+1. **Vocabulary sizes.** `improvement` is 56 (schema: 50) because engine improvement idx goes up to 55 (algaespawn);
+   `unit_type` and `passenger_type` are 63 (schema: 60) because unit idx goes up to 62 (larva). Counts of 49 and 59
+   in design.md are numbers of entries, not the largest idx. Terrain 10, climate 19, resource 11, owner, capital_of and
+   unit_owner 10 are unchanged.
+2. **Techs.** 51 bits indexed by engine tech idx (0..50, two idx values unused), schema: `N_TECHS = 49`.
+3. **Global scalars.** 12 scalars (stars, income, score, turn, turns left, has turn limit, mode, map width, living
+   players, players at the start, my cities, my units); schema has 8. `N_SCALARS = 12`.
+4. **Per other slot.** 24 values: the schema's single `embassy` is split into "I have an embassy with them" and
+   "they have one with me" (`PER_SLOT = 24`, schema 23).
+5. **Trigger kinds.** 3 (none, city reward, peace request), schema `N_TRIGGER_KINDS = 8`.
+6. **`G_DIM = 247`** (schema 239): 13 + 12 + 51 + 7 * 24 + 3.
+7. **Stay.** The engine does not list `Stay`, but the retail AI plays it constantly, so the encoder's legal list adds
+   one `Stay` per own unit that can move. Imitation targets are then always inside the legal list.
+8. **ClearTileEffect arg** is the engine effect bit (1 flooded, 4 algae); **CityReward arg** is the compact reward id of
+   section 4.
+9. **Extra shard keys:** `final_scores float32[N, 8]`, `adjudicated int8[N]`, `seed int32[N]`, `cmd_index int32[N]`,
+   `difficulty int8[N]`, `version int32[1]`. `K = 16` candidate slots.
+10. **`winner`** is a relative slot 0..7 or -1; the Nature slot 8 never wins, so the winner head can be 8 wide, but 9 is
+    harmless.
