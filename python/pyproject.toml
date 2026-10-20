@@ -1,0 +1,10 @@
+[project]
+name = "polyai"
+version = "0.1.0"
+description = "Model, data and training code for polytopia-ai"
+requires-python = ">=3.11"
+dependencies = ["numpy", "torch"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
