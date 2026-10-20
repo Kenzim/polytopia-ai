@@ -38,7 +38,7 @@ invisible enemy that is not at peace with me.
 | 5 | capital_of | 10 | `1 + slot` of the player this tile is a capital for, else 0 |
 | 6 | unit_type | 63 | engine unit idx (1 scout ... 62 larva) of the visible unit on the tile |
 | 7 | unit_owner | 10 | `1 + slot` of that unit's owner |
-| 8 | passenger_type | 63 | unit idx of the unit carried by a boat, else 0 |
+| 8 | passenger_type | 63 | unit idx of the unit carried by a boat, or of the second own unit on the tile (Giant with a Cloak), else 0 |
 
 ### Numeric columns (index, name, divisor, value)
 
@@ -129,19 +129,19 @@ trigger is pending the list is just the choices, no Stays.
 
 | kind id | name | arg | src | dst |
 |---|---|---|---|---|
-| 1 | Move | 0 | unit tile | target tile |
-| 2 | Attack | 0 | unit tile | target tile |
-| 3 | Capture | 0 | unit tile | city tile (same as src) |
-| 4 | Promote | 0 | unit tile | unit tile |
-| 5 | Recover | 0 | unit tile | unit tile |
-| 6 | HealOthers | 0 | unit tile | unit tile |
-| 7 | Explode | 0 | unit tile | unit tile |
-| 8 | Disband | 0 | unit tile | unit tile |
-| 9 | ExamineRuins | 0 | unit tile | unit tile |
-| 10 | Stay | 0 | unit tile | unit tile |
-| 11 | Swarm | 0 | unit tile | unit tile |
-| 12 | Boost | 0 | unit tile | unit tile |
-| 13 | Disembark | 0 | unit tile | unit tile |
+| 1 | Move | stack rank | unit tile | target tile |
+| 2 | Attack | stack rank | unit tile | target tile |
+| 3 | Capture | stack rank | unit tile | city tile (same as src) |
+| 4 | Promote | stack rank | unit tile | unit tile |
+| 5 | Recover | stack rank | unit tile | unit tile |
+| 6 | HealOthers | stack rank | unit tile | unit tile |
+| 7 | Explode | stack rank | unit tile | unit tile |
+| 8 | Disband | stack rank | unit tile | unit tile |
+| 9 | ExamineRuins | stack rank | unit tile | unit tile |
+| 10 | Stay | stack rank | unit tile | unit tile |
+| 11 | Swarm | stack rank | unit tile | unit tile |
+| 12 | Boost | stack rank | unit tile | unit tile |
+| 13 | Disembark | stack rank | unit tile | unit tile |
 | 14 | Upgrade | target unit idx | unit tile | unit tile |
 | 15 | Train | unit idx | city tile | city tile |
 | 16 | Build | improvement idx | tile | tile |
@@ -160,7 +160,10 @@ Kind 0 is padding in a batch. `N_KINDS = 32` embedding rows. City reward ids: 1 
 Explorer, 5 BorderGrowth, 6 SuperUnit, 7 Resources, 8 PopulationGrowth, 9 Rebellion, 10 Poison, 11
 TutorialExplorer. All arguments are below 64.
 
-Units are named by their tile: the mover owns at most one unit per tile and a boat's passenger is inside the boat.
+Units are named by their tile. A boat's passenger is inside the boat. The only case of two own units on one tile is a
+Giant with a Cloak: for every unit command except Upgrade, `arg` is then the unit's rank among the mover's units on that
+tile (engine unit-list order; 0 in all other cases), and the tile shows the second unit as `passenger_type`. An Upgrade
+names the target type in `arg`, so it is resolved to the unit on the tile that can upgrade to it.
 `decode(encode(cmd)) == cmd` holds on every legal list (`cargo test -p polyai-core`, thousands of positions, all 13
 tribes), and two different commands never share a tuple.
 
@@ -233,7 +236,9 @@ shard keys and dtypes of the first eleven rows of the section 6 table.
    one `Stay` per own unit that can move. Imitation targets are then always inside the legal list.
 8. **ClearTileEffect arg** is the engine effect bit (1 flooded, 4 algae); **CityReward arg** is the compact reward id of
    section 4.
-9. **Extra shard keys:** `final_scores float32[N, 8]`, `adjudicated int8[N]`, `seed int32[N]`, `cmd_index int32[N]`,
+9. **Action `arg` of unit commands** is the stack rank (0 except for a Giant with a Cloak on one tile; Upgrade keeps the
+   target type), so every arg still fits `ARG_MAX = 64`.
+10. **Extra shard keys:** `final_scores float32[N, 8]`, `adjudicated int8[N]`, `seed int32[N]`, `cmd_index int32[N]`,
    `difficulty int8[N]`, `version int32[1]`. `K = 16` candidate slots.
-10. **`winner`** is a relative slot 0..7 or -1; the Nature slot 8 never wins, so the winner head can be 8 wide, but 9 is
+11. **`winner`** is a relative slot 0..7 or -1; the Nature slot 8 never wins, so the winner head can be 8 wide, but 9 is
     harmless.
