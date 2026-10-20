@@ -155,3 +155,17 @@ fn diplomacy_commands_round_trip() {
         }
     }
 }
+
+#[test]
+fn ai_candidates_do_not_change_the_game() {
+    for seed in [31, 32] {
+        let setup = setup_for(seed, &[TRIBES[3], TRIBES[8], TRIBES[12]]);
+        let (plain, _) = play_ai_game(&setup, |_, _| {});
+        let (probed, _) = play_ai_game(&setup, |e, _| {
+            if e.current_player() != NATURE {
+                let _ = e.ai_candidates();
+            }
+        });
+        assert_eq!(plain.commands, probed.commands, "seed {seed}");
+    }
+}

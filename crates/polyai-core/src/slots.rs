@@ -6,6 +6,17 @@ pub const NATURE_SLOT: usize = 8;
 pub const N_SLOTS: usize = 9;
 pub const N_OTHER_SLOTS: usize = 7;
 
+/// Player id per slot for the mover `me`, given the non-Nature player ids in turn order. Slot 0 is `me`, slots 1..7
+/// follow in turn order, `0` marks a slot without a player; the Nature slot is not set here.
+pub fn slot_ids(order: &[u8], me: u8) -> [u8; N_SLOTS] {
+    let at = order.iter().position(|&id| id == me).unwrap_or(0);
+    let mut ids = [0u8; N_SLOTS];
+    for k in 0..order.len().min(N_SLOTS - 1) {
+        ids[k] = order[(at + k) % order.len()];
+    }
+    ids
+}
+
 /// Maps engine player ids to slots and back. Slot 0 is the mover, 1..7 follow in turn order, 8 is Nature.
 #[derive(Debug, Clone)]
 pub struct SlotMap {
@@ -17,11 +28,7 @@ pub struct SlotMap {
 impl SlotMap {
     pub fn new(e: &Engine, me: u8) -> Self {
         let order: Vec<u8> = e.s.players.iter().map(|p| p.id).filter(|&id| id != NATURE).collect();
-        let at = order.iter().position(|&id| id == me).unwrap_or(0);
-        let mut ids = [0u8; N_SLOTS];
-        for k in 0..order.len().min(N_SLOTS - 1) {
-            ids[k] = order[(at + k) % order.len()];
-        }
+        let mut ids = slot_ids(&order, me);
         if e.s.players.iter().any(|p| p.id == NATURE) {
             ids[NATURE_SLOT] = NATURE;
         }
