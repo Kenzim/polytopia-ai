@@ -115,6 +115,24 @@ Elo 1057 (1031 to 1084), between Normal (1000) and Hard (1260) in the joint fit.
 optimistic: with the old 50-turn cap, positions after turn 30 that keep a label come from games that ended soon after,
 so late-turn Brier is near zero by selection. Judge value heads on bc-v2 (150-turn cap, 1.6% draws) instead.
 
+### Larger imitation model (2026-10-21)
+
+`bc4_b10c128_v2`: b10c128 (3.4M parameters), behaviour cloning on bc-v1 (relabelled) plus bc-v2, 100,000 steps at batch
+256; held-out top-1 0.626, top-3 0.850, Brier 0.071 (bc-v2 validation shards). Same suite and settings as bc3, on the
+GPU (peak 50 MiB, about 15 min): `--threads 6 --device cuda --gpu-gb 1.0 --out
+/kvm/polytopia-ai-data/arena/bc4/bc4_vs_retail.jsonl`.
+
+| opponent | W-L-D | score | 95% CI |
+|---|---|---|---|
+| retail:easy | 351-45-4 | 88.2% | 84.7 to 91.0 |
+| retail:normal | 230-167-3 | 57.9% | 53.0 to 62.6 |
+| retail:hard | 95-295-10 | 25.0% | 21.0 to 29.5 |
+| retail:crazy | 46-349-5 | 12.1% | 9.3 to 15.7 |
+
+Joint fit with the retail table and bc3 (5,600 games): Crazy 1437, Hard 1255, bc4 1065 (1042 to 1086), bc3 1053 (1028
+to 1079), Normal 1000, Easy 711. Better imitation (top-1 0.547 to 0.626) bought almost no strength: greedy imitation
+of a mixed-difficulty retail AI plateaus near Normal, so further gains have to come from self-play and search.
+
 ### Older results (suite v1: Small, Continents, 50 turns, adjudicated on score)
 
 The first table (2026-10-20) used the old suite and is not comparable with the one above: 15% of its games were
