@@ -114,7 +114,7 @@ class RLConfig:
     ckpt_every: int = 10
     log_games: bool = True
     seed: int = 0
-    threads: int = 8  # VecEnv stepping threads plus torch threads, at most 8
+    threads: int = 8  # VecEnv stepping threads plus torch threads
     torch_threads: int = 2
     bf16: bool = True  # autocast in the PPO update on CUDA (inference always runs bf16 on CUDA, as ModelPolicy)
     max_batch: int = 256  # positions per inference forward pass
@@ -670,7 +670,7 @@ def outcome_summary(results: list[dict]) -> dict:
 def train(cfg: RLConfig) -> dict:
     import polyai_engine as pe
 
-    threads = max(2, min(cfg.threads, 8))
+    threads = max(2, cfg.threads)
     torch_threads = max(1, min(cfg.torch_threads, threads - 1))
     torch.set_num_threads(torch_threads)
     workers = max(1, threads - torch_threads)
