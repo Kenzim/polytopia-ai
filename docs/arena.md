@@ -133,6 +133,28 @@ Joint fit with the retail table and bc3 (5,600 games): Crazy 1437, Hard 1255, bc
 to 1079), Normal 1000, Easy 711. Better imitation (top-1 0.547 to 0.626) bought almost no strength: greedy imitation
 of a mixed-difficulty retail AI plateaus near Normal, so further gains have to come from self-play and search.
 
+### First self-play model (2026-10-21)
+
+`rl1_b6c96_cpu`: PPO self-play (`polyai.rl`, `docs/rl.md`) from bc3, 200 updates of about 16,000 learner decisions,
+pool of retail Easy to Crazy, bc3 and its own snapshots, KL to bc3 decaying 0.1 to 0.01 (updates 1 to 100 on CPU, 101
+to 200 on the GPU, about 70 min there, peak 0.97 GB). Same suite and settings as bc3 and bc4: greedy, no search, model
+seat at Normal, 200 seeds x 2 seats per opponent, 0 illegal commands. Results:
+`/kvm/polytopia-ai-data/arena/rl1/rl1_raw.jsonl`.
+
+| opponent | W-L-D | score | 95% CI |
+|---|---|---|---|
+| retail:easy | 396-2-2 | 99.2% | 97.8 to 99.7 |
+| retail:normal | 386-13-1 | 96.6% | 94.4 to 98.0 |
+| retail:hard | 338-60-2 | 84.8% | 80.9 to 87.9 |
+| retail:crazy | 273-122-5 | 68.9% | 64.2 to 73.2 |
+
+Joint fit with the retail table and bc4 (5,600 games): rl1 1573 (1529 to 1615), Crazy 1443, Hard 1267, bc4 1068,
+Normal 1000, Easy 703. Both seats contribute (vs Crazy: 144-56 in seat 0, 129-71 in seat 1). Self-play took the same
+1.4M network from about 1050 to about 1570 in 200 updates. Caveat: the pool contained the retail AI, so part of the
+gain may be specific to exploiting it; human and live games are the check on that. The policy entropy rose from 1.5
+to 2.6 as the KL weight fell to 0.01, so the follow-up run (rl3) keeps the KL weight at 0.03 to 0.02 and the entropy
+bonus at 0.0005.
+
 ### Older results (suite v1: Small, Continents, 50 turns, adjudicated on score)
 
 The first table (2026-10-20) used the old suite and is not comparable with the one above: 15% of its games were
