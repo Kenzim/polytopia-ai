@@ -303,7 +303,8 @@ def main(argv: list[str] | None = None) -> int:
     d = Suite()
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--model", action="append", required=True,
-                    help="checkpoint file or run directory, optionally PATH:sample=T; repeat for several models")
+                    help="checkpoint file or run directory, optionally PATH:sample=T and/or PATH:search=K[:w=..][:skip=..]"
+                         "[:budget=..][:turns=..][:plan=0|1] (docs/search.md); repeat for several models")
     ap.add_argument("--opponent", default="retail:easy", help="comma separated, retail:easy|normal|hard|crazy")
     ap.add_argument("--seeds", type=int, default=d.seeds, help="seeds per opponent; each is played with seats swapped")
     ap.add_argument("--seed-start", type=int, default=d.seed_start)
@@ -342,7 +343,18 @@ def main(argv: list[str] | None = None) -> int:
     done = load_done(out)
     summaries = []
     for spec in a.model:
+        from .search import run_arena_spec, split_search_spec
+
+        spec, search_cfg = split_search_spec(spec)
         path, temperature = parse_model_spec(spec)
+        if search_cfg is not None:  # PATH:search=K: per-turn search, played with single games (polyai.search)
+            if device.type != "cpu":
+                raise SystemExit("search specs run on the CPU in worker processes: pass --device cpu")
+            print(f"{path}: {search_cfg}", flush=True)
+            summaries += run_arena_spec(path, search_cfg, temperature, opponents, suite, done, out,
+                                        log=lambda m: print(m, flush=True), workers=threads, seed=a.seed,
+                                        max_batch=a.max_batch)
+            continue
         agent = ModelAgent(path, temperature, device, a.max_batch, a.seed)
         print(f"{agent.name}: {path} (step {agent.step}), {agent.model.n_params() / 1e6:.2f}M params", flush=True)
         for opp in opponents:
