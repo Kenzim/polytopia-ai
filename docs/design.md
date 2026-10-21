@@ -1,8 +1,18 @@
-# polytopia-ai design (v1, 2026-10-20)
+# polytopia-ai design (v1.1, 2026-10-21)
 
 Goal: an ML Polytopia bot with a learned value function (a chess-style +/- evaluation) and a learned policy (move
 ranking and best-move suggestions), trained on games played by `polytopia-engine`: first by imitating the retail AI,
 then by self-play. It is measured against the retail AI at each difficulty and against MCTS from `../weekly`.
+
+**Objective (Kenzi, 2026-10-20, ledger decision 0e246e45).** The bot should be strong against real players, not
+just against the retail AI. It plays to win by elimination only (Domination); points are ignored. The value target
+and the RL reward are win 1 / loss 0 and nothing else. Scores stay in the observation because players can see them.
+It must be general across setups (tribes, map sizes, presets, player counts), with 1v1 weighted at about half or
+more of all games, because top-level human play is mostly 1v1. Might mode is out of scope unless Kenzi adds it.
+
+v1.1 changes from v1 (2026-10-20): no score-margin value heads or shaped score reward; no top-score adjudication
+at a turn limit (a high cap for compute only, capped games are draws); 1v1-weighted setup sampler; 1v1 main eval
+suite; a human-replay track (section 6, phase C).
 
 Scope: the 12 normal tribes plus Cymanti (ledger to-do c2666790). Elyrion, Polaris and Aquarion are out of scope.
 
@@ -20,7 +30,7 @@ Facts checked against `../engine` (crate `polytopia-sim`) on 2026-10-20:
 - Retail AI: `ai_get_move()`, `step_ai_cmd()`, and `ai_candidates() -> Vec<(Command, f32)>`, scored candidates best
   first (`src/engine/ai_move.rs:30-140`). Deterministic given the seed.
 - End: `is_over()`, `winners`, `score(id)`, `reward_for(id)`. A turn limit ends the game with the top-scoring living
-  player as winner.
+  player as winner. We do not use that rule as a result (section 6).
 - Fog: per-tile explorer lists, `is_explored(player, idx)` (`src/engine/vision.rs`). Polytopia has no re-fogging: an
   explored tile stays visible, so "explored" is the whole fog model. `visible_unit_for(at, viewer)` also hides
   invisible (cloaked) enemy units.
@@ -135,9 +145,9 @@ A KataGo-style residual CNN, which is the standard answer for variable board siz
 - Policy head: per-tile features `h` (C channels) and a pooled vector `g`. For each legal action,
   `logit = MLP([h[src], h[dst], E_kind[kind], E_arg[kind, arg], E_off[clip(dst - src)]])`, with `h[none] = g`.
   Softmax over the legal list (padded with a mask).
-- Value heads from pooled features: (a) winner distribution over the 9 slots (softmax), giving my win probability
-  in any number of players; (b) final score margin, me minus the best opponent, scaled by 1/1000; (c) auxiliary
-  score margin in 5 turns (denser signal).
+- Value head from pooled features: the winner distribution over the 9 slots (softmax), giving my win probability
+  in any number of players. Positions from games that ended without an elimination winner (draws at the compute
+  cap) carry no winner target. There are no score-margin heads (removed in v1.1: points are not the objective).
 - Evaluation shown to people: `eval = 4 * log10(p / (1 - p))` clipped to +/-9.9, so 50% shows 0.0 and 85% shows
   about +3.0, like chess pawns. Best moves: the policy's top 3 with the value after each.
 
@@ -158,14 +168,21 @@ b10c128 at batch 256 needs well under 1.5 GB of activations. We never touch othe
 
 **Phase A, imitation of the retail AI.** `polyai-gen` plays retail-vs-retail games and records, for every command
 of every AI seat: the observation, the legal action list, the action the AI chose, and the top of
-`ai_candidates()` with scores (a soft target). After the game it fills in the outcome (winner, final scores) and
-the score margin 5 turns later.
+`ai_candidates()` with scores (a soft target). After the game it fills in the outcome: the elimination winner, or
+none if the game hit the compute cap.
 
-- Setups drawn per game from a seeded generator: 2, 3 or 4 players; tribes uniformly from the 13; map size Tiny,
-  Small or Normal; presets Dryland, Lakes, Continents, Pangea, Archipelago; difficulty per seat from Easy, Normal,
-  Hard, Crazy (the teacher signal is mostly Hard and Crazy, but weaker seats give varied positions); Domination
-  with a turn limit of 50 (games that reach it are scored by the engine's top-score rule and flagged
-  `adjudicated`).
+- Setups drawn per game from a seeded generator: 1v1 in about half or more of games, otherwise 3 or 4 players;
+  tribes uniformly from the 13; map size Tiny, Small or Normal; presets Dryland, Lakes, Continents, Pangea,
+  Archipelago; difficulty per seat from Easy, Normal, Hard, Crazy (the teacher signal is mostly Hard and Crazy, but
+  weaker seats give varied positions); Domination.
+- **No adjudication.** The turn limit is a high safety cap for compute only (on the order of 150 to 200 turns, set
+  from the measured game-length distribution). A game that reaches it is a draw: `winner = -1`, and its positions
+  are dropped from value training (policy imitation still uses them). The engine's top-score rule is never used as
+  a result.
+- **bc-v1 relabel.** The existing 20,000-game set was generated with a 50-turn limit and top-score adjudication
+  (6,389 games adjudicated) and 2 to 4 players without the 1v1 weighting. Its adjudicated games are relabelled
+  `winner = -1` (the `adjudicated` flag marks them), so they still train the policy but not the value. The next
+  dataset (bc-v2) uses the v1.1 sampler and cap.
 - Records: one compact game record per game (setup + command list + outcome), from which any encoding version can
   be regenerated by replay; plus encoded shards (`.npz`, zstd or `savez_compressed`) of about 50,000 positions each
   for training. Both live under `/kvm/polytopia-ai-data/` (outside git).
@@ -176,17 +193,24 @@ the score margin 5 turns later.
 
 **Phase B, self-play.** The `VecEnv` runs games where some seats are the current model (sampling from the policy
 with temperature) and the rest come from an opponent pool: earlier checkpoints, the imitation policy, and retail AI
-at random difficulty. Trajectories go to a replay buffer on disk.
+at random difficulty, and later a human-style policy (phase C). Trajectories go to a replay buffer on disk.
+
+**Phase C, human track.** Capture top-level 1v1 Domination replays, check that each replays exactly in the engine,
+and encode them like any other record. Uses: a benchmark (move-match rate against the human's move, outcome
+prediction), fine-tuning data, and a human-style opponent in the self-play pool. Later: live tests on the website
+and through the headless client. Sourcing the replays depends on the `re`, `vision` and `client` work and is not
+started in v1.
 
 ## 7. Training loop
 
 1. **Behaviour cloning.** Policy loss: cross-entropy on the AI's chosen command plus 0.5 x KL to
-   `softmax(candidate scores / T)` where candidates exist. Value loss: winner cross-entropy + score-margin MSE.
+   `softmax(candidate scores / T)` where candidates exist. Value loss: winner cross-entropy only, on games with an
+   elimination winner.
    AdamW, cosine schedule, bf16. Held-out metrics: top-1 and top-3 agreement with the AI, value calibration
    (Brier score) by turn.
 2. **Reinforcement from self-play.** Start with PPO (clipped, GAE over the per-command trajectory, reward = win
-   1 / loss 0 at the end plus a small shaped score-margin term that is annealed away) with a KL penalty towards
-   the behaviour-cloning policy that decays over training, as AlphaStar did. Opponent pool sampling weighted
+   1 / loss 0 at the end and nothing else; a game at the compute cap is a draw worth 0.5 to both or is dropped)
+   with a KL penalty towards the behaviour-cloning policy that decays over training, as AlphaStar did. Opponent pool sampling weighted
    towards opponents we beat less than 70% of the time.
 3. **Search on top (later).** A small per-turn search using the policy as prior and the value head at leaves
    (Gumbel MuZero-style root sampling with tens of simulations over the current turn's commands). If it beats the raw
@@ -201,11 +225,13 @@ loader workers counted together).
 - **Agents:** `retail:easy|normal|hard|crazy`, `mcts:<iterations>[:rollout=random|ai]`, `random`, and
   `model:<checkpoint>[:greedy|sample|search]`.
 - **Matches:** fixed seed lists from 1,000,000 up. Each seed is played with seats swapped (and tribes swapped with
-  them), so map and tribe advantages cancel. Default 1v1, Small map, Continents, Domination with a 50-turn limit.
-  FFA tables (1 model vs 2 or 3 retail) are a second suite.
-- **Results:** one JSONL line per game (agents, seed, setup, winner, scores, turns, adjudicated, wall time).
-- **Metrics:** win rate with a Wilson 95% interval per pairing, mean score margin, and Elo from a Bradley-Terry fit
-  over all games, anchored at retail Normal = 1000.
+  them), so map and tribe advantages cancel. The main suite is 1v1 Domination across varied map sizes, presets
+  and tribes, with the high compute cap; capped games are draws (half a win each). FFA tables (1 model vs 2 or 3
+  retail) are a second suite.
+- **Results:** one JSONL line per game (agents, seed, setup, winner, scores, turns, capped, wall time).
+- **Metrics:** win rate (draws as half) with a Wilson 95% interval per pairing, draw rate, and Elo from a
+  Bradley-Terry fit over all games, anchored at retail Normal = 1000. Scores are logged but are not a metric.
+- **Human benchmark (phase C):** move-match rate and outcome prediction on held-out top-level 1v1 replays.
 - **MCTS caveat:** weekly's MCTS sees through fog and uses uniform random rollouts over single commands, so it is
   likely weak and slow at Polytopia's horizon. The adapter (`polyai-arena`) offers two variants: plain uniform
   rollouts, and the legal list pruned to the retail AI's top-k candidates. It is a baseline, and a cheating one;
@@ -222,13 +248,14 @@ loader workers counted together).
 3. b10c128 imitation model; eval and best-move API in `polyai_engine` for web and client to use later.
 4. PPO self-play; beat retail Crazy more than half the time on the 1v1 suite.
 5. Search on top; MCTS and Elo table.
+6. Human track: replay capture, human benchmark, fine-tuning, human-style pool opponent.
 
 ## 10. Open questions and risks
 
 - The retail AI's own move choice may use hidden information. Imitation from the fogged view just learns a noisier
   policy; the value head is trained on outcomes, which are fair.
-- Long games: Domination 1v1 between equal AIs can run past 50 turns. The turn limit and the `adjudicated` flag
-  keep data finite; check how often it triggers.
+- Long games: Domination between equal AIs can run long, and without adjudication some never end. The compute cap
+  keeps data finite; measure the length distribution and the draw rate at the cap, and set the cap from it.
 - Engine changes from the other manager (data format, versions, Might mode) may shift behaviour. Records store the
   engine commit and game version so data can be regenerated.
 - Engine requests (relayed through the project chat, not done by us): a public, cheap per-player "currently
