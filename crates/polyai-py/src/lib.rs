@@ -517,6 +517,7 @@ struct EnvInner {
     spec: SetupSpec,
     model: ModelSeats,
     difficulty: Option<u8>,
+    seat_difficulties: Option<Vec<u8>>,
     auto_reset: bool,
     eval: bool,
     seed_start: i64,
@@ -531,6 +532,11 @@ impl EnvInner {
         let mut setup = GameSetup::sample(seed, &self.spec);
         if let Some(d) = self.difficulty {
             setup = setup.with_difficulty(d);
+        }
+        if let Some(ds) = &self.seat_difficulties {
+            for (seat, &d) in setup.seats.iter_mut().zip(ds) {
+                seat.difficulty = d;
+            }
         }
         setup
     }
@@ -553,9 +559,10 @@ impl EnvInner {
 impl PyVecEnv {
     /// `model_seats`: `"rotate"` (one model seat per game, `seed % n_players`), `"all"` (self-play, the model plays every
     /// seat) or a list of seat indices. `split`: `"train"` draws seeds from 1..=100000 (wrapping), `"eval"` needs
-    /// `seed_start >= 1000000`.
+    /// `seed_start >= 1000000`. `seat_difficulties` sets each seat's handicap by seat index (applied after
+    /// `difficulty`; every value 0..=3, one per seat of the largest player count).
     #[new]
-    #[pyo3(signature = (n_games, seed_start=1, model_seats=None, split="train", n_players=None, sizes=None, presets=None, difficulty=None, turn_limit=DEFAULT_TURN_LIMIT, threads=24, auto_reset=true))]
+    #[pyo3(signature = (n_games, seed_start=1, model_seats=None, split="train", n_players=None, sizes=None, presets=None, difficulty=None, turn_limit=DEFAULT_TURN_LIMIT, threads=24, auto_reset=true, seat_difficulties=None))]
     #[allow(clippy::too_many_arguments)]
     fn new(
         py: Python<'_>,
@@ -570,7 +577,13 @@ impl PyVecEnv {
         turn_limit: i32,
         threads: usize,
         auto_reset: bool,
+        seat_difficulties: Option<Vec<u8>>,
     ) -> PyResult<Self> {
+        if let Some(ds) = &seat_difficulties {
+            if ds.iter().any(|&d| d > 3) {
+                return Err(value_err("seat_difficulties values are 0..=3"));
+            }
+        }
         let eval = match split {
             "train" => false,
             "eval" => true,
@@ -601,6 +614,7 @@ impl PyVecEnv {
             spec: make_spec(n_players, sizes, presets, turn_limit)?,
             model,
             difficulty,
+            seat_difficulties,
             auto_reset,
             eval,
             seed_start: i64::from(seed_start),

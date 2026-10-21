@@ -246,7 +246,8 @@ final partial one. `--keep K` writes one position in `K` (default 4).
   `clone()`,
   `record()` (bytes of the section 7 format). Seats are indices into the setup's seat list.
 - `VecEnv(n_games, seed_start=1, model_seats="rotate" | "all" | [seats], split="train" | "eval", n_players, sizes,
-  presets, difficulty, turn_limit=150, threads=24, auto_reset=True)`. Seats the model does not control (and Nature) are
+  presets, difficulty, turn_limit=150, threads=24, auto_reset=True, seat_difficulties=None)`. `seat_difficulties` is a
+  per-seat handicap list (0..=3, by seat index) applied after `difficulty`. Seats the model does not control (and Nature) are
   played by the retail AI at their handicap on a rayon pool (at most 24 threads, GIL released in `step`). `"rotate"`
   gives each game one model seat, `seed % n_players`. `split="train"` draws seeds from 1..=100000 (wrapping),
   `"eval"` needs `seed_start >= 1000000`.
