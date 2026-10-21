@@ -32,7 +32,7 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from . import schema as S
+from .policy import ModelPolicy, collate, resolve_checkpoint  # noqa: F401  (collate is re-exported)
 
 EVAL_SEED_MIN = 1_000_000
 DIFFICULTIES = ["easy", "normal", "hard", "crazy"]  # engine difficulty ids 0 to 3
@@ -68,16 +68,7 @@ def parse_model_spec(spec: str) -> tuple[Path, float | None]:
         spec = head
     if temperature is not None and temperature <= 0:
         raise ValueError("the sampling temperature must be positive")
-    path = Path(spec)
-    if path.is_dir():
-        for name in ("ckpt_final.pt", "ckpt_last.pt"):
-            if (path / name).exists():
-                path = path / name
-                break
-        else:
-            raise FileNotFoundError(f"no ckpt_final.pt or ckpt_last.pt in {path}")
-    if not path.is_file():
-        raise FileNotFoundError(f"checkpoint {path} does not exist")
+    path = resolve_checkpoint(spec)
     return path, temperature
 
 
@@ -93,59 +84,29 @@ def agent_label(path: Path, temperature: float | None) -> str:
 # ---------------------------------------------------------------------------------------------------------------
 
 
-def collate(obs: dict, sel: np.ndarray, device: torch.device) -> tuple[torch.Tensor, ...]:
-    """Positions `sel` of a `VecEnv` observation (one map size) -> tiles, globals, padded actions, action mask."""
-    act_off = np.asarray(obs["act_off"], dtype=np.int64)
-    starts, lens = act_off[:-1][sel], np.diff(act_off)[sel]
-    amax = max(int(lens.max()), 1)
-    cols = np.arange(amax)[None, :]
-    mask = cols < lens[:, None]
-    rows = np.where(mask, starts[:, None] + cols, 0)
-    actions = np.asarray(obs["actions"])[rows].astype(np.int16)
-    actions[~mask] = (S.KIND_PAD, 0, -1, -1)
-
-    def put(a: np.ndarray) -> torch.Tensor:
-        return torch.from_numpy(np.ascontiguousarray(a)).to(device, non_blocking=True)
-
-    return put(np.asarray(obs["tiles"])[sel]), put(np.asarray(obs["globals"])[sel]), put(actions), put(mask)
-
-
 class ModelAgent:
-    """A checkpoint that picks an index into each legal list: greedy, or sampled at a temperature."""
+    """A checkpoint that picks an index into each legal list: greedy, or sampled at a temperature. The inference is
+    `polyai.policy.ModelPolicy`'s, so an arena result measures what the policy interface (and the service) plays."""
 
     def __init__(self, path: Path, temperature: float | None, device: torch.device, max_batch: int = 128,
                  seed: int = 0):
-        from .train_bc import load_checkpoint
-
+        self.policy = ModelPolicy(path, device, max_batch, seed)
         self.path, self.temperature, self.max_batch = path, temperature, max_batch
         self.device = device
         self.name = agent_label(path, temperature)
-        self.model = load_checkpoint(path).to(device).to(memory_format=torch.channels_last).eval()
-        state = torch.load(path, map_location="cpu", weights_only=False)
-        self.step = int(state.get("step", 0))
-        self.generator = torch.Generator(device=device)
-        self.generator.manual_seed(seed)
-        self.infer_seconds = 0.0
-        self.decisions = 0
+        self.model = self.policy.model
+        self.step = self.policy.step
 
-    @torch.inference_mode()
+    @property
+    def infer_seconds(self) -> float:
+        return self.policy.infer_seconds
+
+    @property
+    def decisions(self) -> int:
+        return self.policy.decisions
+
     def choose(self, obs: dict) -> np.ndarray:
-        n = len(obs["game"])
-        picks = np.empty(n, np.int32)
-        t0 = time.perf_counter()
-        for s in range(0, n, self.max_batch):
-            sel = np.arange(s, min(n, s + self.max_batch))
-            tiles, globals_, actions, mask = collate(obs, sel, self.device)
-            with torch.autocast(self.device.type, dtype=torch.bfloat16, enabled=self.device.type == "cuda"):
-                logits = self.model(tiles, globals_, actions, mask).policy_logits.float()
-            if self.temperature is None:
-                pick = logits.argmax(dim=1)
-            else:
-                pick = torch.multinomial(torch.softmax(logits / self.temperature, dim=1), 1, generator=self.generator)[:, 0]
-            picks[sel] = pick.cpu().numpy()
-        self.infer_seconds += time.perf_counter() - t0
-        self.decisions += n
-        return picks
+        return self.policy.choose(obs, temperature=self.temperature).index
 
 
 # ---------------------------------------------------------------------------------------------------------------

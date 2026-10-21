@@ -16,14 +16,15 @@ class Policy(Protocol):
 @dataclass
 class Choices:                           # one entry per position in obs
     index: np.ndarray                    # int32[N], index into that position's legal list
-    logp: np.ndarray                     # float32[N], log-probability of `index` under the policy that chose it
+    logp: np.ndarray                     # float32[N], log-probability of `index` under softmax(logits / T); T = 1 when greedy
     value: np.ndarray                    # float32[N], P(the mover wins) from the value head
     top: list[list[tuple[int, float]]]   # per position, the 3 best (index, probability), best first
 ```
 
 `obs` is the `polyai_engine` observation group (one map size: `tiles`, `globals`, `act_off`, `actions`, ...), the
 same dict `VecEnv.observe()` and `VecEnv.step()` return. `temperature=None` is the greedy move; a positive value
-samples from softmax(logits / T). The evaluation shown to people is `polyai.model.eval_pawns(value)` (0.0 at 50%).
+samples from softmax(logits / T). A greedy move reports the model's own probability of it (T = 1), not 1; `top`
+probabilities are from the same distribution. `value` is slot 0 of the winner softmax. The evaluation shown to people is `polyai.model.eval_pawns(value)` (0.0 at 50%).
 
 Callers:
 - `polyai.arena` (model against retail on the fixed 1v1 suite) plays through `Policy`.
