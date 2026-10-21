@@ -77,10 +77,12 @@ Response:
 | `index`, `n_legal` | int | the pick and the length of the legal list it came from |
 | `logp` | float | log-probability of the pick |
 | `value` | float | P(we win), and `eval` = `eval_pawns(value)` |
-| `top` | list | the 3 best moves: `[{"desc", "p"}]` |
+| `top` | list | the 3 best moves: `[{"index", "desc", "p"}]` |
 | `policy_id` | str | which checkpoint answered |
 | `encoding`, `engine` | int, str | `ENCODING_VERSION` and the AI side's engine commit |
 | `think_ms` | float | time inside the service |
+| `forced` | str | only when the service replaced the model's pick with `EndTurn` because `per_turn` reached the cap |
+| `rebuild_ms`, `infer_ms` | float | parts of `think_ms`: replaying the state, and the model's batch |
 
 Client rules:
 - Map `raw` back with its own engine's `command_from_raw` and check it is legal there (a `Stay` counts as legal, as
