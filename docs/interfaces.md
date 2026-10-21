@@ -38,6 +38,16 @@ The client is Rust and pins its own engine revision, so it does not link the mod
 server's state blobs; the service rebuilds the game with the AI side's engine, encodes it with `polyai-core` (the same
 code as training), runs the policy and answers with the move in the game's own wire format.
 
+**Decision: a separate service, not in the runner's process.** Reasons:
+- The model is PyTorch on the shared GPU. One service process holds one copy of the weights and batches requests from
+  every game both accounts are in; in-process inference would mean libtorch in the runner and a copy per runner.
+- New checkpoints are picked up by restarting or reloading the service (the `policy_id` in every answer says which
+  one played); the runner is never rebuilt for a model change.
+- The client's pinned engine and the AI side's engine can differ without a link-time clash; a state the AI side
+  cannot rebuild comes back as `ok: false` and the runner falls back to the retail AI.
+- The cost is one local socket round trip per command, small next to model inference and server latency
+  (`think_ms` is measured by the service and reported).
+
 - Socket: `/kvm/tmp/polyai/policy.sock` (the `--socket` option changes it), mode 0600.
 - Framing: each message is a 4-byte little-endian length, then that many bytes of UTF-8 JSON. Byte fields are base64.
 - One request, one response, on a connection that may be kept open. The service batches requests that arrive together.
@@ -114,6 +124,16 @@ in Perfection or at a server turn limit, a resignation or timeout with more than
 unfinished) has `winner = -1`: its positions train the policy but not the value head. A 1v1 resignation or timeout
 by the opponent counts as our win only when `server_result` says so. Positions whose legal list does not contain the
 played command are skipped and counted, as `shardify` does now.
+
+**Status of `client/tools/shardify` against this section (checked 2026-10-21):**
+- Matches: encoding v2 through `polyai_core::encode`, the legal list and candidate scores from `polyai-core`, the
+  shard writer taken from `polyai-gen` by path, and the labels. `Outcome::of` drops a top-score winner whenever more
+  than one player is alive at the turn limit (so Perfection and server turn-limit games get `winner = -1`), and a game
+  replayed without reaching its end is only written with `--unfinished`, also as `winner = -1`, `capped = 1`.
+- To add on the client side: the six optional keys above (`source = 2`, `ours`, `behaviour_logp`, `policy`,
+  `policy_ids`, `game_key`) from the format-2 `SavedGame`, and the 1v1 `server_result` rule (opponent resigned or
+  timed out: our seat is the winner). The writer gains these keys in `polyai-gen/src/shard.rs` without new
+  dependencies, so the `#[path]` include keeps working; shards without them still load with the defaults.
 
 ## 3. How live games are used in training
 
