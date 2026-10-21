@@ -204,6 +204,23 @@ One shard holds one map size; `N` positions, `T` = total legal-list length, `K =
 | difficulty | int8 | [N] | mover's difficulty: 0 easy, 1 normal, 2 hard, 3 crazy |
 | version | int32 | [1] | `ENCODING_VERSION` (2) |
 
+**Optional keys** (docs/interfaces.md section 2.2; the encoding `version` stays 2). `polyai-gen` writes them with the
+generator values; shards made before they existed lack them, and `python/polyai/data.py` fills the same defaults:
+
+| key | dtype | shape | meaning (default when missing) |
+|---|---|---|---|
+| source | int8 | [N] | 0 retail generator, 1 self-play, 2 live, 3 human replay (0) |
+| ours | int8 | [N] | 1 when the mover is one of our accounts (0) |
+| behaviour_logp | float32 | [N] | `logp` of the policy that chose the move; NaN for retail, human and fallback moves (NaN) |
+| policy | int16 | [N] | index into `policy_ids`, -1 for none (-1) |
+| policy_ids | `<U` | [P] | the `policy_id` strings of this shard; `<U1` and empty when P = 0 (empty) |
+| game_key | `<U` | [N] | `gen:<seed>` for generated games, `live:<game id>` for live ones, so a game is never split across train and validation (`gen:<seed>`) |
+
+The writer is `ShardBuf::push` (generator values; key `gen:<seed>`) or `ShardBuf::push_with(.., &Origin)` (any source).
+Strings are numpy UCS-4 (`<U{L}`, `L` the longest string). `shard.rs` and `npz.rs` are also included by path into
+`client/tools/shardify`, so they take no dependencies beyond `zip` and `polyai-core`. `Shard.batch` returns `source`,
+`ours` and `behaviour_logp` next to the other columns; `Shard.game_key` and `Shard.policy_ids` give the strings.
+
 Only a fraction of the positions of each game is written (default one in four, chosen by a seeded hash), because
 neighbouring commands of a turn are strongly correlated. `ai_candidates()` is only evaluated for written positions.
 

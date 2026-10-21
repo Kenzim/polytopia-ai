@@ -159,3 +159,16 @@ REQUIRED_FIELDS = tuple(SHARD_FIELDS)
 V1_ONLY_FIELDS = ("adjudicated",)
 V1_IGNORED_FIELDS = ("margin", "margin5")
 V1_REQUIRED_FIELDS = tuple(k for k in REQUIRED_FIELDS if k != "capped") + V1_ONLY_FIELDS
+
+# Optional keys (docs/interfaces.md section 2.2, encoding.md section 6). Generator shards before these existed lack
+# them, and the loader fills the defaults in. `policy_ids` is per shard, not per position; `game_key` is a string
+# array, whose default is "gen:<seed>" (see `data.Shard.game_key`).
+SOURCE_GENERATOR, SOURCE_SELFPLAY, SOURCE_LIVE, SOURCE_HUMAN = 0, 1, 2, 3
+OPTIONAL_FIELDS: dict[str, ShardField] = {
+    "source": ShardField("int8", "[N]", "0 retail generator, 1 self-play, 2 live, 3 human replay (default 0)"),
+    "ours": ShardField("int8", "[N]", "1 when the mover is one of our accounts (default 0)"),
+    "behaviour_logp": ShardField("float32", "[N]", "logp of the policy that chose the move; NaN if none (default NaN)"),
+    "policy": ShardField("int16", "[N]", "index into policy_ids, -1 for none (default -1)"),
+    "policy_ids": ShardField("str", "[P]", "policy_id strings of this shard (default empty)"),
+    "game_key": ShardField("str", "[N]", "game identity for train/validation splits (default gen:<seed>)"),
+}

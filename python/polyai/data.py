@@ -4,6 +4,9 @@ Shard layout is `schema.SHARD_FIELDS` (encoding v2). Version 1 shards are read t
 games that ended by top-score adjudication become draws (`winner = -1`, `capped = 1`), the score margins are dropped and
 the "turns left" and "has a turn limit" globals, which only told the model about a 50-turn limit, are zeroed as v2
 does for Domination.
+
+Shards may also carry the optional provenance keys of `schema.OPTIONAL_FIELDS` (`source`, `ours`, `behaviour_logp`,
+`policy`, `policy_ids`, `game_key`); a shard without them loads with the generator defaults.
 One shard holds one map size, so every batch drawn from a shard has a single
 (H, W) and needs no board padding. Only the legal-action lists are padded.
 """
@@ -86,7 +89,11 @@ def save_shard(path: str | Path, arrays: dict[str, np.ndarray]) -> None:
         raise ValueError(f"shard is missing fields: {missing}")
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    np.savez(path, **{k: np.asarray(arrays[k], dtype=S.SHARD_FIELDS[k].dtype) for k in S.REQUIRED_FIELDS})
+    out = {k: np.asarray(arrays[k], dtype=S.SHARD_FIELDS[k].dtype) for k in S.REQUIRED_FIELDS}
+    for k, spec in S.OPTIONAL_FIELDS.items():
+        if k in arrays:
+            out[k] = np.asarray(arrays[k], dtype=str if spec.dtype == "str" else spec.dtype)
+    np.savez(path, **out)
 
 
 def relabel_v1(arrays: dict[str, np.ndarray]) -> dict[str, np.ndarray]:
@@ -131,6 +138,39 @@ class Shard:
         if ((arrays["capped"] == 1) & (arrays["winner"] >= 0)).any():
             raise ValueError("a capped game has a winner")
         self.n, self.h, self.w = n, h, w
+        self._fill_optional()
+
+    def _fill_optional(self) -> None:
+        """The optional provenance keys, as stored or defaulted (a shard without them is a retail-generator shard)."""
+        n = self.n
+        a = self.a = dict(self.a)
+        for k, spec in S.OPTIONAL_FIELDS.items():
+            if k in a and spec.dtype != "str":
+                a[k] = np.asarray(a[k]).astype(spec.dtype)
+            if k in a and k != "policy_ids" and a[k].shape != (n,):
+                raise ValueError(f"{k} has shape {a[k].shape}, expected ({n},)")
+        a.setdefault("source", np.full(n, S.SOURCE_GENERATOR, np.int8))
+        a.setdefault("ours", np.zeros(n, np.int8))
+        a.setdefault("behaviour_logp", np.full(n, np.nan, np.float32))
+        a.setdefault("policy", np.full(n, -1, np.int16))
+        ids = a["policy_ids"] = np.asarray(a.get("policy_ids", np.array([], dtype="<U1")))
+        if ids.ndim != 1:
+            raise ValueError("policy_ids must be one-dimensional")
+        if n and (a["policy"].min() < -1 or a["policy"].max() >= len(ids)):
+            raise ValueError("policy refers to a policy_id the shard does not hold")
+
+    @property
+    def game_key(self) -> np.ndarray:
+        """str[N]: the stored keys, or `gen:<seed>` for a shard written before keys existed."""
+        if "game_key" not in self.a:
+            seeds = self.a["seed"]
+            uniq, inv = np.unique(seeds, return_inverse=True)
+            self.a["game_key"] = np.array([f"gen:{s}" for s in uniq])[inv.reshape(-1)]
+        return self.a["game_key"]
+
+    @property
+    def policy_ids(self) -> list[str]:
+        return [str(x) for x in self.a["policy_ids"]]
 
     @classmethod
     def load(cls, path: str | Path) -> Shard:
@@ -138,7 +178,7 @@ class Shard:
             if "version" not in z.files:
                 raise ValueError(f"{path} has no version field")
             wanted = S.V1_REQUIRED_FIELDS if int(z["version"].reshape(-1)[0]) == 1 else S.REQUIRED_FIELDS
-            return cls({k: z[k] for k in wanted if k in z.files})
+            return cls({k: z[k] for k in (*wanted, *S.OPTIONAL_FIELDS) if k in z.files})
 
     def __len__(self) -> int:
         return self.n
@@ -181,6 +221,9 @@ class Shard:
             "cand_score": a["cand_score"][idx],  # may hold +inf; compute_losses deals with it
             "winner": a["winner"][idx].astype(np.int64),
             "turn": a["turn"][idx].astype(np.int64),
+            "source": a["source"][idx].astype(np.int64),
+            "ours": a["ours"][idx].astype(np.int64),
+            "behaviour_logp": a["behaviour_logp"][idx],  # NaN where no policy chose the move
         }
 
 

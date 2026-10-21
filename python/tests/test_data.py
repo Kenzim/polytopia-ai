@@ -8,6 +8,7 @@ from polyai.data import (
     Shard,
     make_synthetic_shard,
     save_shard,
+    to_torch,
     tile_permutation,
     transform_actions,
     transform_tiles,
@@ -233,3 +234,59 @@ def test_loader_without_prefetch_and_partial_batch(tmp_path):
     loader = BatchLoader([p], 16, augment=False, shuffle=False, drop_last=False, prefetch=0)
     sizes = [b["chosen"].shape[0] for b in loader.iterate(epochs=1)]
     assert sizes == [16, 16, 8]
+
+
+# ---------------------------------------------------------------------------------------------------------------
+# Optional provenance keys (interfaces.md section 2.2)
+# ---------------------------------------------------------------------------------------------------------------
+
+
+def test_missing_optional_keys_load_with_defaults(tmp_path):
+    arrays = make_synthetic_shard(20, 11, seed=4)
+    assert not set(S.OPTIONAL_FIELDS) & set(arrays)
+    save_shard(tmp_path / "s.npz", arrays)
+    shard = Shard.load(tmp_path / "s.npz")
+    assert (shard.a["source"] == S.SOURCE_GENERATOR).all() and shard.a["source"].dtype == np.int8
+    assert (shard.a["ours"] == 0).all() and (shard.a["policy"] == -1).all() and shard.a["policy"].dtype == np.int16
+    assert np.isnan(shard.a["behaviour_logp"]).all() and shard.a["behaviour_logp"].dtype == np.float32
+    assert shard.policy_ids == []
+    assert list(shard.game_key) == [f"gen:{s}" for s in arrays["seed"]]
+    b = shard.batch(np.arange(5))
+    assert b["source"].shape == b["ours"].shape == b["behaviour_logp"].shape == (5,)
+    assert (b["source"] == 0).all() and np.isnan(b["behaviour_logp"]).all()
+    to_torch(b)  # all of it converts
+
+
+def test_optional_keys_round_trip(tmp_path):
+    arrays = make_synthetic_shard(6, 11, seed=5)
+    arrays["source"] = np.array([2, 2, 2, 2, 2, 2])
+    arrays["ours"] = np.array([1, 0, 1, 1, 0, 1])
+    arrays["behaviour_logp"] = np.array([-0.5, np.nan, -1.0, -2.0, np.nan, -0.1])
+    arrays["policy"] = np.array([0, -1, 1, 0, -1, 1])
+    arrays["policy_ids"] = np.array(["run_a@100", "run_b@7"])
+    arrays["game_key"] = np.array(["live:a", "live:a", "live:a", "live:ü", "live:ü", "live:ü"])
+    save_shard(tmp_path / "s.npz", arrays)
+    shard = Shard.load(tmp_path / "s.npz")
+    assert shard.policy_ids == ["run_a@100", "run_b@7"]
+    assert list(shard.game_key) == list(arrays["game_key"])
+    np.testing.assert_array_equal(shard.a["ours"], arrays["ours"])
+    b = shard.batch(np.array([2, 1]))
+    np.testing.assert_array_equal(b["ours"], [1, 0])
+    assert b["behaviour_logp"][0] == -1.0 and np.isnan(b["behaviour_logp"][1])
+
+
+def test_bad_optional_keys_are_refused():
+    arrays = make_synthetic_shard(4, 11, seed=6)
+    with pytest.raises(ValueError, match="source has shape"):
+        Shard({**arrays, "source": np.zeros(3, np.int8)})
+    with pytest.raises(ValueError, match="policy_id"):
+        Shard({**arrays, "policy": np.array([0, 0, 0, 0]), "policy_ids": np.array([], dtype="<U1")})
+    with pytest.raises(ValueError, match="game_key has shape"):
+        Shard({**arrays, "game_key": np.array(["a", "b"])}).game_key
+
+
+def test_v1_shard_still_loads_with_defaults(tmp_path):
+    arrays = make_synthetic_shard(10, 11, seed=7)
+    np.savez(tmp_path / "old.npz", **v1_of(arrays))
+    shard = Shard.load(tmp_path / "old.npz")
+    assert shard.source_version == 1 and (shard.a["source"] == 0).all() and len(shard.game_key) == 10
