@@ -6,12 +6,15 @@ place one plugs in.
 
 ## Setup of every game
 
-1v1, Small map, Continents, Domination, 50-turn limit (adjudicated on score when the limit is hit, as in
-`polyai-gen`). Two different tribes are drawn from the 13 (12 normal plus Cymanti) per seed, in `eval_setup`
-(`src/lib.rs`). Seeds start at 1,000,000 and the runner refuses lower ones (`EVAL_SEED_MIN`; seeds 1 to 100,000 are
-training data). Every seed is played twice with the agents swapping seats: the map and the tribe in each seat stay
-the same, so the swap removes the seat and tribe advantage from the comparison. Games are deterministic given the
-agents (random and MCTS are seeded from the game seed and seat).
+The main suite is **1v1 Domination across varied maps** (objective v1.1: win by elimination only, points never
+decide). Each seed draws, in `eval_setup` (`src/lib.rs`), a map size (Tiny, Small or Normal), a preset (Dryland, Lakes,
+Continents, Pangea or Archipelago) and two different tribes from the 13 (12 normal plus Cymanti). The compute cap is
+`DEFAULT_TURN_LIMIT` = 150 turns: a game still running then, with both players alive, is a **draw** (`capped`), never
+decided on score, and counts as half a win for each side. Seeds start at 1,000,000 and the runner refuses lower ones
+(`EVAL_SEED_MIN`; seeds 1 to 100,000 are training data). Every seed is played twice with the agents swapping seats: the
+map and the tribe in each seat stay the same, so the swap removes the seat and tribe advantage from the comparison.
+Games are deterministic given the agents (random and MCTS are seeded from the game seed and seat). FFA tables (one
+model against two or three retail seats) are a second suite and not built yet.
 
 ## Agents
 
@@ -48,79 +51,72 @@ Every pair of the listed agents plays every seed twice. `--threads` is capped at
 and games already in the file are skipped, so an interrupted run resumes and a longer `--seeds` extends a run. Data
 goes under `/kvm/polytopia-ai-data/arena/`, never into git.
 
-JSONL fields: `seed, swap, agents` (seat 0 first), `tribes, setup, winner` (seat, `-1` none), `scores, turns,
-adjudicated, over, commands, illegal, wall_ms, think_ms` (per seat, time inside `pick`), `engine` (engine commit,
-`-dirty` if the working tree had changes), `game_version`.
+JSONL fields: `seed, swap, agents` (seat 0 first), `tribes, setup` (`size, preset, mode, turn_limit`), `winner`
+(seat that won by elimination; **`-1` for a draw**), `scores` (logged, never decisive), `turns, capped` (true when the
+game reached the turn cap with both players alive, which is exactly a draw), `over, commands, illegal, wall_ms,
+think_ms` (per seat, time inside `pick`), `engine` (engine commit, `-dirty` if the working tree had changes),
+`game_version`. Lines written before the change (suite v1: Small, Continents, 50 turns) have `adjudicated` instead of
+`capped` and the top-score player as `winner`; `elo.py` reads those as draws.
 
-`tools/elo.py FILE...` prints per pair: games, W-L-D, win rate with a Wilson 95% interval (a draw is half a win),
-mean score margin, share adjudicated and seconds per game; then a Bradley-Terry fit anchored at `retail:normal` =
-1000, with 95% intervals from a bootstrap over seeds (300 resamples, both seatings of a seed kept together). A weak
-prior of one drawn game per pair keeps unbeaten agents finite, so a 100-0 pair still gives a finite rating whose
-interval is wide. Tests: `/kvm/polytopia/.venv/bin/python -m pytest tools/test_elo.py`.
+`tools/elo.py FILE...` prints per pair: games, W-L-D, win rate with a Wilson 95% interval (a draw is half a win), the
+draw rate, seconds per game and, as an information-only last column, the mean final score difference; then a
+Bradley-Terry fit (a draw counts half a win each way) anchored at `retail:normal` = 1000, with 95% intervals from a
+bootstrap over seeds (300 resamples, both seatings of a seed kept together). A weak prior of one drawn game per pair
+keeps unbeaten agents finite, so a 100-0 pair still gives a finite rating whose interval is wide. The headline says
+how many games were draws. Tests: `/kvm/polytopia/.venv/bin/python -m pytest tools/test_elo.py`.
 
-## First table (2026-10-20)
+## Retail table on the 1v1 suite (2026-10-21)
 
-Engine commit `729db890c58f` (working tree dirty), game version 123. Round robin of random, the four retail
-difficulties and `mcts:50` over 50 seeds x 2 seatings = 100 games per pair, plus `mcts:50:topk=5` (20 seeds, against
-Easy and Normal) and `mcts:200` (20 seeds, against Easy). 1,620 games, 15% adjudicated at the turn limit overall.
-Raw data: `/kvm/polytopia-ai-data/arena/all.jsonl` (merged), `rr.jsonl`, `mcts_topk.jsonl`, `mcts200.jsonl`.
+Engine commit `729db890c58f` (working tree dirty), game version 123. Round robin of the four retail difficulties over
+200 seeds x 2 seatings = 400 games per pair, 2,400 games, 13 draws (0.5%) at the 150-turn cap. Run:
+`nice -n 10 target/release/polyai-arena --agents retail:easy,retail:normal,retail:hard,retail:crazy --seeds 200
+--threads 16 --out /kvm/polytopia-ai-data/arena-v2/retail.jsonl` (about 55 s). Raw data and the report:
+`/kvm/polytopia-ai-data/arena-v2/`.
 
 | agent | Elo | 95% CI |
 |---|---|---|
-| retail:crazy | 1418 | 1359 to 1492 |
-| retail:hard | 1237 | 1192 to 1294 |
+| retail:crazy | 1472 | 1430 to 1523 |
+| retail:hard | 1282 | 1243 to 1324 |
 | retail:normal (anchor) | 1000 | 1000 to 1000 |
-| mcts:50:topk=5 | 914 | 845 to 983 |
-| retail:easy | 785 | 730 to 827 |
-| mcts:200 | 267 | 199 to 340 |
-| mcts:50 | 181 | 132 to 216 |
-| random | -40 | -115 to 20 |
+| retail:easy | 697 | 654 to 735 |
 
-Difficulties order as expected, Easy < Normal < Hard < Crazy, with every adjacent gap far outside the intervals
-(Crazy beats Hard 73%, Hard beats Normal 80%, Normal beats Easy 79%). Pairs:
-
-| pair | games | W-L-D (first) | win rate | 95% CI | mean margin | adjudicated | s/game |
+| pair | games | W-L-D (first) | win rate | 95% CI | draws | s/game | score diff (info) |
 |---|---|---|---|---|---|---|---|
-| retail:crazy vs retail:easy | 100 | 100-0-0 | 100.0% | 96.3 to 100.0 | +10549 | 3% | 0.2 |
-| retail:crazy vs retail:hard | 100 | 73-27-0 | 73.0% | 63.6 to 80.7 | +5091 | 17% | 0.5 |
-| retail:crazy vs retail:normal | 100 | 93-7-0 | 93.0% | 86.3 to 96.6 | +9692 | 13% | 0.3 |
-| retail:easy vs retail:hard | 100 | 6-94-0 | 6.0% | 2.8 to 12.5 | -8967 | 11% | 0.3 |
-| retail:easy vs retail:normal | 100 | 21-79-0 | 21.0% | 14.2 to 30.0 | -6583 | 46% | 0.4 |
-| retail:hard vs retail:normal | 100 | 80-20-0 | 80.0% | 71.1 to 86.7 | +6427 | 26% | 0.4 |
-| random vs retail:crazy | 100 | 0-100-0 | 0.0% | 0.0 to 3.7 | -5512 | 0% | 0.1 |
-| random vs retail:easy | 100 | 0-100-0 | 0.0% | 0.0 to 3.7 | -5449 | 0% | 0.1 |
-| random vs retail:hard | 100 | 0-100-0 | 0.0% | 0.0 to 3.7 | -5241 | 0% | 0.1 |
-| random vs retail:normal | 100 | 0-100-0 | 0.0% | 0.0 to 3.7 | -5435 | 0% | 0.1 |
-| mcts:50 vs random | 100 | 80-20-0 | 80.0% | 71.1 to 86.7 | +2135 | 99% | 41.9 |
-| mcts:50 vs retail:crazy | 100 | 0-100-0 | 0.0% | 0.0 to 3.7 | -5276 | 0% | 9.4 |
-| mcts:50 vs retail:easy | 100 | 0-100-0 | 0.0% | 0.0 to 3.7 | -5426 | 0% | 31.0 |
-| mcts:50 vs retail:hard | 100 | 0-100-0 | 0.0% | 0.0 to 3.7 | -4907 | 0% | 10.0 |
-| mcts:50 vs retail:normal | 100 | 0-100-0 | 0.0% | 0.0 to 3.7 | -5185 | 0% | 18.1 |
-| mcts:200 vs retail:easy | 40 | 0-40-0 | 0.0% | 0.0 to 8.8 | -5031 | 0% | 131.0 |
-| mcts:50:topk=5 vs retail:easy | 40 | 28-12-0 | 70.0% | 54.6 to 81.9 | +3960 | 48% | 216.5 |
-| mcts:50:topk=5 vs retail:normal | 40 | 15-25-0 | 37.5% | 24.2 to 53.0 | -2527 | 25% | 170.3 |
+| retail:crazy vs retail:easy | 400 | 398-1-1 | 99.6% | 98.4 to 99.9 | 0% | 0.3 | +9701 |
+| retail:crazy vs retail:hard | 400 | 288-108-4 | 72.5% | 67.9 to 76.6 | 1% | 0.5 | +5606 |
+| retail:crazy vs retail:normal | 400 | 381-15-4 | 95.8% | 93.3 to 97.3 | 1% | 0.4 | +10267 |
+| retail:easy vs retail:hard | 400 | 12-388-0 | 3.0% | 1.7 to 5.2 | 0% | 0.3 | -8729 |
+| retail:easy vs retail:normal | 400 | 62-337-1 | 15.6% | 12.4 to 19.5 | 0% | 0.7 | -9532 |
+| retail:hard vs retail:normal | 400 | 322-75-3 | 80.9% | 76.7 to 84.4 | 1% | 0.5 | +6662 |
 
-Scores are in the engine's score units (hundreds per city and so on), so margins of thousands are normal.
+The order is Easy < Normal < Hard < Crazy with every gap far outside the intervals, as in the first table, and the
+spread is a little wider than on the old Small/Continents suite (Crazy 1472 against 1418, Easy 697 against 785).
+Draws are rare (0.5% of games, at most 1% in any pair): retail games between these agents end by elimination long
+before the cap. The 13 draws fall on 11 of the 200 seeds, mostly Normal maps; a first run of 50 seeds had none.
 
-### Reading it
+### Older results (suite v1: Small, Continents, 50 turns, adjudicated on score)
 
-- **Adjudication.** 15% of all games hit the 50-turn limit; among retail pairs it is 3% to 46% (highest for Easy v
-  Normal, 46%, where neither side finishes the other quickly). The other games end under the Domination rule
-  before the limit. Random loses before the limit every time, so it is never adjudicated; random against the passive plain
-  MCTS is adjudicated in 99% of games.
-- **Retail speed.** A retail game takes 0.1 to 0.5 s of CPU, so a 1,000-game retail table takes about 13 s on 20
+The first table (2026-10-20) used the old suite and is not comparable with the one above: 15% of its games were
+adjudicated, up to 46% for Easy v Normal, and the adjudicated winner was the top-score player, which is no longer a
+result. Its numbers for the agents not re-run are kept for reference only: `mcts:50:topk=5` 914, `mcts:200` 267,
+`mcts:50` 181, random -40 Elo (anchor `retail:normal` = 1000; retail Crazy 1418, Hard 1237, Easy 785). The MCTS notes
+below still hold qualitatively but should be re-measured on the new suite before they are quoted.
+
+### Reading it (from the first table)
+
+- **Retail speed.** A retail game takes 0.1 to 0.7 s of CPU, so a 1,000-game retail table takes under a minute on 16
   threads. The cost of a table is all in MCTS.
 - **MCTS speed.** Plain random-rollout MCTS spends about 90 ms per own command at 50 iterations and about 380 ms at
   200 (rough: think time divided by half the game's commands), so a game costs 20 to 130 s of CPU
   (`mcts:50`: 22 s thinking per game on average, `mcts:200`: 131 s). `topk=5` spends about 280 ms per command at 50
-  iterations (193 s per game) because of the retail candidate scoring.
-- **MCTS strength.** Plain MCTS loses every game to every retail difficulty (0 of 440 games) and only beats random, in a
-  slow adjudicated game. More iterations help little (`mcts:200` 267 vs `mcts:50` 181 Elo, different opponents so
-  only roughly comparable). Pruning the root to the retail AI's top 5 candidates is the big gain: `mcts:50:topk=5`
-  beats Easy 70% and loses to Normal, about 914 Elo, but this rests on 20 seeds and mostly measures the retail
-  candidate list. The cheating (full information) is part of that number.
-- **Caveats.** Elo values for agents that win or lose every game (random, plain MCTS against retail) are set by the
-  prior and are only ordinal. The Wilson interval of a 0-100 pair (0 to 3.7%) is the honest statement there. Pairs
-  involving the topk and 200-iteration variants have 40 games, not 100. The engine ranks Domination winners by
-  score, whereas retail may rank by city count (ledger to-do 8e4f7017); this could shift who wins an adjudicated
-  game, and so the absolute win rates, but it applies equally to every agent.
+  iterations (193 s per game) because of the retail candidate scoring. The 150-turn cap lets an MCTS game run longer
+  than the 50-turn limit it was timed under, so its cost per game on the new suite is higher and unmeasured.
+- **MCTS strength.** Plain MCTS lost every game to every retail difficulty (0 of 440 games) and only beat random, in a
+  slow game decided on score. More iterations help little. Pruning the root to the retail AI's top 5 candidates is the
+  big gain: `mcts:50:topk=5` beat Easy 70% and lost to Normal, but this rests on 20 seeds and mostly measures the
+  retail candidate list. The cheating (full information) is part of that number. Under elimination-only scoring a
+  passive agent no longer wins by holding more points, so the MCTS-versus-random numbers will change.
+- **Caveats.** Elo values for agents that win or lose every game are set by the prior and are only ordinal; the Wilson
+  interval of a 0-100 pair (0 to 3.7%) is the honest statement there. The engine ranks Domination winners by score,
+  whereas retail may rank by city count (ledger to-do 8e4f7017); this no longer matters for results here, since the
+  engine's top-score winner is not used.

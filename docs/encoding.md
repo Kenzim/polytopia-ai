@@ -1,9 +1,10 @@
-# polyai encoding spec (version 1)
+# polyai encoding spec (version 2)
 
 Authority for the tensor, action and shard layout. The Rust constants live in `crates/polyai-core/src/encoding.rs`
 and `action.rs`; this file is what `python/polyai/schema.py` must match. Where this file and `design.md` disagree,
 this file wins (the differences from `schema.py` are listed at the end). Ids come from the embedded rules data of game
-version 123 (logic data v28); `ENCODING_VERSION = 1` is stored in every record and shard.
+version 123 (logic data v28); `ENCODING_VERSION = 2` is stored in every shard (and is the `version` of the Python module).
+The changes from version 1 are collected in section 11; read that first when moving code from v1 to v2.
 
 ## 1. Player slots
 
@@ -88,8 +89,8 @@ So `F_TILE = 41`, columns 0..9 categorical, 9..41 numeric. This is the same colu
 | 14 | 1 | my income per turn / 10 |
 | 15 | 1 | my score / 1000 |
 | 16 | 1 | turn number / 50 |
-| 17 | 1 | turns left / 50 (0 when there is no limit) |
-| 18 | 1 | has a turn limit (0 / 1) |
+| 17 | 1 | turns left / 50: always 0 in version 2 (the turn limit of a Domination game is a compute cap, see section 11) |
+| 18 | 1 | has a turn limit: always 0 in version 2 |
 | 19 | 1 | game mode / 5 (Domination 2) |
 | 20 | 1 | map width / 30 |
 | 21 | 1 | living players / 8 |
@@ -171,12 +172,14 @@ tribes), and two different commands never share a tuple.
 
 For every recorded position (a decision of a player who is not Nature):
 
-- `winner`: slot (relative to the mover) of the engine's winner, `-1` when nobody won;
-- `margin`: final score of me minus the best other player's final score, raw points (`Engine::score`);
-- `margin5`: the same difference measured at the start of the turn 5 turns later (the final value if the game ended
-  sooner);
-- `final_scores`: final scores by slot, float32[8], zeros for absent slots;
-- `adjudicated`: 1 when the game ended at the turn limit with more than one player alive.
+- `winner`: slot (relative to the mover) of the player who won by elimination, `-1` when nobody won. Points never
+  decide a game: when the game reaches the turn cap with more than one player alive it is a draw, `winner = -1` for
+  every position of the game, and the engine's own top-score winner is discarded;
+- `final_scores`: final scores by slot, float32[8], zeros for absent slots. Logged for analysis only; it is not a
+  target;
+- `capped`: 1 when the game ended without an elimination winner: it reached the turn cap with more than one player
+  alive (or was cut off by the generator's command safety cap). `capped == 1` exactly when `winner == -1`. Positions of
+  a capped game still train the policy; they carry no value target.
 
 ## 6. Shards (`.npz`, deflate)
 
@@ -192,16 +195,14 @@ One shard holds one map size; `N` positions, `T` = total legal-list length, `K =
 | chosen | int16 | [N] | index of the played command inside its legal list |
 | cand_idx | int16 | [N, 16] | legal-list indices of the AI's best candidates, best first, -1 padded |
 | cand_score | float32 | [N, 16] | their scores (noise free) |
-| winner | int8 | [N] | section 5 |
-| margin | float32 | [N] | section 5 |
-| margin5 | float32 | [N] | section 5 |
-| final_scores | float32 | [N, 8] | section 5 |
-| adjudicated | int8 | [N] | section 5 |
+| winner | int8 | [N] | section 5 (`-1` for a draw) |
+| final_scores | float32 | [N, 8] | section 5 (logged only) |
+| capped | int8 | [N] | section 5 |
 | turn | int16 | [N] | game turn of the position |
 | seed | int32 | [N] | game seed (training seeds 1..100000) |
 | cmd_index | int32 | [N] | index of the command in the game record |
 | difficulty | int8 | [N] | mover's difficulty: 0 easy, 1 normal, 2 hard, 3 crazy |
-| version | int32 | [1] | `ENCODING_VERSION` |
+| version | int32 | [1] | `ENCODING_VERSION` (2) |
 
 Only a fraction of the positions of each game is written (default one in four, chosen by a seeded hash), because
 neighbouring commands of a turn are strongly correlated. `ai_candidates()` is only evaluated for written positions.
@@ -209,7 +210,11 @@ neighbouring commands of a turn are strongly correlated. `ai_candidates()` is on
 ## 7. Game records
 
 `GameRecord { format, engine_version, engine_commit, setup, commands, outcome }`, one binary file per generator
-thread batch (`records-<n>.polyrec`, a length-prefixed list). The setup holds the seed, map size, preset, game mode,
+thread batch (`records-<n>.polyrec`, a length-prefixed list). Record `format` is 2 (v2 writes it, v1 and v2 files
+load). The layout is unchanged; what changed is the meaning of the outcome: flag bit 1 is `capped` (it was
+`adjudicated`) and a capped game has no winners. A format 1 record with that bit set stored the engine's top-score
+winner; the loader sets `capped`, empties `winners` and keeps the scores, so an old adjudicated game is a draw
+(`bc-v1` relabelling needs nothing else). The setup holds the seed, map size, preset, game mode,
 turn limit and per seat tribe and difficulty; the command list holds every command of every player (Nature's
 `EndTurn` included) in order. `replay(&record)` rebuilds the game and must reproduce the final scores and winners.
 The engine commit is the `git rev-parse` of `../engine` at build time, with `-dirty` appended when it has local
@@ -218,9 +223,12 @@ changes.
 ## 8. `polyai-gen`
 
 `target/release/polyai-gen --out DIR --games N [--seed-start S] [--threads T] [--keep K] [--shard-size P]
-[--difficulty D]` plays games `S..S+N-1` (setup drawn from the seed by `GameSetup::sample`: 2 to 4 players, 13 tribes,
-Tiny/Small/Normal, five presets, per-seat difficulty weights 10/20/35/35 for easy/normal/hard/crazy, Domination, 50 turns)
-with every seat on the retail AI. `T` is capped at 24 and is the number of worker threads (shard writing happens on the
+[--difficulty D] [--turn-limit L] [--players 2:55,3:25,4:20]` plays games `S..S+N-1` (setup drawn from the seed by
+`GameSetup::sample`: 2 to 4 players weighted 55/25/20, 13 tribes, Tiny/Small/Normal, five presets, per-seat difficulty
+weights 10/20/35/35 for easy/normal/hard/crazy, Domination, a 150-turn compute cap) with every seat on the retail AI.
+`--players` takes `count:weight` pairs (`2:1,4:3`) or plain counts (`2,3`, uniform); the weights live in
+`SetupSpec.n_player_weights` (empty means uniform, the old behaviour for an explicit list). A game still running at
+the cap is a draw (`capped = 1`, `winner = -1`); the summary prints the number of capped games and the player-count mix. `T` is capped at 24 and is the number of worker threads (shard writing happens on the
 workers, so there are no others). Seeds must lie in 1..=100000; evaluation seeds (>= 1,000,000) are refused. A shard
 is written whenever one map size has `P` positions (default 50000), so one run writes several shards per size and a
 final partial one. `--keep K` writes one position in `K` (default 4).
@@ -228,14 +236,17 @@ final partial one. `--keep K` writes one position in `K` (default 4).
 ## 9. `polyai_engine` (Python, built with `maturin develop --release` in `crates/polyai-py`)
 
 - Constants: `ENCODING_VERSION`, `F_TILE`, `G_DIM`, `N_KINDS`, `TRIBES`, `KIND_NAMES`, `CAT_VOCABS`, `ENGINE_COMMIT`.
-- `sample_setup(seed, n_players=None, sizes=None, presets=None, difficulty=None, turn_limit=50)` returns a setup dict
+- `sample_setup(seed, n_players=None, sizes=None, presets=None, difficulty=None, turn_limit=150)` returns a setup dict
   `{seed, size, preset, mode, turn_limit, seats: [(tribe, difficulty)]}`; size ids 1 tiny, 2 small, 3 normal.
+  `n_players` is a list (uniform over it, as before) or a dict `{count: weight}`; `None` is the default 55/25/20 mix
+  of 2, 3 and 4 players. `turn_limit` is the compute cap (default 150): a game still running then is a draw.
 - `Game.sample(seed, ...)` / `Game.from_setup(dict)`: `legal_actions()` int16[N, 4], `encode()` (tiles, globals),
   `step(index)`, `step_action((kind, arg, src, dst))`, `ai_move()`, `play_ai_move()`, `ai_candidates(k=16)`,
-  `current_seat()` (`None` on Nature's turn, call `play_ai_move()`), `scores()`, `winners()`, `is_over()`, `clone()`,
+  `current_seat()` (`None` on Nature's turn, call `play_ai_move()`), `scores()`, `winners()` (empty for a draw), `capped()` (`adjudicated()` is an alias for one version), `is_over()`,
+  `clone()`,
   `record()` (bytes of the section 7 format). Seats are indices into the setup's seat list.
 - `VecEnv(n_games, seed_start=1, model_seats="rotate" | "all" | [seats], split="train" | "eval", n_players, sizes,
-  presets, difficulty, turn_limit=50, threads=24, auto_reset=True)`. Seats the model does not control (and Nature) are
+  presets, difficulty, turn_limit=150, threads=24, auto_reset=True)`. Seats the model does not control (and Nature) are
   played by the retail AI at their handicap on a rayon pool (at most 24 threads, GIL released in `step`). `"rotate"`
   gives each game one model seat, `seed % n_players`. `split="train"` draws seeds from 1..=100000 (wrapping),
   `"eval"` needs `seed_start >= 1000000`.
@@ -244,7 +255,8 @@ final partial one. `--keep K` writes one position in `K` (default 4).
     finished games)`. A dict has `game`, `seat`, `n_players`, `turn`, `seed` (all `[B]`), `tiles` `[B, H, W, 41]`,
     `globals` `[B, 247]`, `act_off` `[B + 1]`, `actions` `[T, 4]`.
   - A finished game is a dict with `game, seed, n_players, tribes, difficulties, model_seats, winners` (seats),
-    `scores` (by seat), `turns, adjudicated, decisions, commands`. With `auto_reset` the slot restarts at once on the
+    `scores` (by seat), `turns, capped, decisions, commands`, and `adjudicated` (a copy of `capped`, kept for one
+    version). `winners` is empty and `capped` true for a draw at the cap. With `auto_reset` the slot restarts at once on the
     next seed and shows up in the returned observations.
   - Observations are only for games awaiting the model; it is up to the caller to give every awaiting game a choice
     (a game that gets none simply waits).
@@ -272,7 +284,46 @@ shard keys and dtypes of the first eleven rows of the section 6 table.
    section 4.
 9. **Action `arg` of unit commands** is the stack rank (0 except for a Giant with a Cloak on one tile; Upgrade keeps the
    target type), so every arg still fits `ARG_MAX = 64`.
-10. **Extra shard keys:** `final_scores float32[N, 8]`, `adjudicated int8[N]`, `seed int32[N]`, `cmd_index int32[N]`,
+10. **Extra shard keys:** `final_scores float32[N, 8]`, `capped int8[N]` (v1: `adjudicated`), `seed int32[N]`, `cmd_index int32[N]`,
    `difficulty int8[N]`, `version int32[1]`. `K = 16` candidate slots.
 11. **`winner`** is a relative slot 0..7 or -1; the Nature slot 8 never wins, so the winner head can be 8 wide, but 9 is
     harmless.
+
+## 11. Version 1 to version 2 (objective v1.1: win by elimination only)
+
+Points never decide a game. The bot wins by eliminating the other players, a game that is not decided by the turn cap
+is a draw, and the cap exists for compute only.
+
+| what | v1 | v2 |
+|---|---|---|
+| `ENCODING_VERSION`, shard `version` | 1 | **2** |
+| tile tensor, action tuples, `G_DIM = 247`, global layout | | unchanged (same shapes and offsets) |
+| globals 17 (turns left) and 18 (has limit) | filled when `turn_limit > 0` | **always 0** in Domination; the slots stay so offsets do not move |
+| turn cap | 50, then the engine's top-score player won (adjudication) | **150**, then a draw: `winner = -1`, no winner of any kind |
+| shard `adjudicated` | int8, 1 at the limit with several alive | replaced by **`capped`** (int8): 1 for a draw, exactly when `winner == -1` |
+| shard `margin`, `margin5` | float32 labels | **removed** (points are not a target) |
+| shard `final_scores` | float32[N, 8] | unchanged, logged only |
+| shard `winner` | slot or -1; a game adjudicated at the limit carried the top-score player's slot | slot of the elimination winner, **-1 for every position of a capped game** |
+| Python `Game.winners()`, finished-game `winners` | engine winners (top score at the limit) | empty for a draw |
+| finished-game dict | `adjudicated` | **`capped`** (and `adjudicated`, an alias for one version) |
+| `turn_limit` default of `sample_setup`, `Game.sample`, `VecEnv` | 50 | **150** |
+| setup sampler player counts | uniform over 2, 3, 4 | **55% / 25% / 20%** (an explicit list is still uniform; a dict `{count: weight}` is weighted) |
+| record format | 1 | **2**, same layout; flag bit 1 is `capped`, a capped game has no winners; v1 files load with the adjudicated winner dropped |
+| arena JSONL | `adjudicated`, winner = top-score player | `capped`, `winner` -1 for a draw; 1v1 on Tiny/Small/Normal, five presets (docs/arena.md) |
+
+What the Python side should do:
+
+- Read `version` from the shard and accept 1 and 2. For a v1 shard use `adjudicated` where v2 has `capped`, and treat
+  `adjudicated == 1` as `winner = -1` (the stored winner of an adjudicated game is the top-score player, not a
+  result). `margin` and `margin5` exist only in v1 shards; do not train on them.
+- Value target: win/loss from `winner` only; skip the value loss where `winner == -1` (equivalently `capped == 1`).
+  The policy loss still uses those positions.
+- Do not rely on the turn limit as a feature: globals 17 and 18 are 0 in every game.
+- `bc-v1` (50-turn limit, adjudication) keeps its shape; relabelling is `winner = -1 where adjudicated == 1`.
+
+Measured basis for the cap (retail vs retail, 300-turn limit, 600 games over the sampler mix and 600 1v1 games, train
+seeds, Tiny/Small/Normal; elimination turn = the turn the game ended): median 38 turns (mix) and 33 (1v1), p90 68 and
+57; still alive after turn 100: 3.2% and 2.2%, after 150: 1.8% and 1.3%, after 200: 1.3% and 1.2%, after 300: 1.2% and
+1.0%. The tail beyond 150 is almost all games that never end (7 of 8 games alive at 200 were still alive at 300), and
+a stuck game costs 6 to 11 s of CPU at 300 turns against 0.5 to 0.9 s for an average game. The cap is therefore 150: a
+draw rate of about 1.3% (1v1) to 1.8% (mix) with 4-player games the worst (3.9%).
