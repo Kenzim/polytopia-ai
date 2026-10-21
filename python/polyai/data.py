@@ -1,6 +1,9 @@
 """Shard loading, batching by map size, 8-fold symmetry augmentation and synthetic shards.
 
-Shard layout is `schema.SHARD_FIELDS`. One shard holds one map size, so every batch drawn from a shard has a single
+Shard layout is `schema.SHARD_FIELDS` (encoding v2). Version 1 shards are read too and relabelled to the v2 meaning:
+games that ended by top-score adjudication become draws (`winner = -1`, `capped = 1`), the score margins are dropped and
+the "turns left" global, which only told the model about a 50-turn limit, is zeroed as v2 does for Domination.
+One shard holds one map size, so every batch drawn from a shard has a single
 (H, W) and needs no board padding. Only the legal-action lists are padded.
 """
 
@@ -85,32 +88,56 @@ def save_shard(path: str | Path, arrays: dict[str, np.ndarray]) -> None:
     np.savez(path, **{k: np.asarray(arrays[k], dtype=S.SHARD_FIELDS[k].dtype) for k in S.REQUIRED_FIELDS})
 
 
+def relabel_v1(arrays: dict[str, np.ndarray]) -> dict[str, np.ndarray]:
+    """A version 1 shard in the version 2 meaning (see the module docstring). Does not modify its input."""
+    adjudicated = np.asarray(arrays["adjudicated"]).astype(np.int8)
+    out = {k: arrays[k] for k in S.REQUIRED_FIELDS if k in arrays}
+    out["winner"] = np.where(adjudicated == 1, -1, arrays["winner"]).astype(np.int8)
+    out["capped"] = (adjudicated == 1).astype(np.int8)
+    g = np.array(arrays["globals"], dtype=np.float32)
+    g[:, S.G_TURNS_LEFT] = 0.0
+    out["globals"] = g
+    out["version"] = np.array([S.ENCODING_VERSION], np.int32)
+    return out
+
+
 class Shard:
-    """One loaded shard held in memory."""
+    """One loaded shard held in memory, always in the version 2 meaning (`source_version` says what was read)."""
 
     def __init__(self, arrays: dict[str, np.ndarray]):
-        missing = [k for k in S.REQUIRED_FIELDS if k not in arrays]
+        if "version" not in arrays:
+            raise ValueError("shard has no version field")
+        version = int(np.asarray(arrays["version"]).reshape(-1)[0])
+        if version not in S.SUPPORTED_VERSIONS:
+            raise ValueError(f"shard has encoding version {version}, this package reads {list(S.SUPPORTED_VERSIONS)}")
+        required = S.V1_REQUIRED_FIELDS if version == 1 else S.REQUIRED_FIELDS
+        missing = [k for k in required if k not in arrays]
         if missing:
-            raise ValueError(f"shard is missing fields: {missing}")
+            raise ValueError(f"version {version} shard is missing fields: {missing}")
+        if version == 1:
+            arrays = relabel_v1(arrays)
+        self.source_version = version
         self.a = arrays
         n, h, w, f = arrays["tiles"].shape
         if f != S.F_TILE:
             raise ValueError(f"tiles have {f} fields, schema says {S.F_TILE}")
         if arrays["globals"].shape != (n, S.G_DIM):
             raise ValueError(f"globals have shape {arrays['globals'].shape}, schema says ({n}, {S.G_DIM})")
-        version = int(np.asarray(arrays["version"]).reshape(-1)[0])
-        if version != S.ENCODING_VERSION:
-            raise ValueError(f"shard has encoding version {version}, this package reads {S.ENCODING_VERSION}")
         if arrays["act_off"].shape != (n + 1,):
             raise ValueError("act_off must have N + 1 entries")
         if arrays["actions"].shape != (int(arrays["act_off"][-1]), 4):
             raise ValueError("actions must have act_off[-1] rows of 4")
+        if ((arrays["capped"] == 1) & (arrays["winner"] >= 0)).any():
+            raise ValueError("a capped game has a winner")
         self.n, self.h, self.w = n, h, w
 
     @classmethod
     def load(cls, path: str | Path) -> Shard:
         with np.load(path) as z:
-            return cls({k: z[k] for k in S.REQUIRED_FIELDS})
+            if "version" not in z.files:
+                raise ValueError(f"{path} has no version field")
+            wanted = S.V1_REQUIRED_FIELDS if int(z["version"].reshape(-1)[0]) == 1 else S.REQUIRED_FIELDS
+            return cls({k: z[k] for k in wanted if k in z.files})
 
     def __len__(self) -> int:
         return self.n
@@ -152,8 +179,6 @@ class Shard:
             "cand_idx": a["cand_idx"][idx].astype(np.int64),
             "cand_score": a["cand_score"][idx],  # may hold +inf; compute_losses deals with it
             "winner": a["winner"][idx].astype(np.int64),
-            "margin": a["margin"][idx],
-            "margin5": a["margin5"][idx],
             "turn": a["turn"][idx].astype(np.int64),
         }
 
@@ -255,7 +280,7 @@ def make_synthetic_shard(
     n: int, size: int = 16, seed: int = 0, n_cand: int = S.N_CANDIDATES, max_actions: int = 40
 ) -> dict:
     """Random positions with a learnable structure: the chosen action is the legal one with the highest hidden score
-    that depends on its kind, argument and the terrain of its source tile; the winner is a function of the globals.
+    that depends on its kind, argument and the terrain of its source tile; the winner is a function of the globals (-1 for the few capped games).
     Like the real data, the candidate list holds only some of the positions' top actions, `chosen` is sometimes not
     its first entry, some scores are +inf and padding scores are 0."""
     rng = np.random.default_rng(seed)
@@ -301,16 +326,15 @@ def make_synthetic_shard(
                 cand_score[i, 0] = np.inf
 
     winner = np.where(globals_[:, 0] > 0, 0, 1 + (globals_[:, 1] > 0)).astype(np.int8)
-    winner[rng.random(n) < 0.05] = -1
-    margin = (globals_[:, 2] * 3000 + rng.normal(0, 100, n)).astype(np.float32)
-    margin5 = (margin * 0.6).astype(np.float32)
+    capped = (rng.random(n) < 0.05).astype(np.int8)
+    winner[capped == 1] = -1  # a capped game is a draw
     turn = rng.integers(1, 50, size=n).astype(np.int16)
     final_scores = np.zeros((n, 8), np.float32)
-    final_scores[:, 0] = np.abs(margin)
+    final_scores[:, 0] = np.abs(globals_[:, 2]) * 3000
     return {
         "tiles": tiles, "globals": globals_, "act_off": off, "actions": actions, "chosen": chosen,
-        "cand_idx": cand_idx, "cand_score": cand_score, "winner": winner, "margin": margin, "margin5": margin5,
-        "final_scores": final_scores, "adjudicated": (turn >= 50).astype(np.int8), "turn": turn,
+        "cand_idx": cand_idx, "cand_score": cand_score, "winner": winner, "final_scores": final_scores,
+        "capped": capped, "turn": turn,
         "seed": rng.integers(1, 100000, size=n).astype(np.int32), "cmd_index": np.arange(n, dtype=np.int32),
         "difficulty": rng.integers(0, 4, size=n).astype(np.int8), "version": np.array([S.ENCODING_VERSION], np.int32),
     }

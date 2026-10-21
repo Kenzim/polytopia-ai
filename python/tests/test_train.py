@@ -26,8 +26,7 @@ def fake_output(batch, logits=None, winner=None) -> ModelOutput:
     if logits is None:
         logits = torch.zeros(b, a)
     logits = logits.masked_fill(~batch["action_mask"], MASK_FILL)
-    return ModelOutput(logits, winner if winner is not None else torch.zeros(b, S.N_SLOTS), torch.zeros(b),
-                       torch.zeros(b))
+    return ModelOutput(logits, winner if winner is not None else torch.zeros(b, S.N_SLOTS))
 
 
 @pytest.fixture
@@ -112,11 +111,27 @@ def test_unknown_winner_is_ignored(batch):
     assert torch.isfinite(losses["loss"])
 
 
-def test_margin_loss_uses_thousandths_and_is_robust(batch):
+def test_capped_games_train_the_policy_but_not_the_value(batch):
+    """winner = -1 positions add nothing to the value loss, and its gradient ignores them, while the policy CE counts all."""
     batch = dict(batch)
-    batch["margin"] = torch.full_like(batch["margin"], 2000.0)
-    losses = compute_losses(fake_output(batch), batch, TrainConfig())
-    assert losses["margin_loss"].item() == pytest.approx(1.5)  # Huber on a gap of 2.0: 2 - 0.5
+    winner = batch["winner"].clone()
+    winner[::2] = -1
+    batch["winner"] = winner
+    logits = torch.randn(len(winner), S.N_SLOTS, requires_grad=True)
+    out = fake_output(batch, winner=logits)
+    losses = compute_losses(out, batch, TrainConfig())
+    known = winner >= 0
+    expected = torch.nn.functional.cross_entropy(logits[known], winner[known])
+    assert losses["winner_ce"].item() == pytest.approx(expected.item(), rel=1e-5)
+    losses["winner_ce"].backward()
+    assert (logits.grad[~known] == 0).all() and (logits.grad[known] != 0).any()
+    assert losses["policy_ce"].item() == pytest.approx(
+        compute_losses(fake_output(batch), {**batch, "winner": batch["winner"].abs()}, TrainConfig())["policy_ce"].item())
+
+
+def test_losses_have_no_margin_terms(batch):
+    assert set(compute_losses(fake_output(batch), batch, TrainConfig())) == {"loss", "policy_ce", "policy_kl", "winner_ce"}
+    assert not hasattr(TrainConfig(), "margin_weight")
 
 
 def test_brier_by_turn_and_agreement(batch):
@@ -239,6 +254,18 @@ def test_gpu_training_stays_under_the_memory_budget(tmp_path):
                       log_every=3, runs_dir=str(tmp_path / "runs"), warmup_steps=1, threads=2)
     summary = train(cfg)
     assert 0 < summary["peak_mem_mb"] < 2.5 * 1024
+
+
+def test_pre_v11_checkpoints_fail_with_a_clear_message(tmp_path):
+    """A checkpoint with the old 11-output value head (winner + two margins) is refused, not loaded half-way."""
+    model = build_model("tiny")
+    state = {"model": model.state_dict(), "model_config": model.cfg.to_dict(), "step": 1}
+    old = state["model"]["value_mlp.2.weight"]
+    state["model"]["value_mlp.2.weight"] = torch.cat([old, torch.zeros(2, old.shape[1])])
+    state["model"]["value_mlp.2.bias"] = torch.zeros(old.shape[0] + 2)
+    torch.save(state, tmp_path / "old.pt")
+    with pytest.raises(SystemExit, match="written before design v1.1"):
+        load_checkpoint(tmp_path / "old.pt")
 
 
 def test_resume_continues_from_the_last_checkpoint(tmp_path):

@@ -1,4 +1,4 @@
-"""KataGo-style residual CNN with a legal-list policy head and three value heads (design.md section 5)."""
+"""KataGo-style residual CNN with a legal-list policy head and a winner value head (design.md section 5)."""
 
 from __future__ import annotations
 
@@ -45,9 +45,7 @@ def eval_pawns(p: torch.Tensor | float) -> torch.Tensor:
 
 class ModelOutput(NamedTuple):
     policy_logits: torch.Tensor  # [B, A] float32, padded entries at MASK_FILL
-    winner_logits: torch.Tensor  # [B, 9]
-    margin: torch.Tensor  # [B] final score margin / 1000
-    margin5: torch.Tensor  # [B] score margin in 5 turns / 1000
+    winner_logits: torch.Tensor  # [B, 9] who wins by elimination, relative slots; softmax gives win probabilities
 
 
 def masked_mean_max(x: torch.Tensor, mask: torch.Tensor | None) -> torch.Tensor:
@@ -117,9 +115,9 @@ class PolyNet(nn.Module):
         self.n_off = (2 * S.OFFSET_RADIUS + 1) ** 2
         self.off_embed = nn.Embedding(self.n_off + 1, ph)
         self.policy_mlp = nn.Sequential(nn.ReLU(), nn.Linear(ph, ph), nn.ReLU(), nn.Linear(ph, 1))
-        # Value heads.
+        # Value head: the winner distribution only (win 1 / loss 0; points are not the objective).
         vh = cfg.value_hidden
-        self.value_mlp = nn.Sequential(nn.Linear(c, vh), nn.ReLU(), nn.Linear(vh, S.N_SLOTS + 2))
+        self.value_mlp = nn.Sequential(nn.Linear(c, vh), nn.ReLU(), nn.Linear(vh, S.N_SLOTS))
         self._init()
 
     def _init(self) -> None:
@@ -205,8 +203,7 @@ class PolyNet(nn.Module):
         logits = torch.full(action_mask.shape, MASK_FILL, dtype=torch.float32, device=tiles.device)
         logits = logits.index_put((bi, ai), flat)
 
-        v = self.value_mlp(F.relu(g)).float()
-        return ModelOutput(logits, v[:, : S.N_SLOTS], v[:, S.N_SLOTS], v[:, S.N_SLOTS + 1])
+        return ModelOutput(logits, self.value_mlp(F.relu(g)).float())
 
 
 def build_model(name_or_cfg: str | ModelConfig) -> PolyNet:

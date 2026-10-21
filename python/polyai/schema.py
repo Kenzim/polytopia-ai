@@ -1,6 +1,7 @@
 """The one place that defines the tensor and shard layout the Python side expects.
 
-This follows `ai/docs/encoding.md` (version 1), which is the authority. `tests/test_schema.py` checks every
+This follows `ai/docs/encoding.md`, which is the authority. Shards of encoding version 2 (the current one) and 1 are
+read; version 1 shards are relabelled at load time (see `data.Shard`). `tests/test_schema.py` checks every
 constant here against the `polyai_engine` module (built from polyai-core) whenever that is installed; nothing else in
 the package hard-codes field names, vocabulary sizes or shapes.
 """
@@ -9,7 +10,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-ENCODING_VERSION = 1  # stored in every record and shard
+ENCODING_VERSION = 2  # the version this package writes (synthetic shards, checkpoints)
+SUPPORTED_VERSIONS = (1, 2)  # shard versions the loader accepts; v1 is relabelled to the v2 meaning on load
 
 # ---------------------------------------------------------------------------------------------------------------
 # Tile tensor: int16[H, W, F_TILE]
@@ -92,6 +94,7 @@ N_TRIGGER_KINDS = 3  # none, city reward, peace request
 G_TRIBE = 0
 G_SCALARS = G_TRIBE + N_TRIBES
 G_STARS, G_INCOME, G_SCORE = G_SCALARS, G_SCALARS + 1, G_SCALARS + 2
+G_TURNS_LEFT = G_SCALARS + 4  # turns left / 50; 0 for Domination from encoding v2 on
 G_TECHS = G_SCALARS + N_SCALARS
 G_SLOTS = G_TECHS + N_TECHS
 G_TRIGGER = G_SLOTS + N_OTHER_SLOTS * PER_SLOT
@@ -130,6 +133,7 @@ class ShardField:
     note: str
 
 
+# The v2 layout: no score margins, `capped` instead of `adjudicated`.
 SHARD_FIELDS: dict[str, ShardField] = {
     "tiles": ShardField("int16", "[N, H, W, F_TILE]", "see CAT_FIELDS and NUM_FIELDS"),
     "globals": ShardField("float32", "[N, G_DIM]", "global vector"),
@@ -138,11 +142,9 @@ SHARD_FIELDS: dict[str, ShardField] = {
     "chosen": ShardField("int16", "[N]", "index of the played command inside its own legal list (the label)"),
     "cand_idx": ShardField("int16", "[N, K]", "legal-list indices of the AI's best candidates, best first, -1 padded"),
     "cand_score": ShardField("float32", "[N, K]", "their noise-free scores; may be +inf; 0 where padded"),
-    "winner": ShardField("int8", "[N]", "winning slot relative to the player to move, -1 for none"),
-    "margin": ShardField("float32", "[N]", "final score of me minus best opponent, raw points"),
-    "margin5": ShardField("float32", "[N]", "the same margin 5 turns later (final if the game ended sooner)"),
+    "winner": ShardField("int8", "[N]", "winning slot relative to the player to move, -1 for none (capped game)"),
     "final_scores": ShardField("float32", "[N, 8]", "final scores by slot, zeros for absent slots"),
-    "adjudicated": ShardField("int8", "[N]", "1 when the game ended at the turn limit with more than one player alive"),
+    "capped": ShardField("int8", "[N]", "1 when the game hit the compute cap with more than one player alive (a draw)"),
     "turn": ShardField("int16", "[N]", "game turn of the position"),
     "seed": ShardField("int32", "[N]", "game seed"),
     "cmd_index": ShardField("int32", "[N]", "index of the command in the game record"),
@@ -150,3 +152,9 @@ SHARD_FIELDS: dict[str, ShardField] = {
     "version": ShardField("int32", "[1]", "ENCODING_VERSION"),
 }
 REQUIRED_FIELDS = tuple(SHARD_FIELDS)
+
+# What a version 1 shard holds instead: `adjudicated` (a top-score decision at the turn limit, now a draw) in place
+# of `capped`. Its `margin` and `margin5` keys are ignored: points are not the objective.
+V1_ONLY_FIELDS = ("adjudicated",)
+V1_IGNORED_FIELDS = ("margin", "margin5")
+V1_REQUIRED_FIELDS = tuple(k for k in REQUIRED_FIELDS if k != "capped") + V1_ONLY_FIELDS

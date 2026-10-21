@@ -24,8 +24,8 @@ def test_output_shapes_on_every_map_size(size):
     a = b["actions"].shape[1]
     assert out.policy_logits.shape == (3, a)
     assert out.winner_logits.shape == (3, S.N_SLOTS)
-    assert out.margin.shape == (3,) and out.margin5.shape == (3,)
-    assert torch.isfinite(out.winner_logits).all() and torch.isfinite(out.margin).all()
+    assert len(out) == 2  # policy logits and the winner head, nothing else
+    assert torch.isfinite(out.winner_logits).all()
 
 
 def test_parameter_counts_are_in_the_designed_range():
@@ -122,7 +122,6 @@ def test_board_mask_makes_padding_irrelevant():
     actions[..., 3] = torch.where(small["actions"][..., 3] >= 0, yd * h + xd, small["actions"][..., 3])
     out = model(tiles, small["globals"], actions, small["action_mask"], board_mask=board_mask)
     torch.testing.assert_close(out.winner_logits, ref.winner_logits, atol=1e-4, rtol=1e-4)
-    torch.testing.assert_close(out.margin, ref.margin, atol=1e-4, rtol=1e-4)
     real = small["action_mask"]
     torch.testing.assert_close(out.policy_logits[real], ref.policy_logits[real], atol=1e-4, rtol=1e-4)
 
@@ -134,8 +133,7 @@ def test_gradients_flow_to_every_parameter():
             torch.nn.init.normal_(p, std=0.05)
     b = batch_of(11, n=4)
     out = run(model, b)
-    loss = out.policy_logits.masked_fill(~b["action_mask"], 0).sum() + out.winner_logits.sum() \
-        + out.margin.sum() + out.margin5.sum()
+    loss = out.policy_logits.masked_fill(~b["action_mask"], 0).sum() + out.winner_logits.sum()
     loss.backward()
     dead = [n for n, p in model.named_parameters() if p.grad is None or not torch.isfinite(p.grad).all()]
     assert not dead, dead

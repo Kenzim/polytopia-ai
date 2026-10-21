@@ -32,6 +32,72 @@ def test_synthetic_shard_matches_schema():
         assert arrays["tiles"][..., i].max() < v
 
 
+def v1_of(arrays: dict) -> dict:
+    """A synthetic shard in the version 1 layout: top-score adjudication, margins, a turn limit in the globals."""
+    out = {k: v for k, v in arrays.items() if k != "capped"}
+    n = len(arrays["winner"])
+    adjudicated = np.zeros(n, np.int8)
+    adjudicated[::5] = 1
+    winner = out["winner"].copy()
+    winner[adjudicated == 1] = 0  # v1 gave an adjudicated game a winner: the top scorer
+    winner[arrays["capped"] == 1] = 1
+    out["winner"] = winner
+    out["adjudicated"] = adjudicated
+    out["margin"] = np.linspace(-9000, 9000, n).astype(np.float32)
+    out["margin5"] = out["margin"] * 0.5
+    out["globals"] = out["globals"].copy()
+    out["globals"][:, S.G_TURNS_LEFT] = 0.6
+    out["version"] = np.array([1], np.int32)
+    return out
+
+
+def test_v2_shard_roundtrip_keeps_everything(tmp_path):
+    arrays = make_synthetic_shard(40, 11, seed=8)
+    assert int(arrays["version"][0]) == 2 and "margin" not in arrays and "adjudicated" not in arrays
+    assert (arrays["capped"] == 1).any() and (arrays["winner"][arrays["capped"] == 1] == -1).all()
+    save_shard(tmp_path / "s.npz", arrays)
+    shard = Shard.load(tmp_path / "s.npz")
+    assert shard.source_version == 2
+    for k in S.REQUIRED_FIELDS:
+        np.testing.assert_array_equal(shard.a[k], arrays[k])
+
+
+def test_v1_shard_is_relabelled_on_load(tmp_path):
+    old = v1_of(make_synthetic_shard(40, 11, seed=8))
+    np.savez(tmp_path / "old.npz", **old)
+    shard = Shard.load(tmp_path / "old.npz")
+    assert shard.source_version == 1 and (shard.n, shard.h) == (40, 11)
+    adj = old["adjudicated"] == 1
+    assert adj.any()
+    assert (shard.a["winner"][adj] == -1).all()  # adjudicated games are draws now
+    np.testing.assert_array_equal(shard.a["winner"][~adj], old["winner"][~adj])
+    np.testing.assert_array_equal(shard.a["capped"], adj.astype(np.int8))
+    assert (shard.a["globals"][:, S.G_TURNS_LEFT] == 0).all()  # no turn-limit information
+    assert old["globals"][0, S.G_TURNS_LEFT] == pytest.approx(0.6)  # the input was not touched
+    assert "margin" not in shard.a and "margin5" not in shard.a and "adjudicated" not in shard.a
+    b = shard.batch(np.arange(10))
+    assert "margin" not in b and (b["winner"][adj[:10]] == -1).all()
+
+
+def test_v1_without_its_own_fields_and_unknown_versions_are_rejected():
+    old = v1_of(make_synthetic_shard(8, 11))
+    del old["adjudicated"]
+    with pytest.raises(ValueError, match="adjudicated"):
+        Shard(old)
+    bad = make_synthetic_shard(8, 11)
+    bad["version"] = np.array([3], np.int32)
+    with pytest.raises(ValueError, match="version 3"):
+        Shard(bad)
+
+
+def test_a_capped_game_with_a_winner_is_rejected():
+    arrays = make_synthetic_shard(8, 11)
+    arrays["capped"][:] = 1
+    arrays["winner"][:] = 0
+    with pytest.raises(ValueError, match="capped"):
+        Shard(arrays)
+
+
 def test_save_and_load_roundtrip(tmp_path):
     arrays = make_synthetic_shard(16, 11, seed=4)
     save_shard(tmp_path / "s.npz", arrays)
@@ -42,8 +108,8 @@ def test_save_and_load_roundtrip(tmp_path):
 
 def test_missing_field_is_rejected(tmp_path):
     arrays = make_synthetic_shard(4, 11)
-    del arrays["margin5"]
-    with pytest.raises(ValueError, match="margin5"):
+    del arrays["capped"]
+    with pytest.raises(ValueError, match="capped"):
         save_shard(tmp_path / "s.npz", arrays)
 
 
@@ -131,7 +197,7 @@ def test_augmented_batch_keeps_everything_else(shard16):
     idx = np.arange(32)
     plain = shard16.batch(idx)
     aug = shard16.batch(idx, np.random.default_rng(5), augment=True)
-    for k in ("globals", "chosen", "cand_idx", "cand_score", "winner", "margin", "margin5", "turn", "action_mask"):
+    for k in ("globals", "chosen", "cand_idx", "cand_score", "winner", "turn", "action_mask"):
         np.testing.assert_array_equal(plain[k], aug[k])
     np.testing.assert_array_equal(plain["actions"][..., :2], aug["actions"][..., :2])
     assert not np.array_equal(plain["tiles"], aug["tiles"])

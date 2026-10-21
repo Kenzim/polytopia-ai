@@ -17,7 +17,7 @@ COL = S.COLUMN
 
 def test_schema_matches_the_engine_constants():
     pe = pytest.importorskip("polyai_engine")
-    assert pe.ENCODING_VERSION == S.ENCODING_VERSION
+    assert pe.ENCODING_VERSION in S.SUPPORTED_VERSIONS  # 1 until the v2 module is built, then 2
     assert pe.F_TILE == S.F_TILE
     assert pe.G_DIM == S.G_DIM
     assert pe.N_KINDS == S.N_KINDS
@@ -45,7 +45,7 @@ def test_real_shard_loads_and_every_chosen_is_in_its_legal_list(real):
     assert ((a["chosen"] >= 0) & (a["chosen"] < lens)).all()
     cand = a["cand_idx"]
     assert ((cand < lens[:, None]) & (cand >= -1)).all()
-    assert (a["winner"] >= 0).all() and (a["winner"] < S.N_SLOTS).all()
+    assert (a["winner"] >= -1).all() and (a["winner"] < S.N_SLOTS).all()
     assert (a["actions"][:, 1] >= 0).all() and (a["actions"][:, 1] < S.ARG_MAX).all()
     assert (a["actions"][:, 0] >= 1).all() and (a["actions"][:, 0] <= len(S.ACTION_KINDS)).all()
     for i, v in enumerate(S.CAT_VOCABS):
@@ -136,3 +136,25 @@ def test_corners_stay_corners_under_every_symmetry(real):
     for sym in valid_symmetries(h, w):
         _, remap = tile_permutation(h, w, sym)
         assert {int(remap[c]) for c in corners} == corners
+
+
+def test_v1_smoke_shards_are_relabelled_to_draws_where_adjudicated():
+    """Every smoke shard is encoding v1: adjudicated games lose their winner, the rest keep it, margins are gone."""
+    paths = smoke_shards()
+    if not paths:
+        pytest.skip("no smoke shards")
+    total = capped = 0
+    for p in paths:
+        with np.load(p) as z:
+            raw_winner, raw_adj, raw_globals = z["winner"], z["adjudicated"] == 1, z["globals"]
+            assert int(z["version"][0]) == 1 and "margin" in z.files
+        shard = Shard.load(p)
+        assert shard.source_version == 1
+        np.testing.assert_array_equal(shard.a["capped"] == 1, raw_adj)
+        assert (shard.a["winner"][raw_adj] == -1).all()
+        np.testing.assert_array_equal(shard.a["winner"][~raw_adj], raw_winner[~raw_adj])
+        assert (shard.a["winner"][~raw_adj] >= 0).all()
+        assert (raw_globals[:, S.G_TURNS_LEFT] > 0).any() and (shard.a["globals"][:, S.G_TURNS_LEFT] == 0).all()
+        total += shard.n
+        capped += int(raw_adj.sum())
+    assert 0 < capped < total

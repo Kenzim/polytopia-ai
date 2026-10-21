@@ -3,7 +3,8 @@
     nice python -m polyai.train_bc --name bc_b6 --model b6c96 --train DIR_OR_SHARDS --val DIR_OR_SHARDS
 
 Loss = CE(chosen action) + kl_weight * KL(softmax(candidate scores / T) || model, restricted to the candidates)
-     + winner CE + Huber loss on the margin (+ a smaller weight on the margin in 5 turns).
+     + winner CE, on positions of games that ended with an elimination winner (capped games, `winner = -1`, train the
+policy only; there are no score-margin targets).
 `chosen` (the move the AI played, with its noise) is the label; the candidate scores are the AI's noise-free view of
 its best moves and only shape the distribution among them. Run directory:
 <runs-dir>/<name>/{config.json, metrics.jsonl, ckpt_last.pt, ckpt_final.pt}. `--resume` continues from ckpt_last.pt.
@@ -47,8 +48,6 @@ class TrainConfig:
     kl_weight: float = 0.5
     kl_temperature: float = 50.0  # candidate scores run to tens of thousands; the median gap of the top two is ~45
     winner_weight: float = 1.0
-    margin_weight: float = 0.25
-    margin5_weight: float = 0.125
     augment: bool = True
     bf16: bool = True
     eval_every: int = 500
@@ -97,19 +96,9 @@ def compute_losses(out: ModelOutput, batch: dict[str, torch.Tensor], cfg: TrainC
         winner_ce = F.cross_entropy(out.winner_logits.float(), winner, ignore_index=-1)
     else:
         winner_ce = out.winner_logits.new_zeros(())
-    # Margins are in thousands of points and run to +/-25, so a squared error would swamp every other term.
-    margin = F.smooth_l1_loss(out.margin.float(), batch["margin"].float() / 1000.0)
-    margin5 = F.smooth_l1_loss(out.margin5.float(), batch["margin5"].float() / 1000.0)
 
-    total = (
-        ce
-        + cfg.kl_weight * kl
-        + cfg.winner_weight * winner_ce
-        + cfg.margin_weight * margin
-        + cfg.margin5_weight * margin5
-    )
-    return {"loss": total, "policy_ce": ce, "policy_kl": kl, "winner_ce": winner_ce, "margin_loss": margin,
-            "margin5_loss": margin5}
+    total = ce + cfg.kl_weight * kl + cfg.winner_weight * winner_ce
+    return {"loss": total, "policy_ce": ce, "policy_kl": kl, "winner_ce": winner_ce}
 
 
 class Meter:
@@ -235,11 +224,22 @@ def save_checkpoint(path: Path, model: PolyNet, step: int, opt: torch.optim.Opti
     os.replace(tmp, path)
 
 
+def _check_heads(state: dict, path: str | Path) -> None:
+    """Checkpoints written before v1.1 have two extra score-margin outputs in the value head. They no longer load."""
+    w = state["model"].get("value_mlp.2.weight")
+    if w is not None and w.shape[0] != S.N_SLOTS:
+        raise SystemExit(
+            f"{path} was written before design v1.1 (value head with {w.shape[0]} outputs, score-margin heads); "
+            f"this package has a winner-only value head with {S.N_SLOTS}. Old checkpoints cannot be loaded: retrain."
+        )
+
+
 def load_checkpoint(path: str | Path, map_location: str = "cpu") -> PolyNet:
     """The model alone, for evaluation or play. `resume_state` loads the optimiser state as well."""
     from .model import ModelConfig
 
     state = torch.load(path, map_location=map_location, weights_only=False)
+    _check_heads(state, path)
     model = build_model(ModelConfig(**state["model_config"]))
     model.load_state_dict(state["model"])
     return model
@@ -250,6 +250,7 @@ def resume_state(path: Path, model: PolyNet, opt: torch.optim.Optimizer, device:
     if not path.exists():
         raise SystemExit(f"cannot resume: {path} does not exist")
     state = torch.load(path, map_location=device, weights_only=False)
+    _check_heads(state, path)
     if state["model_config"] != model.cfg.to_dict():
         raise SystemExit(f"cannot resume: {path} was written by a different model configuration")
     if "optimizer" not in state:
@@ -372,7 +373,7 @@ def parse_args(argv: list[str] | None = None) -> TrainConfig:
     for f in ("batch_size", "steps", "warmup_steps", "eval_every", "ckpt_every", "eval_batches", "log_every", "seed", "threads"):
         ap.add_argument(f"--{f.replace('_', '-')}", type=int, default=getattr(d, f))
     for f in ("lr", "weight_decay", "min_lr_frac", "grad_clip", "kl_weight", "kl_temperature", "winner_weight",
-              "margin_weight", "margin5_weight", "need_gb"):
+              "need_gb"):
         ap.add_argument(f"--{f.replace('_', '-')}", type=float, default=getattr(d, f))
     ap.add_argument("--resume", action="store_true", help="continue the run NAME from its ckpt_last.pt")
     ap.add_argument("--no-augment", action="store_true")
