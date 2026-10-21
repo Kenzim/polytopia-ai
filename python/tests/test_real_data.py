@@ -17,7 +17,7 @@ COL = S.COLUMN
 
 def test_schema_matches_the_engine_constants():
     pe = pytest.importorskip("polyai_engine")
-    assert pe.ENCODING_VERSION in S.SUPPORTED_VERSIONS  # 1 until the v2 module is built, then 2
+    assert pe.ENCODING_VERSION == S.ENCODING_VERSION
     assert pe.F_TILE == S.F_TILE
     assert pe.G_DIM == S.G_DIM
     assert pe.N_KINDS == S.N_KINDS
@@ -158,3 +158,17 @@ def test_v1_smoke_shards_are_relabelled_to_draws_where_adjudicated():
         total += shard.n
         capped += int(raw_adj.sum())
     assert 0 < capped < total
+
+
+def test_v2_smoke_shards_load_as_they_are():
+    """Shards from the v2 generator (when someone has written them): capped games have no winner, no turn limit seen."""
+    paths = sorted(Path("/kvm/polytopia-ai-data/smoke-v2").glob("*.npz"))
+    if not paths:
+        pytest.skip("no v2 smoke shards")
+    shard = Shard.load(min(paths, key=lambda p: p.stat().st_size))
+    a = shard.a
+    assert shard.source_version == 2 and "margin" not in a and "adjudicated" not in a
+    assert (a["winner"][a["capped"] == 1] == -1).all() and (a["winner"][a["capped"] == 0] >= 0).all()
+    assert (a["globals"][:, [S.G_TURNS_LEFT, S.G_HAS_LIMIT]] == 0).all()
+    batch = shard.batch(np.arange(16))
+    assert set(batch) >= {"tiles", "globals", "actions", "action_mask", "chosen", "winner"} and "margin" not in batch

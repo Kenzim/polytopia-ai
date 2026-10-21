@@ -142,3 +142,36 @@ def test_end_to_end_on_the_engine_and_elo_reads_the_file(checkpoint, tmp_path):
     assert len(games) == 6
     stats = elo.pair_stats(games)
     assert sum(s["n"] for s in stats.values()) == 6
+
+
+def test_per_seat_difficulties_are_used_when_the_engine_offers_them():
+    """The model seat plays at Normal handicap, as in polyai-arena, once VecEnv accepts `seat_difficulties`."""
+    seen = []
+
+    class FakeEnv:
+        """Stands for the pyo3 class; its signature is what the runner inspects."""
+
+        def __init__(self, signature):
+            self.__text_signature__ = signature
+
+        def __call__(self, n_games, seed_start, model_seats, **kw):
+            seen.append((n_games, seed_start, model_seats, kw))
+            return self
+
+        def observe(self):
+            return []
+
+    class FakePe:
+        VecEnv = FakeEnv("(n_games, seed_start, model_seats, seat_difficulties=None, difficulty=None)")
+
+    from polyai.arena import Arm
+
+    Arm(FakePe, Suite(seeds=5, batch_games=3), 3, 1, 2)
+    n, start, seats, kw = seen[0]
+    assert (n, start, seats) == (3, 1_000_000, [1])
+    assert kw["seat_difficulties"] == [3, 1] and "difficulty" not in kw
+    assert kw["n_players"] == [2] and kw["split"] == "eval" and kw["turn_limit"] == 150
+
+    FakePe.VecEnv = FakeEnv("(n_games, seed_start, model_seats, difficulty=None)")
+    Arm(FakePe, Suite(seeds=5), 2, 0, 2)
+    assert seen[1][3]["difficulty"] == 2 and "seat_difficulties" not in seen[1][3]

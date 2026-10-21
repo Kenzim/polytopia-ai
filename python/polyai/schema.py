@@ -95,6 +95,7 @@ G_TRIBE = 0
 G_SCALARS = G_TRIBE + N_TRIBES
 G_STARS, G_INCOME, G_SCORE = G_SCALARS, G_SCALARS + 1, G_SCALARS + 2
 G_TURNS_LEFT = G_SCALARS + 4  # turns left / 50; 0 for Domination from encoding v2 on
+G_HAS_LIMIT = G_SCALARS + 5  # has a turn limit (0 / 1); also 0 from encoding v2 on
 G_TECHS = G_SCALARS + N_SCALARS
 G_SLOTS = G_TECHS + N_TECHS
 G_TRIGGER = G_SLOTS + N_OTHER_SLOTS * PER_SLOT

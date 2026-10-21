@@ -2,7 +2,8 @@
 
 Shard layout is `schema.SHARD_FIELDS` (encoding v2). Version 1 shards are read too and relabelled to the v2 meaning:
 games that ended by top-score adjudication become draws (`winner = -1`, `capped = 1`), the score margins are dropped and
-the "turns left" global, which only told the model about a 50-turn limit, is zeroed as v2 does for Domination.
+the "turns left" and "has a turn limit" globals, which only told the model about a 50-turn limit, are zeroed as v2
+does for Domination.
 One shard holds one map size, so every batch drawn from a shard has a single
 (H, W) and needs no board padding. Only the legal-action lists are padded.
 """
@@ -95,7 +96,7 @@ def relabel_v1(arrays: dict[str, np.ndarray]) -> dict[str, np.ndarray]:
     out["winner"] = np.where(adjudicated == 1, -1, arrays["winner"]).astype(np.int8)
     out["capped"] = (adjudicated == 1).astype(np.int8)
     g = np.array(arrays["globals"], dtype=np.float32)
-    g[:, S.G_TURNS_LEFT] = 0.0
+    g[:, [S.G_TURNS_LEFT, S.G_HAS_LIMIT]] = 0.0
     out["globals"] = g
     out["version"] = np.array([S.ENCODING_VERSION], np.int32)
     return out

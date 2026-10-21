@@ -47,6 +47,7 @@ def v1_of(arrays: dict) -> dict:
     out["margin5"] = out["margin"] * 0.5
     out["globals"] = out["globals"].copy()
     out["globals"][:, S.G_TURNS_LEFT] = 0.6
+    out["globals"][:, S.G_HAS_LIMIT] = 1.0
     out["version"] = np.array([1], np.int32)
     return out
 
@@ -72,7 +73,7 @@ def test_v1_shard_is_relabelled_on_load(tmp_path):
     assert (shard.a["winner"][adj] == -1).all()  # adjudicated games are draws now
     np.testing.assert_array_equal(shard.a["winner"][~adj], old["winner"][~adj])
     np.testing.assert_array_equal(shard.a["capped"], adj.astype(np.int8))
-    assert (shard.a["globals"][:, S.G_TURNS_LEFT] == 0).all()  # no turn-limit information
+    assert (shard.a["globals"][:, [S.G_TURNS_LEFT, S.G_HAS_LIMIT]] == 0).all()  # no turn-limit information
     assert old["globals"][0, S.G_TURNS_LEFT] == pytest.approx(0.6)  # the input was not touched
     assert "margin" not in shard.a and "margin5" not in shard.a and "adjudicated" not in shard.a
     b = shard.batch(np.arange(10))
