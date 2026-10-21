@@ -212,6 +212,9 @@ started in v1.
    1 / loss 0 at the end and nothing else; a game at the compute cap is a draw worth 0.5 to both or is dropped)
    with a KL penalty towards the behaviour-cloning policy that decays over training, as AlphaStar did. Opponent pool sampling weighted
    towards opponents we beat less than 70% of the time.
+   Live games played by our two accounts through the client are a second, smaller data stream next to self-play
+   (value targets, off-policy PPO on our moves, imitation of strong human opponents); the policy interface the client
+   calls and the record format those games come back in are defined in `docs/interfaces.md`.
 3. **Search on top (later).** A small per-turn search using the policy as prior and the value head at leaves
    (Gumbel MuZero-style root sampling with tens of simulations over the current turn's commands). If it beats the raw
    policy clearly, use it as an expert-iteration teacher.
