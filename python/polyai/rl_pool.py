@@ -148,10 +148,13 @@ class OppStats:
         self.decay = decay
         self.cells: dict[tuple[str, int], list[float]] = {}  # (entry, n_players) -> [sum, count]
 
-    def record(self, entry: str, n_players: int, outcome: float) -> None:
+    def record(self, entry: str, n_players: int, outcome: float, weight: float = 1.0) -> None:
+        """`weight` corrects the length bias of finished games: games end at a rate proportional to 1 / length, so a
+        window of finished games over-represents short ones (mostly early losses). The trainer passes the game's turns
+        over the running mean, which restores the per-game average."""
         cell = self.cells.setdefault((entry, n_players), [0.0, 0.0])
-        cell[0] = cell[0] * self.decay + outcome
-        cell[1] = cell[1] * self.decay + 1.0
+        cell[0] = cell[0] * self.decay + weight * outcome
+        cell[1] = cell[1] * self.decay + weight
 
     def games(self, entry: str) -> float:
         return sum(c[1] for (e, _), c in self.cells.items() if e == entry)

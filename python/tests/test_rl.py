@@ -219,6 +219,17 @@ def test_pool_weights_favour_opponents_not_yet_beaten():
     assert w["self:u1"] == pytest.approx(w["self:u2"])
 
 
+def test_length_weights_correct_the_bias_towards_short_games():
+    # short games are losses, long ones wins; short ones finish three times as often, so they are three times as
+    # many in a window of finished games. Weighting by length recovers the per-game mean of 0.5.
+    plain, weighted = OppStats(decay=1.0), OppStats(decay=1.0)
+    for _ in range(300):
+        for outcome, turns in [(0.0, 20)] * 3 + [(1.0, 60)]:
+            plain.record("bc", 2, outcome)
+            weighted.record("bc", 2, outcome, turns / 40.0)
+    assert plain.raw("bc", 2) == pytest.approx(0.25) and weighted.raw("bc", 2) == pytest.approx(60 / 120)
+
+
 def test_stats_state_roundtrip():
     s = OppStats()
     s.record("bc", 3, 1.0)
@@ -313,8 +324,12 @@ def test_ppo_update_runs_and_changes_the_policy(tmp_path, init_run):
     before = [p.detach().clone() for p in model.parameters()]
     from polyai.train_bc import make_optimizer
 
-    res = ppo_update(model, ref, make_optimizer(model, cfg), col.stores, cfg, 0, CPU, np.random.default_rng(0))
+    extra = [next(st.finalize() for st in col.stores.values() if st.n)]  # the hook for another position source
+    n_rollout = sum(len(st.finalize()["train"]) for st in col.stores.values() if st.n)
+    res = ppo_update(model, ref, make_optimizer(model, cfg), col.stores, cfg, 0, CPU, np.random.default_rng(0),
+                     extra=extra)
     assert res["minibatches"] > 0 and np.isfinite(res["loss"]) and res["kl_bc"] >= 0
+    assert res["positions"] == n_rollout + len(extra[0]["train"])
     assert any(not torch.equal(a, b) for a, b in zip(before, model.parameters()))
 
 

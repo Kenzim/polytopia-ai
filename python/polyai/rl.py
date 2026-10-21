@@ -277,9 +277,17 @@ def kl_coef_at(update: int, cfg: RLConfig) -> float:
 
 
 def ppo_update(model: PolyNet, ref: PolyNet | None, opt: torch.optim.Optimizer, stores: dict[tuple, SizeStore],
-               cfg: RLConfig, update: int, device: torch.device, rng: np.random.Generator) -> dict:
-    """Several epochs of minibatch PPO over everything the rollout stored. Returns the mean metrics."""
+               cfg: RLConfig, update: int, device: torch.device, rng: np.random.Generator,
+               extra: list[dict] | None = None) -> dict:
+    """Several epochs of minibatch PPO over everything the rollout stored. Returns the mean metrics.
+
+    `extra` is the hook for another source of positions (interfaces.md section 3: live games joining as an off-policy
+    stream). Each item has the layout of `SizeStore.finalize()` (one board size: `tiles`, `globals`, `act_off`,
+    `actions`, `chosen`, `logp`, `adv`, `ret`, `train`) and is trained on next to the rollout; nothing produces it yet,
+    and the truncated importance ratio for such positions is not built."""
     data = {hw: st.finalize() for hw, st in stores.items() if st.n}
+    for i, d in enumerate(extra or []):
+        data[("extra", i)] = d
     n_train = sum(len(d["train"]) for d in data.values())
     if n_train < 2:
         return {"positions": n_train, "skipped": True}
@@ -432,6 +440,7 @@ class Collector:
         self.results: list[dict] = []  # finished games of the current update
         self.n_learner = 0
         self.n_opp = 0
+        self.turns_ema = 60.0  # running mean game length in turns, for the length weight of the win statistics
         self.sizes = [SIZE_IDS[s] for s in cfg.sizes.split(",") if s] if cfg.sizes else None
         self.presets = [PRESET_IDS[s] for s in cfg.presets.split(",") if s] if cfg.presets else None
         self.t_infer = 0.0
@@ -588,10 +597,13 @@ class Collector:
             arm.traj.pop(slot, None)
         else:
             self._flush(arm, slot, outcome, terminal=True)
-        self.pool.stats.record(entry, n, outcome)
+        turns = int(f["turns"])
+        self.turns_ema = 0.99 * self.turns_ema + 0.01 * turns
+        weight = min(10.0, max(0.1, turns / self.turns_ema))
+        self.pool.stats.record(entry, n, outcome, weight)
         rec = {"update": self.update, "seed": int(f["seed"]), "n_players": n, "learner_seat": seat, "opponent": entry,
                "opponent_policy_id": self.pool.info[entry].policy_id if entry in self.pool.info else entry,
-               "outcome": outcome, "capped": capped, "turns": int(f["turns"]), "decisions": int(f["decisions"])}
+               "outcome": outcome, "capped": capped, "turns": turns, "weight": weight, "decisions": int(f["decisions"])}
         self.results.append(rec)
         if self.games_log is not None:
             self.games_log.write(json.dumps(rec) + "\n")
@@ -638,15 +650,20 @@ def checkpoint_step(path: Path) -> int:
 
 
 def outcome_summary(results: list[dict]) -> dict:
-    """Per pool entry and per player count: games, wins, draws, losses and the mean outcome of one update."""
+    """Per pool entry: games, wins, draws, losses, the mean outcome of one update (`score`) and the same weighted by the
+    games' length weights (`score_w`, corrected for finished games being biased to short ones)."""
     by: dict[str, dict] = {}
     for r in results:
-        cell = by.setdefault(r["opponent"], {"games": 0, "wins": 0, "draws": 0, "losses": 0, "score": 0.0})
+        cell = by.setdefault(r["opponent"], {"games": 0, "wins": 0, "draws": 0, "losses": 0, "score": 0.0,
+                                             "score_w": 0.0, "_w": 0.0})
         cell["games"] += 1
         cell["score"] += r["outcome"]
+        cell["score_w"] += r["weight"] * r["outcome"]
+        cell["_w"] += r["weight"]
         cell["wins" if r["outcome"] == 1.0 else "draws" if r["outcome"] == 0.5 else "losses"] += 1
     for cell in by.values():
         cell["score"] /= cell["games"]
+        cell["score_w"] /= cell.pop("_w")
     return by
 
 
