@@ -94,6 +94,27 @@ spread is a little wider than on the old Small/Continents suite (Crazy 1472 agai
 Draws are rare (0.5% of games, at most 1% in any pair): retail games between these agents end by elimination long
 before the cap. The 13 draws fall on 11 of the 200 seeds, mostly Normal maps; a first run of 50 seeds had none.
 
+## First imitation model on the 1v1 suite (2026-10-21)
+
+`bc3_b6c96_v11`: b6c96 (1.4M parameters), behaviour cloning on bc-v1 shards 0 to 148 relabelled for v1.1 (score
+adjudicated games are draws), 40,000 steps at batch 256; held-out top-1 0.547, top-3 0.806. It plays greedily (argmax
+policy, no search) at the Normal handicap, against each retail level on the same 200 seeds x 2 seatings. Run on CPU
+because the shared GPU was full: `python -m polyai.arena --model /kvm/polytopia-ai-data/runs/bc3_b6c96_v11 --opponent
+retail:easy,retail:normal,retail:hard,retail:crazy --seeds 200 --threads 8 --torch-threads 4 --device cpu --out
+/kvm/polytopia-ai-data/arena-v2/model/bc3.jsonl` (about 35 min). Report fitted together with the retail table:
+`/kvm/polytopia-ai-data/arena-v2/model/bc3_report.md`.
+
+| opponent | W-L-D | score | 95% CI |
+|---|---|---|---|
+| retail:easy | 343-56-1 | 85.9% | 82.1 to 88.9 |
+| retail:normal | 225-172-3 | 56.6% | 51.7 to 61.4 |
+| retail:hard | 101-293-6 | 26.0% | 21.9 to 30.5 |
+| retail:crazy | 40-355-5 | 10.6% | 8.0 to 14.0 |
+
+Elo 1057 (1031 to 1084), between Normal (1000) and Hard (1260) in the joint fit. The held-out Brier of bc-v1 runs is
+optimistic: with the old 50-turn cap, positions after turn 30 that keep a label come from games that ended soon after,
+so late-turn Brier is near zero by selection. Judge value heads on bc-v2 (150-turn cap, 1.6% draws) instead.
+
 ### Older results (suite v1: Small, Continents, 50 turns, adjudicated on score)
 
 The first table (2026-10-20) used the old suite and is not comparable with the one above: 15% of its games were
