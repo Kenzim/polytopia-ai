@@ -4,7 +4,7 @@ use crate::slots::{SlotMap, N_OTHER_SLOTS};
 use polytopia_sim::engine::{Command, Engine, NATURE};
 use polytopia_sim::{CityReward, DiplomacyRelationState};
 
-pub const ENCODING_VERSION: i32 = 1;
+pub const ENCODING_VERSION: i32 = 2;
 
 pub const N_CAT: usize = 9;
 pub const N_NUM: usize = 32;
@@ -231,7 +231,9 @@ fn encode_globals(e: &Engine, me: u8, slots: &SlotMap) -> Vec<f32> {
     g[sc + 1] = e.income(me) as f32 / 10.0;
     g[sc + 2] = e.score(me) as f32 / 1000.0;
     g[sc + 3] = turn / 50.0;
-    if s.turn_limit > 0 {
+    // The turn limit of a Domination game is a compute cap that players do not have, so the model never sees it:
+    // both values stay 0 (encoding.md section 3, version 2).
+    if s.turn_limit > 0 && s.rules_game_mode != crate::setup::DOMINATION {
         g[sc + 4] = (s.turn_limit as f32 - turn).max(0.0) / 50.0;
         g[sc + 5] = 1.0;
     }

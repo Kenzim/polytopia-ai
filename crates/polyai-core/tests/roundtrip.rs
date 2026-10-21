@@ -91,7 +91,7 @@ fn setup_sampler_is_seeded_and_in_range() {
     for seed in 1..400 {
         let s = GameSetup::sample(seed, &SetupSpec::default());
         assert!((2..=4).contains(&s.seats.len()));
-        assert_eq!(s.turn_limit, 50);
+        assert_eq!(s.turn_limit, DEFAULT_TURN_LIMIT);
         assert_eq!(s.mode, 2);
         let distinct: HashSet<i32> = s.seats.iter().map(|x| x.tribe).collect();
         assert_eq!(distinct.len(), s.seats.len());
@@ -100,6 +100,51 @@ fn setup_sampler_is_seeded_and_in_range() {
     }
     assert_eq!(tribes.len(), 13);
     assert_eq!(players.len(), 3);
+}
+
+#[test]
+fn player_counts_follow_the_weights_and_explicit_lists_stay_uniform() {
+    let count = |spec: &SetupSpec, n: i32| -> Vec<usize> {
+        let mut c = vec![0usize; 5];
+        for seed in 1..=n {
+            c[GameSetup::sample(seed, spec).seats.len()] += 1;
+        }
+        c
+    };
+    let c = count(&SetupSpec::default(), 4000);
+    let share = |k: usize| c[k] as f64 / 4000.0;
+    assert!((share(2) - 0.55).abs() < 0.03 && (share(3) - 0.25).abs() < 0.03 && (share(4) - 0.20).abs() < 0.03, "{c:?}");
+    let uniform = SetupSpec { n_players: vec![2, 3], n_player_weights: vec![], ..Default::default() };
+    let c = count(&uniform, 2000);
+    assert!(c[4] == 0 && (c[2] as f64 / 2000.0 - 0.5).abs() < 0.04, "{c:?}");
+    let spec = SetupSpec::default().with_players_str("2:1,4:3").unwrap();
+    let c = count(&spec, 2000);
+    assert!(c[3] == 0 && (c[4] as f64 / 2000.0 - 0.75).abs() < 0.04, "{c:?}");
+    assert!(SetupSpec::default().with_players_str("2:1,3").is_err());
+    assert!(SetupSpec::default().with_players_str("1").is_err());
+    assert_eq!(SetupSpec::default().with_players_str("2").unwrap().n_players, vec![2]);
+}
+
+#[test]
+fn a_game_cut_off_at_the_cap_is_a_draw_and_the_model_never_sees_the_cap() {
+    // Two players at a 4-turn cap: nobody is eliminated, so the engine's top-score winner must not be reported.
+    let mut setup = setup_for(41, &[TRIBES[0], TRIBES[1]]);
+    setup.turn_limit = 4;
+    let mut left = Vec::new();
+    let (rec, e) = play_ai_game(&setup, |e, _| {
+        if e.current_player() != NATURE && e.s.current_command % 40 == 0 {
+            let slots = SlotMap::new(e, e.current_player());
+            let legal = legal_actions(e);
+            left.push(encode(e, e.current_player(), &slots, &legal).globals[G_SCALARS + 4..G_SCALARS + 6].to_vec());
+        }
+    });
+    assert!(rec.outcome.over && rec.outcome.capped && rec.outcome.is_draw());
+    assert!(rec.outcome.winners.is_empty());
+    assert!(!e.winners.is_empty(), "the engine itself still names a top-score winner");
+    assert!(!left.is_empty() && left.iter().all(|v| v == &[0.0, 0.0]), "turns left leaks the cap: {left:?}");
+    let back = GameRecord::from_bytes(&rec.to_bytes()).unwrap();
+    assert_eq!(back, rec);
+    back.replay(true).expect("replay");
 }
 
 #[test]

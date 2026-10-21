@@ -9,7 +9,11 @@ pub const TRAIN_SEED_MAX: i32 = 100_000;
 pub const EVAL_SEED_MIN: i32 = 1_000_000;
 
 pub const DOMINATION: i32 = 2;
-pub const DEFAULT_TURN_LIMIT: i32 = 50;
+/// The turn at which a game is stopped for compute only. A game still running with more than one player alive at
+/// this turn is a draw (`Outcome::capped`); the engine's top-score rule is never used as a result.
+pub const DEFAULT_TURN_LIMIT: i32 = 150;
+/// Default player-count mix of the sampler: 1v1 about 55%, three players 25%, four 20% (design.md v1.1).
+pub const DEFAULT_PLAYER_WEIGHTS: [(usize, u32); 3] = [(2, 55), (3, 25), (4, 20)];
 
 pub const SIZES: [MapSize; 3] = [MapSize::Tiny, MapSize::Small, MapSize::Normal];
 pub const PRESETS: [MapPreset; 5] = [MapPreset::Dryland, MapPreset::Lakes, MapPreset::Continents, MapPreset::Pangea, MapPreset::Archipelago];
@@ -98,6 +102,8 @@ pub struct GameSetup {
 #[derive(Debug, Clone)]
 pub struct SetupSpec {
     pub n_players: Vec<usize>,
+    /// Weight of each entry of `n_players`; empty means uniform (the old explicit-list behaviour).
+    pub n_player_weights: Vec<u32>,
     pub sizes: Vec<MapSize>,
     pub presets: Vec<MapPreset>,
     /// Weights for difficulty 0..3.
@@ -107,7 +113,46 @@ pub struct SetupSpec {
 
 impl Default for SetupSpec {
     fn default() -> Self {
-        Self { n_players: vec![2, 3, 4], sizes: SIZES.to_vec(), presets: PRESETS.to_vec(), difficulty_weights: [10, 20, 35, 35], turn_limit: DEFAULT_TURN_LIMIT }
+        Self {
+            n_players: DEFAULT_PLAYER_WEIGHTS.iter().map(|w| w.0).collect(),
+            n_player_weights: DEFAULT_PLAYER_WEIGHTS.iter().map(|w| w.1).collect(),
+            sizes: SIZES.to_vec(),
+            presets: PRESETS.to_vec(),
+            difficulty_weights: [10, 20, 35, 35],
+            turn_limit: DEFAULT_TURN_LIMIT,
+        }
+    }
+}
+
+impl SetupSpec {
+    /// Player counts with weights. Fails on an empty list, a count outside 2..=13 or a weight list of another length
+    /// or with a zero total.
+    pub fn with_players(mut self, counts: Vec<usize>, weights: Vec<u32>) -> Result<Self, String> {
+        if counts.is_empty() || counts.iter().any(|n| !(2..=TRIBES.len()).contains(n)) {
+            return Err("player counts must be a non-empty list of values from 2 to 13".into());
+        }
+        if !weights.is_empty() && (weights.len() != counts.len() || weights.iter().all(|&w| w == 0)) {
+            return Err("need one weight per player count, and at least one above zero".into());
+        }
+        self.n_players = counts;
+        self.n_player_weights = weights;
+        Ok(self)
+    }
+
+    /// Parse `2:55,3:25,4:20` (weighted) or `2,3` (uniform).
+    pub fn with_players_str(self, s: &str) -> Result<Self, String> {
+        let (mut counts, mut weights) = (Vec::new(), Vec::new());
+        for part in s.split(',') {
+            let (n, w) = part.split_once(':').map_or((part, None), |(n, w)| (n, Some(w)));
+            counts.push(n.trim().parse().map_err(|_| format!("bad player count '{n}'"))?);
+            if let Some(w) = w {
+                weights.push(w.trim().parse().map_err(|_| format!("bad weight '{w}'"))?);
+            }
+        }
+        if !weights.is_empty() && weights.len() != counts.len() {
+            return Err("give a weight for every player count or for none".into());
+        }
+        self.with_players(counts, weights)
     }
 }
 
@@ -115,7 +160,11 @@ impl GameSetup {
     /// A setup drawn deterministically from `seed`.
     pub fn sample(seed: i32, spec: &SetupSpec) -> Self {
         let mut rng = Rng::new(seed as u32 as u64 | 0x5E7_0000_0000);
-        let n = spec.n_players[rng.below(spec.n_players.len())];
+        let n = if spec.n_player_weights.len() == spec.n_players.len() {
+            spec.n_players[rng.weighted(&spec.n_player_weights)]
+        } else {
+            spec.n_players[rng.below(spec.n_players.len())]
+        };
         let size = spec.sizes[rng.below(spec.sizes.len())] as u8;
         let preset = spec.presets[rng.below(spec.presets.len())] as u8;
         let mut pool: Vec<i32> = TRIBES.to_vec();

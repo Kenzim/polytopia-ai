@@ -55,13 +55,21 @@ fn setup_from_dict(d: &Bound<'_, PyDict>) -> PyResult<GameSetup> {
     Ok(s)
 }
 
-fn make_spec(n_players: Option<Vec<usize>>, sizes: Option<Vec<u8>>, presets: Option<Vec<u8>>, turn_limit: i32) -> PyResult<SetupSpec> {
+/// Player counts as given from Python: a list (uniform) or a dict `{count: weight}`.
+#[derive(FromPyObject)]
+enum PlayerCounts {
+    List(Vec<usize>),
+    Weighted(BTreeMap<usize, u32>),
+}
+
+fn make_spec(n_players: Option<PlayerCounts>, sizes: Option<Vec<u8>>, presets: Option<Vec<u8>>, turn_limit: i32) -> PyResult<SetupSpec> {
     let mut spec = SetupSpec { turn_limit, ..Default::default() };
     if let Some(n) = n_players {
-        if n.is_empty() || n.iter().any(|x| !(2..=TRIBES.len()).contains(x)) {
-            return Err(value_err("n_players must be a non-empty list of values from 2 to 13"));
-        }
-        spec.n_players = n;
+        let (counts, weights) = match n {
+            PlayerCounts::List(v) => (v, Vec::new()),
+            PlayerCounts::Weighted(m) => (m.keys().copied().collect(), m.values().copied().collect()),
+        };
+        spec = spec.with_players(counts, weights).map_err(value_err)?;
     }
     if let Some(v) = sizes {
         spec.sizes = v.into_iter().map(|x| size_from_u8(x).ok_or_else(|| value_err("size ids: 1 tiny, 2 small, 3 normal"))).collect::<PyResult<_>>()?;
@@ -155,8 +163,8 @@ impl PyGame {
 
     /// A game drawn from `seed` with the imitation-data distribution, optionally narrowed.
     #[staticmethod]
-    #[pyo3(signature = (seed, n_players=None, sizes=None, presets=None, difficulty=None, turn_limit=50))]
-    fn sample(seed: i32, n_players: Option<Vec<usize>>, sizes: Option<Vec<u8>>, presets: Option<Vec<u8>>, difficulty: Option<u8>, turn_limit: i32) -> PyResult<Self> {
+    #[pyo3(signature = (seed, n_players=None, sizes=None, presets=None, difficulty=None, turn_limit=DEFAULT_TURN_LIMIT))]
+    fn sample(seed: i32, n_players: Option<PlayerCounts>, sizes: Option<Vec<u8>>, presets: Option<Vec<u8>>, difficulty: Option<u8>, turn_limit: i32) -> PyResult<Self> {
         let mut setup = GameSetup::sample(seed, &make_spec(n_players, sizes, presets, turn_limit)?);
         if let Some(d) = difficulty {
             setup = setup.with_difficulty(d);
@@ -210,15 +218,21 @@ impl PyGame {
         g.order.iter().map(|&id| g.e.score(id)).collect()
     }
 
-    /// Winning seats (empty while the game is running).
+    /// Winning seats by elimination (empty while the game is running and for a draw at the turn cap).
     fn winners(&self) -> Vec<usize> {
         let g = self.0.lock().unwrap();
-        g.e.winners.iter().filter_map(|&w| seat_of(&g.order, w)).collect()
+        Outcome::of(&g.e).winners.iter().filter_map(|&w| seat_of(&g.order, w)).collect()
     }
 
-    fn adjudicated(&self) -> bool {
+    /// True when the game was stopped at the turn cap with more than one player alive (a draw).
+    fn capped(&self) -> bool {
         let g = self.0.lock().unwrap();
-        Outcome::of(&g.e).adjudicated
+        Outcome::of(&g.e).capped
+    }
+
+    /// Alias of `capped()`, kept for one version.
+    fn adjudicated(&self) -> bool {
+        self.capped()
     }
 
     /// The legal list of the player to move as int16[N, 4] `(kind, arg, src_tile, dst_tile)`.
@@ -401,7 +415,7 @@ struct Finished {
     winners: Vec<usize>,
     scores: Vec<i32>,
     turns: u32,
-    adjudicated: bool,
+    capped: bool,
     decisions: u32,
     commands: usize,
 }
@@ -416,7 +430,7 @@ impl Finished {
             winners: o.winners.iter().filter_map(|&w| seat_of(&s.order, w)).collect(),
             scores: s.order.iter().map(|&id| o.score_of(id)).collect(),
             turns: o.turns,
-            adjudicated: o.adjudicated,
+            capped: o.is_draw(),
             decisions: s.decisions,
             commands: s.commands,
         }
@@ -433,7 +447,8 @@ impl Finished {
         d.set_item("winners", &self.winners)?;
         d.set_item("scores", &self.scores)?;
         d.set_item("turns", self.turns)?;
-        d.set_item("adjudicated", self.adjudicated)?;
+        d.set_item("capped", self.capped)?;
+        d.set_item("adjudicated", self.capped)?; // alias of `capped`, kept for one version
         d.set_item("decisions", self.decisions)?;
         d.set_item("commands", self.commands)?;
         Ok(d)
@@ -540,7 +555,7 @@ impl PyVecEnv {
     /// seat) or a list of seat indices. `split`: `"train"` draws seeds from 1..=100000 (wrapping), `"eval"` needs
     /// `seed_start >= 1000000`.
     #[new]
-    #[pyo3(signature = (n_games, seed_start=1, model_seats=None, split="train", n_players=None, sizes=None, presets=None, difficulty=None, turn_limit=50, threads=24, auto_reset=true))]
+    #[pyo3(signature = (n_games, seed_start=1, model_seats=None, split="train", n_players=None, sizes=None, presets=None, difficulty=None, turn_limit=DEFAULT_TURN_LIMIT, threads=24, auto_reset=true))]
     #[allow(clippy::too_many_arguments)]
     fn new(
         py: Python<'_>,
@@ -548,7 +563,7 @@ impl PyVecEnv {
         seed_start: i32,
         model_seats: Option<&Bound<'_, PyAny>>,
         split: &str,
-        n_players: Option<Vec<usize>>,
+        n_players: Option<PlayerCounts>,
         sizes: Option<Vec<u8>>,
         presets: Option<Vec<u8>>,
         difficulty: Option<u8>,
@@ -670,8 +685,8 @@ impl PyVecEnv {
 
 /// The setup `seed` draws, as a dict (see `Game.from_setup`).
 #[pyfunction]
-#[pyo3(signature = (seed, n_players=None, sizes=None, presets=None, difficulty=None, turn_limit=50))]
-fn sample_setup<'py>(py: Python<'py>, seed: i32, n_players: Option<Vec<usize>>, sizes: Option<Vec<u8>>, presets: Option<Vec<u8>>, difficulty: Option<u8>, turn_limit: i32) -> PyResult<Bound<'py, PyDict>> {
+#[pyo3(signature = (seed, n_players=None, sizes=None, presets=None, difficulty=None, turn_limit=DEFAULT_TURN_LIMIT))]
+fn sample_setup<'py>(py: Python<'py>, seed: i32, n_players: Option<PlayerCounts>, sizes: Option<Vec<u8>>, presets: Option<Vec<u8>>, difficulty: Option<u8>, turn_limit: i32) -> PyResult<Bound<'py, PyDict>> {
     let mut setup = GameSetup::sample(seed, &make_spec(n_players, sizes, presets, turn_limit)?);
     if let Some(d) = difficulty {
         setup = setup.with_difficulty(d);

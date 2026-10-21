@@ -59,11 +59,15 @@ impl Game for PolyGame {
         self.e.is_over()
     }
 
-    /// 1 for a win, 0.5 for no winner, 0 for a loss. Before the end: the share of the score held against the best
+    /// 1 for a win by elimination, 0.5 for a draw (the turn cap with several players alive; the engine's top-score
+    /// winner is not used), 0 for a loss. Before the end: the share of the score held against the best
     /// opponent still alive, so a cut-off rollout still says who is ahead.
     fn reward(&self, perspective: usize) -> f64 {
         let me = perspective as u8;
         if self.e.is_over() {
+            if self.e.living_players().len() > 1 {
+                return 0.5;
+            }
             return match self.e.winners.as_slice() {
                 [] => 0.5,
                 w if w.contains(&me) => 1.0,

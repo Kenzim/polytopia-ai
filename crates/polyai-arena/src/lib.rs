@@ -7,9 +7,9 @@ pub mod mcts;
 
 use mcts::MctsParams;
 use polyai_core::game::{ai_pick, MAX_COMMANDS, MAX_PER_TURN};
-use polyai_core::{legal_actions, GameSetup, Outcome, Rng, Seat, TurnCounter, DEFAULT_TURN_LIMIT, DOMINATION, ENGINE_COMMIT, TRIBES};
+use polyai_core::{legal_actions, GameSetup, Outcome, Rng, Seat, TurnCounter, DEFAULT_TURN_LIMIT, DOMINATION, ENGINE_COMMIT, PRESETS, SIZES, TRIBES};
 use polytopia_sim::engine::{Command, Engine, NATURE};
-use polytopia_sim::{MapPreset, MapSize};
+
 use std::time::Instant;
 
 /// Evaluation seeds start here; lower seeds are training data.
@@ -171,17 +171,20 @@ impl AgentSpec {
     }
 }
 
-/// The 1v1 evaluation setup for a seed: Small, Continents, Domination, 50-turn limit, two different tribes from the 13.
-/// Both games of a seed share it; only the agents change seats.
+/// The 1v1 evaluation setup for a seed: Domination, a map size (Tiny, Small or Normal), a preset (five) and two
+/// different tribes from the 13, all drawn from the seed, with the compute cap `DEFAULT_TURN_LIMIT` (a game still
+/// running then is a draw). Both games of a seed share it; only the agents change seats.
 pub fn eval_setup(seed: i32, seat_difficulty: [u8; 2]) -> GameSetup {
     let mut rng = Rng::new(u64::from(seed as u32) | 0xA2E4_0000_0000);
     let mut pool: Vec<i32> = TRIBES.to_vec();
     let t0 = pool.remove(rng.below(pool.len()));
     let t1 = pool.remove(rng.below(pool.len()));
+    let size = SIZES[rng.below(SIZES.len())] as u8;
+    let preset = PRESETS[rng.below(PRESETS.len())] as u8;
     GameSetup {
         seed,
-        size: MapSize::Small as u8,
-        preset: MapPreset::Continents as u8,
+        size,
+        preset,
         mode: DOMINATION,
         turn_limit: DEFAULT_TURN_LIMIT,
         seats: vec![Seat { tribe: t0, difficulty: seat_difficulty[0] }, Seat { tribe: t1, difficulty: seat_difficulty[1] }],
@@ -196,11 +199,12 @@ pub struct GameResult {
     pub swap: u8,
     pub agents: [String; 2],
     pub setup: GameSetup,
-    /// Winning seat; `None` when nobody won (draw or no winner reported).
+    /// Winning seat by elimination; `None` for a draw (the game reached the turn cap, or was cut off).
     pub winner: Option<usize>,
     pub scores: [i32; 2],
     pub turns: u32,
-    pub adjudicated: bool,
+    /// The game reached the turn cap with both players alive: a draw. Never decided on score.
+    pub capped: bool,
     pub over: bool,
     pub commands: usize,
     /// Commands an agent proposed that the engine rejected (replaced by EndTurn).
@@ -251,7 +255,7 @@ pub fn play_game(setup: &GameSetup, agents: &mut [Box<dyn Agent>; 2]) -> (GameRe
         winner,
         scores: [o.score_of(order[0]), o.score_of(order[1])],
         turns: o.turns,
-        adjudicated: o.adjudicated,
+        capped: o.is_draw(),
         over: o.over,
         commands,
         illegal,
@@ -295,7 +299,7 @@ impl GameResult {
         let s = &self.setup;
         format!(
             "{{\"seed\":{},\"swap\":{},\"agents\":[{},{}],\"tribes\":[{},{}],\"setup\":{{\"size\":{},\"preset\":{},\"mode\":{},\"turn_limit\":{}}},\
-             \"winner\":{},\"scores\":[{},{}],\"turns\":{},\"adjudicated\":{},\"over\":{},\"commands\":{},\"illegal\":[{},{}],\
+             \"winner\":{},\"scores\":[{},{}],\"turns\":{},\"capped\":{},\"over\":{},\"commands\":{},\"illegal\":[{},{}],\
              \"wall_ms\":{:.1},\"think_ms\":[{:.1},{:.1}],\"engine\":{},\"game_version\":{}}}",
             self.seed,
             self.swap,
@@ -311,7 +315,7 @@ impl GameResult {
             self.scores[0],
             self.scores[1],
             self.turns,
-            self.adjudicated,
+            self.capped,
             self.over,
             self.commands,
             self.illegal[0],
@@ -370,7 +374,8 @@ mod tests {
         assert_eq!(a.seats[0].tribe, b.seats[0].tribe);
         assert_ne!(a.seats[0].tribe, a.seats[1].tribe);
         assert!(!a.is_training_seed());
-        assert_eq!((a.turn_limit, a.mode), (50, 2));
+        assert_eq!((a.turn_limit, a.mode), (DEFAULT_TURN_LIMIT, 2));
+        assert_eq!((a.size, a.preset), (b.size, b.preset));
     }
 
     #[test]
@@ -401,6 +406,30 @@ mod tests {
         assert!(r.over);
         assert_eq!(r.illegal, [0, 0]);
         assert!(r.turns <= 4);
+    }
+
+    #[test]
+    fn a_capped_game_is_a_draw_whatever_the_scores() {
+        let easy: AgentSpec = "retail:easy".parse().unwrap();
+        let crazy: AgentSpec = "retail:crazy".parse().unwrap();
+        let mut setup = eval_setup(1_000_005, [0, 3]);
+        setup.turn_limit = 4;
+        let mut agents = [easy.build(1_000_005, 0), crazy.build(1_000_005, 1)];
+        let (r, e) = play_game(&setup, &mut agents);
+        assert!(r.over && r.capped && r.winner.is_none());
+        assert_ne!(r.scores[0], r.scores[1], "scores differ, yet nobody wins");
+        assert!(!e.winners.is_empty(), "the engine's own top-score winner is ignored");
+        let line = r.to_json();
+        assert!(line.contains("\"winner\":-1,") && line.contains("\"capped\":true"));
+    }
+
+    #[test]
+    fn eval_setups_vary_size_preset_and_tribes() {
+        let setups: Vec<_> = (1_000_000..1_000_060).map(|s| eval_setup(s, [1, 1])).collect();
+        let sizes: std::collections::HashSet<u8> = setups.iter().map(|s| s.size).collect();
+        let presets: std::collections::HashSet<u8> = setups.iter().map(|s| s.preset).collect();
+        assert_eq!((sizes.len(), presets.len()), (3, 5));
+        assert!(setups.iter().all(|s| s.seats.len() == 2 && s.seats[0].tribe != s.seats[1].tribe));
     }
 
     #[test]

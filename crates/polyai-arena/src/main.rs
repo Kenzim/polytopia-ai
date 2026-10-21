@@ -65,7 +65,7 @@ impl Drop for StopOnDrop<'_> {
 struct Tally {
     wins: [u32; 2],
     draws: u32,
-    adjudicated: u32,
+    capped: u32,
     games: u32,
     wall_ms: f64,
 }
@@ -144,7 +144,7 @@ fn main() {
                 let c = &mut t[i * names.len() + j];
                 c.games += 1;
                 c.wall_ms += r.wall_ms;
-                c.adjudicated += u32::from(r.adjudicated);
+                c.capped += u32::from(r.capped);
                 match r.winner {
                     Some(w) if w == si => c.wins[0] += 1,
                     Some(w) if w == sj => c.wins[1] += 1,
@@ -162,13 +162,13 @@ fn main() {
             let c = t[i * names.len() + j];
             if c.games > 0 {
                 println!(
-                    "{} vs {}: {}-{}-{} (W-L-D for the first), {} adjudicated, {:.1}s per game",
+                    "{} vs {}: {}-{}-{} (W-L-D for the first), {} capped (draws), {:.1}s per game",
                     names[i],
                     names[j],
                     c.wins[0],
                     c.wins[1],
                     c.draws,
-                    c.adjudicated,
+                    c.capped,
                     c.wall_ms / f64::from(c.games) / 1000.0
                 );
             }

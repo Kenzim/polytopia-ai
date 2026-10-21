@@ -8,7 +8,7 @@ import polyai_engine as pe
 
 
 def test_constants():
-    assert pe.ENCODING_VERSION == 1
+    assert pe.ENCODING_VERSION == 2
     assert pe.F_TILE == 41 and pe.G_DIM == 247 and pe.N_KINDS == 32
     assert len(pe.TRIBES) == 13
 
@@ -32,9 +32,38 @@ def test_game_ai_play_and_record():
                 assert len(cand) == len(score) <= 16
         g.play_ai_move()
         n += 1
-    assert g.winners()
+    # A 12-turn cap on a 1v1 game: either one side was eliminated or it is a draw with no winner.
+    assert bool(g.winners()) != g.capped()
+    assert g.adjudicated() == g.capped()
     assert len(g.scores()) == 2
     assert g.record()[:4] == b"PREC"
+
+
+def test_capped_game_is_a_draw_with_no_winner():
+    g = pe.Game.sample(5, n_players=[2], sizes=[1], turn_limit=3)
+    seen = 0
+    while not g.is_over():
+        if g.current_seat() is not None:
+            _, glob = g.encode()
+            assert glob[17] == 0 and glob[18] == 0  # turns left / has a limit: the cap is never shown
+            seen += 1
+        g.play_ai_move()
+    assert seen > 10
+    assert g.capped() and g.winners() == []
+
+
+def test_defaults_and_player_weights():
+    s = pe.sample_setup(3)
+    assert s["turn_limit"] == 150
+    counts = {2: 0, 3: 0, 4: 0}
+    for seed in range(1, 401):
+        counts[len(pe.sample_setup(seed)["seats"])] += 1
+    assert 0.47 < counts[2] / 400 < 0.63 and counts[3] > 60 and counts[4] > 50
+    assert {len(pe.sample_setup(seed, n_players=[3, 4])["seats"]) for seed in range(1, 60)} == {3, 4}
+    only = {len(pe.sample_setup(seed, n_players={2: 1, 4: 0})["seats"]) for seed in range(1, 60)}
+    assert only == {2}
+    with pytest.raises(ValueError):
+        pe.sample_setup(1, n_players={2: 1, 3: 0, 99: 1})
 
 
 def test_step_action_matches_step():
@@ -100,7 +129,7 @@ def test_vecenv_random_policy(mode):
         check_groups(groups, 16)
         for f in finished:
             assert len(f["scores"]) == f["n_players"] == len(f["model_seats"])
-            assert f["turns"] > 0 and f["winners"]
+            assert f["turns"] > 0 and bool(f["winners"]) != f["capped"] and f["adjudicated"] == f["capped"]
         finished_total += len(finished)
         if not groups:
             break

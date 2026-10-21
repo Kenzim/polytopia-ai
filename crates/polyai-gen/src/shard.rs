@@ -24,10 +24,8 @@ pub struct Row {
 /// The labels of a row, from the finished game.
 pub struct Labels {
     pub winner: i8,
-    pub margin: f32,
-    pub margin5: f32,
     pub final_scores: [f32; MAX_SLOTS],
-    pub adjudicated: i8,
+    pub capped: i8,
 }
 
 /// Positions of one map size, column by column.
@@ -43,10 +41,8 @@ pub struct ShardBuf {
     cand_idx: Vec<i16>,
     cand_score: Vec<f32>,
     winner: Vec<i8>,
-    margin: Vec<f32>,
-    margin5: Vec<f32>,
     final_scores: Vec<f32>,
-    adjudicated: Vec<i8>,
+    capped: Vec<i8>,
     turn: Vec<i16>,
     seed: Vec<i32>,
     cmd_index: Vec<i32>,
@@ -67,10 +63,8 @@ impl ShardBuf {
             cand_idx: vec![],
             cand_score: vec![],
             winner: vec![],
-            margin: vec![],
-            margin5: vec![],
             final_scores: vec![],
-            adjudicated: vec![],
+            capped: vec![],
             turn: vec![],
             seed: vec![],
             cmd_index: vec![],
@@ -94,10 +88,8 @@ impl ShardBuf {
         self.cand_idx.extend_from_slice(&r.cand_idx);
         self.cand_score.extend_from_slice(&r.cand_score);
         self.winner.push(l.winner);
-        self.margin.push(l.margin);
-        self.margin5.push(l.margin5);
         self.final_scores.extend_from_slice(&l.final_scores);
-        self.adjudicated.push(l.adjudicated);
+        self.capped.push(l.capped);
         self.turn.push(r.turn);
         self.seed.push(seed);
         self.cmd_index.push(r.cmd_index);
@@ -116,10 +108,8 @@ impl ShardBuf {
         z.add("cand_idx", &[n, K_CAND], &self.cand_idx)?;
         z.add("cand_score", &[n, K_CAND], &self.cand_score)?;
         z.add("winner", &[n], &self.winner)?;
-        z.add("margin", &[n], &self.margin)?;
-        z.add("margin5", &[n], &self.margin5)?;
         z.add("final_scores", &[n, MAX_SLOTS], &self.final_scores)?;
-        z.add("adjudicated", &[n], &self.adjudicated)?;
+        z.add("capped", &[n], &self.capped)?;
         z.add("turn", &[n], &self.turn)?;
         z.add("seed", &[n], &self.seed)?;
         z.add("cmd_index", &[n], &self.cmd_index)?;

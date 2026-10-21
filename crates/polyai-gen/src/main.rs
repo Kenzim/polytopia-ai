@@ -1,6 +1,10 @@
 //! Plays retail-AI games on N threads and writes game records and `.npz` training shards.
 //!
-//! `polyai-gen --out DIR --games N [--seed-start S] [--threads T] [--keep K] [--shard-size P] [--difficulty D]`
+//! `polyai-gen --out DIR --games N [--seed-start S] [--threads T] [--keep K] [--shard-size P] [--difficulty D]
+//!  [--turn-limit L] [--players 2:55,3:25,4:20]`
+//!
+//! `--players` is a weighted list of player counts (`2:55,3:25,4:20` is the default) or a plain list (`2,3`, uniform).
+//! `--turn-limit` is the compute cap (default 150): a game still running then is a draw (`capped`), never adjudicated.
 //!
 //! Seeds `S..S+N` must lie in the training range 1..=100000 (evaluation seeds start at 1,000,000).
 
@@ -10,7 +14,7 @@ mod shard;
 use polyai_core::*;
 use polytopia_sim::engine::{Command, Engine, NATURE};
 use shard::{Labels, Row, ShardBuf, K_CAND, MAX_SLOTS};
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
@@ -27,10 +31,12 @@ struct Args {
     keep: u64,
     shard_size: usize,
     difficulty: Option<u8>,
+    turn_limit: Option<i32>,
+    players: Option<String>,
 }
 
 fn parse_args() -> Result<Args, String> {
-    let mut a = Args { out: PathBuf::new(), games: 0, seed_start: 1, threads: MAX_THREADS, keep: 4, shard_size: 50_000, difficulty: None };
+    let mut a = Args { out: PathBuf::new(), games: 0, seed_start: 1, threads: MAX_THREADS, keep: 4, shard_size: 50_000, difficulty: None, turn_limit: None, players: None };
     let mut it = std::env::args().skip(1);
     while let Some(flag) = it.next() {
         let mut val = || it.next().ok_or(format!("{flag} needs a value"));
@@ -43,17 +49,22 @@ fn parse_args() -> Result<Args, String> {
             "--keep" => a.keep = val()?.parse().map_err(|_| bad(&flag))?,
             "--shard-size" => a.shard_size = val()?.parse().map_err(|_| bad(&flag))?,
             "--difficulty" => a.difficulty = Some(val()?.parse().map_err(|_| bad(&flag))?),
+            "--turn-limit" => a.turn_limit = Some(val()?.parse().map_err(|_| bad(&flag))?),
+            "--players" => a.players = Some(val()?),
             _ => return Err(format!("unknown argument {flag}")),
         }
     }
     if a.out.as_os_str().is_empty() || a.games == 0 {
-        return Err("usage: polyai-gen --out DIR --games N [--seed-start S] [--threads T<=24] [--keep K] [--shard-size P] [--difficulty 0..3]".into());
+        return Err("usage: polyai-gen --out DIR --games N [--seed-start S] [--threads T<=24] [--keep K] [--shard-size P] [--difficulty 0..3] [--turn-limit L] [--players 2:55,3:25,4:20]".into());
     }
     a.threads = a.threads.clamp(1, MAX_THREADS);
     a.keep = a.keep.max(1);
     let last = i64::from(a.seed_start) + a.games as i64 - 1;
     if a.seed_start < 1 || last > i64::from(TRAIN_SEED_MAX) {
         return Err(format!("seeds {}..={} are outside the training range 1..={}", a.seed_start, last, TRAIN_SEED_MAX));
+    }
+    if a.turn_limit.is_some_and(|l| l < 1) {
+        return Err("--turn-limit must be at least 1 (it is the compute cap)".into());
     }
     if a.difficulty.is_some_and(|d| d > 3) {
         return Err("--difficulty is 0 (easy) to 3 (crazy)".into());
@@ -84,14 +95,9 @@ fn play_one(setup: &GameSetup, keep: u64) -> Played {
     let mut rows: Vec<Row> = Vec::new();
     let mut misses = 0usize;
     let mut cmd_index = 0u32;
-    // Scores of every player at the first decision of each turn: (turn, scores in `order`).
-    let mut snaps: Vec<(u32, Vec<i32>)> = Vec::new();
     let (record, last) = play_ai_game(setup, |e: &mut Engine, cmd: &Command| {
         let index = cmd_index;
         cmd_index += 1;
-        if snaps.last().map_or(true, |s| s.0 != e.s.current_turn) {
-            snaps.push((e.s.current_turn, order.iter().map(|&id| e.score(id)).collect()));
-        }
         let me = e.current_player();
         if me == NATURE || mix(setup.seed, index) % keep != 0 {
             return;
@@ -135,10 +141,6 @@ fn play_one(setup: &GameSetup, keep: u64) -> Played {
     });
 
     let o = &record.outcome;
-    let margin_of = |scores: &dyn Fn(u8) -> i32, me: u8| -> f32 {
-        let best_other = order.iter().filter(|&&id| id != me).map(|&id| scores(id)).max().unwrap_or(0);
-        (scores(me) - best_other) as f32
-    };
     let labels = rows
         .iter()
         .map(|r| {
@@ -150,12 +152,7 @@ fn play_one(setup: &GameSetup, keep: u64) -> Played {
                 }
             }
             let winner = o.winners.iter().find_map(|w| ids[..MAX_SLOTS].iter().position(|&x| x == *w && x != 0)).map_or(-1, |k| k as i8);
-            let later = snaps.iter().find(|s| s.0 >= r.turn as u32 + 5);
-            let margin5 = match later {
-                Some((_, sc)) => margin_of(&|id| order.iter().position(|&x| x == id).map_or(0, |i| sc[i]), r.me),
-                None => margin_of(&|id| o.score_of(id), r.me),
-            };
-            Labels { winner, margin: margin_of(&|id| o.score_of(id), r.me), margin5, final_scores, adjudicated: i8::from(o.adjudicated) }
+            Labels { winner, final_scores, capped: i8::from(o.is_draw()) }
         })
         .collect();
     Played { record, rows, labels, misses, h: last.height() as usize, w: last.width() as usize }
@@ -169,7 +166,8 @@ struct Shared {
     positions: AtomicU64,
     commands: AtomicU64,
     misses: AtomicU64,
-    adjudicated: AtomicUsize,
+    capped: AtomicUsize,
+    by_players: Mutex<BTreeMap<usize, usize>>,
     shards: Mutex<Vec<(PathBuf, usize)>>,
 }
 
@@ -197,10 +195,20 @@ fn main() {
         positions: AtomicU64::new(0),
         commands: AtomicU64::new(0),
         misses: AtomicU64::new(0),
-        adjudicated: AtomicUsize::new(0),
+        capped: AtomicUsize::new(0),
+        by_players: Mutex::new(BTreeMap::new()),
         shards: Mutex::new(Vec::new()),
     };
-    let spec = SetupSpec::default();
+    let mut spec = SetupSpec::default();
+    if let Some(l) = args.turn_limit {
+        spec.turn_limit = l;
+    }
+    if let Some(p) = &args.players {
+        spec = spec.with_players_str(p).unwrap_or_else(|e| {
+            eprintln!("--players: {e}");
+            std::process::exit(2);
+        });
+    }
     let started = Instant::now();
     println!("polyai-gen: {} games from seed {} on {} threads, engine {}", args.games, args.seed_start, args.threads, ENGINE_COMMIT);
     std::thread::scope(|scope| {
@@ -239,7 +247,8 @@ fn main() {
                     sh.positions.fetch_add(p.rows.len() as u64, Ordering::Relaxed);
                     sh.commands.fetch_add(p.record.commands.len() as u64, Ordering::Relaxed);
                     sh.misses.fetch_add(p.misses as u64, Ordering::Relaxed);
-                    sh.adjudicated.fetch_add(usize::from(p.record.outcome.adjudicated), Ordering::Relaxed);
+                    sh.capped.fetch_add(usize::from(p.record.outcome.is_draw()), Ordering::Relaxed);
+                    *sh.by_players.lock().unwrap().entry(p.record.setup.seats.len()).or_default() += 1;
                     sh.games.fetch_add(1, Ordering::Relaxed);
                 }
                 rec_out.flush().expect("flush records");
@@ -268,11 +277,13 @@ fn main() {
         c as f64 / t
     );
     println!(
-        "{} shards, {} games adjudicated at the turn limit, {} chosen commands missing from the legal list",
+        "{} shards, {} games capped at the turn limit (draws), {} chosen commands missing from the legal list",
         shards.len(),
-        sh.adjudicated.load(Ordering::Relaxed),
+        sh.capped.load(Ordering::Relaxed),
         sh.misses.load(Ordering::Relaxed)
     );
+    let mix: Vec<String> = sh.by_players.lock().unwrap().iter().map(|(n, c)| format!("{n} players: {c} ({:.0}%)", 100.0 * *c as f64 / g.max(1) as f64)).collect();
+    println!("player counts: {}", mix.join(", "));
     for (path, n) in shards.iter() {
         println!("  {} ({n} positions)", path.display());
     }

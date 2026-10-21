@@ -4,7 +4,8 @@ use crate::record::{GameRecord, Outcome, ENGINE_COMMIT};
 use crate::setup::GameSetup;
 use polytopia_sim::engine::{Command, Engine};
 
-/// A safety net against a game that never ends: well above any real game (50 turns is about 10k commands).
+/// A safety net against a game that never ends: well above any game that reaches the turn cap (150 turns is about
+/// 10k commands).
 pub const MAX_COMMANDS: usize = 200_000;
 /// The retail AI ends its turn after this many commands (same cap as the engine's `step_ai_cmd`).
 pub const MAX_PER_TURN: u32 = 400;

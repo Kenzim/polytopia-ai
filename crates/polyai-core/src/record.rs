@@ -4,7 +4,9 @@ use crate::setup::{GameSetup, Seat};
 use polytopia_sim::engine::{Command, Engine, Wc, NATURE};
 use polytopia_sim::CityReward;
 
-pub const RECORD_FORMAT: u8 = 1;
+/// Format 2 (v1.1): the flag bit 1 means `capped` and a capped game has no winners. Format 1 files are still read:
+/// their `adjudicated` bit maps to `capped` and the top-score winner they stored is dropped.
+pub const RECORD_FORMAT: u8 = 2;
 const MAGIC: &[u8; 4] = b"PREC";
 
 /// The commit of the engine checkout this crate was built against (`-dirty` with local changes).
@@ -14,12 +16,13 @@ pub const ENGINE_COMMIT: &str = env!("ENGINE_COMMIT");
 pub struct Outcome {
     pub over: bool,
     pub turns: u32,
-    /// Engine player ids.
+    /// Engine player ids of the players who won by elimination; empty for a draw.
     pub winners: Vec<u8>,
     /// Final `Engine::score` per player id (Nature excluded).
     pub scores: Vec<(u8, i32)>,
-    /// The game ended at the turn limit with more than one player alive.
-    pub adjudicated: bool,
+    /// The game was stopped at the turn limit (a compute cap) with more than one player alive: a draw with no winner.
+    /// The engine's top-score winner is discarded.
+    pub capped: bool,
 }
 
 impl Outcome {
@@ -27,13 +30,19 @@ impl Outcome {
         let scores = e.s.players.iter().filter(|p| p.id != NATURE).map(|p| (p.id, e.score(p.id))).collect();
         let alive = e.living_players().len();
         let limit = e.s.settings.turn_limit;
+        let capped = e.is_over() && alive > 1 && limit > 0 && e.s.current_turn as i32 >= limit;
         Outcome {
             over: e.is_over(),
             turns: e.s.current_turn,
-            winners: e.winners.clone(),
+            winners: if capped { Vec::new() } else { e.winners.clone() },
             scores,
-            adjudicated: e.is_over() && alive > 1 && limit > 0 && e.s.current_turn as i32 >= limit,
+            capped,
         }
+    }
+
+    /// The game ended (or was cut off) without an elimination winner.
+    pub fn is_draw(&self) -> bool {
+        self.capped || !self.over || self.winners.is_empty()
     }
 
     pub fn score_of(&self, id: u8) -> i32 {
@@ -293,7 +302,7 @@ impl GameRecord {
             put_command(&mut w, c);
         }
         let o = &self.outcome;
-        w.u(u64::from(o.over) | u64::from(o.adjudicated) << 1);
+        w.u(u64::from(o.over) | u64::from(o.capped) << 1);
         w.u(u64::from(o.turns));
         w.u(o.winners.len() as u64);
         for &x in &o.winners {
@@ -313,7 +322,7 @@ impl GameRecord {
         }
         let mut r = R { b, p: 4 };
         let format = r.u()?;
-        if format != u64::from(RECORD_FORMAT) {
+        if format != 1 && format != u64::from(RECORD_FORMAT) {
             return Err(format!("record format {format} not supported"));
         }
         let engine_version = r.i32()?;
@@ -340,6 +349,11 @@ impl GameRecord {
         for _ in 0..nw {
             winners.push(r.u()? as u8);
         }
+        let capped = flags & 2 != 0;
+        if capped {
+            // Format 1 stored the engine's top-score winner of an adjudicated game; it is not a result.
+            winners.clear();
+        }
         let ns = r.u()? as usize;
         let mut scores = Vec::with_capacity(ns);
         for _ in 0..ns {
@@ -350,7 +364,7 @@ impl GameRecord {
             engine_commit,
             setup: GameSetup { seed, size, preset, mode, turn_limit, seats },
             commands,
-            outcome: Outcome { over: flags & 1 != 0, adjudicated: flags & 2 != 0, turns, winners, scores },
+            outcome: Outcome { over: flags & 1 != 0, capped, turns, winners, scores },
         })
     }
 
@@ -397,4 +411,26 @@ pub fn read_records(mut data: &[u8]) -> Result<Vec<GameRecord>, String> {
         data = &data[4 + n..];
     }
     Ok(out)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::setup::SetupSpec;
+
+    #[test]
+    fn format_1_adjudicated_winner_is_dropped_on_load() {
+        let setup = GameSetup::sample(5, &SetupSpec::default());
+        let outcome = Outcome { over: true, turns: 50, winners: vec![2], scores: vec![(1, 900), (2, 1000)], capped: true };
+        let rec = GameRecord { engine_version: 123, engine_commit: "x".into(), setup, commands: vec![Command::EndTurn], outcome };
+        let mut bytes = rec.to_bytes();
+        assert_eq!(bytes[4], RECORD_FORMAT);
+        bytes[4] = 1; // a format 1 file: same layout, the flag bit was called `adjudicated`
+        let old = GameRecord::from_bytes(&bytes).unwrap();
+        assert!(old.outcome.capped && old.outcome.winners.is_empty() && old.outcome.over);
+        assert_eq!(old.outcome.scores, rec.outcome.scores);
+        assert!(old.outcome.is_draw());
+        bytes[4] = 9;
+        assert!(GameRecord::from_bytes(&bytes).is_err());
+    }
 }
