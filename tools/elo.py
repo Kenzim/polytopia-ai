@@ -5,8 +5,11 @@
         [--anchor-elo 1000] [--bootstrap 300] [--seed 0] [--markdown]
 
 Per pair: games, wins for each side, draws, win rate of the first agent (a draw counts as half a win) with a Wilson
-95% interval, the mean score margin (first minus second), the share of games adjudicated at the turn limit, and the
-mean wall time.
+95% interval, the draw rate, the mean wall time, and, as an information-only last column, the mean final score
+difference (first minus second). Points never decide a game: a game that reaches the turn cap with both players alive
+is a draw (`capped` in the JSONL, `winner` -1) and counts half a win each way, here and in the Bradley-Terry fit.
+Lines from before that change (no `capped` key, an `adjudicated` flag) are read the same way: an adjudicated game is
+a draw and its stored score winner is ignored.
 
 Elo: Bradley-Terry strengths fitted by the MM iteration over all games, a draw counting as half a win each way, plus a
 weak prior of one drawn game in total between every pair of agents so that an unbeaten agent gets a finite rating.
@@ -38,14 +41,15 @@ def load_games(paths):
                 r = json.loads(line)
                 a, b = r["agents"]
                 w = r["winner"]
+                capped = bool(r.get("capped", r.get("adjudicated", False)))
                 games.append(
                     {
                         "seed": r["seed"],
                         "a": a,
                         "b": b,
-                        "winner": w if w in (0, 1) else None,
-                        "margin": r["scores"][0] - r["scores"][1],
-                        "adjudicated": bool(r["adjudicated"]),
+                        "winner": w if w in (0, 1) and not capped else None,
+                        "capped": capped,
+                        "score_diff": r["scores"][0] - r["scores"][1],
                         "wall_ms": r.get("wall_ms", 0.0),
                     }
                 )
@@ -65,7 +69,7 @@ def wilson(p_wins, n, z=Z95):
 
 def pair_stats(games):
     """Per unordered pair (names sorted): a dict of counts and means, with `a` the alphabetically first agent."""
-    acc = defaultdict(lambda: {"n": 0, "wa": 0, "wb": 0, "d": 0, "margin": 0.0, "adj": 0, "wall": 0.0})
+    acc = defaultdict(lambda: {"n": 0, "wa": 0, "wb": 0, "d": 0, "score_diff": 0.0, "wall": 0.0})
     for g in games:
         flip = g["a"] > g["b"]
         a, b = (g["b"], g["a"]) if flip else (g["a"], g["b"])
@@ -78,8 +82,7 @@ def pair_stats(games):
             s["wa"] += 1
         else:
             s["wb"] += 1
-        s["margin"] += -g["margin"] if flip else g["margin"]
-        s["adj"] += g["adjudicated"]
+        s["score_diff"] += -g["score_diff"] if flip else g["score_diff"]
         s["wall"] += g["wall_ms"]
     out = {}
     for key, s in acc.items():
@@ -94,8 +97,8 @@ def pair_stats(games):
             "rate": score / n,
             "lo": lo,
             "hi": hi,
-            "margin": s["margin"] / n,
-            "adjudicated": s["adj"] / n,
+            "draw_rate": s["d"] / n,
+            "score_diff": s["score_diff"] / n,
             "wall_s": s["wall"] / n / 1000.0,
         }
     return out
@@ -168,7 +171,7 @@ def elo_table(games, anchor="retail:normal", anchor_elo=1000.0, bootstrap=300, s
 
 
 def format_pairs(stats, md=False):
-    head = ["pair", "games", "W-L-D (first)", "win rate", "95% CI", "mean margin", "adjudicated", "s/game"]
+    head = ["pair", "games", "W-L-D (first)", "win rate", "95% CI", "draws", "s/game", "score diff (info)"]
     rows = []
     for (a, b), s in sorted(stats.items()):
         rows.append(
@@ -178,9 +181,9 @@ def format_pairs(stats, md=False):
                 f"{s['wins_a']}-{s['wins_b']}-{s['draws']}",
                 f"{100 * s['rate']:.1f}%",
                 f"{100 * s['lo']:.1f} to {100 * s['hi']:.1f}",
-                f"{s['margin']:+.0f}",
-                f"{100 * s['adjudicated']:.0f}%",
+                f"{100 * s['draw_rate']:.0f}%",
                 f"{s['wall_s']:.1f}",
+                f"{s['score_diff']:+.0f}",
             ]
         )
     return render(head, rows, md)
@@ -217,8 +220,8 @@ def main(argv=None):
         print("no games", file=sys.stderr)
         return 1
     seeds = {g["seed"] for g in games}
-    adj = sum(g["adjudicated"] for g in games)
-    print(f"{len(games)} games, {len(seeds)} seeds, {100 * adj / len(games):.1f}% adjudicated at the turn limit\n")
+    draws = sum(g["winner"] is None for g in games)
+    print(f"{len(games)} games, {len(seeds)} seeds, {100 * draws / len(games):.1f}% draws (turn cap reached, counted as half a win)\n")
     print(format_pairs(pair_stats(games), a.markdown))
     print()
     agents, elo, lo, hi, anchor = elo_table(games, a.anchor, a.anchor_elo, a.bootstrap, a.seed)

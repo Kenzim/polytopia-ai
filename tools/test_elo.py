@@ -11,8 +11,8 @@ sys.path.insert(0, os.path.dirname(__file__))
 import elo  # noqa: E402
 
 
-def game(seed, a, b, winner, margin=0, adjudicated=False):
-    return {"seed": seed, "a": a, "b": b, "winner": winner, "margin": margin, "adjudicated": adjudicated, "wall_ms": 1000.0}
+def game(seed, a, b, winner, score_diff=0, capped=False):
+    return {"seed": seed, "a": a, "b": b, "winner": winner, "score_diff": score_diff, "capped": capped, "wall_ms": 1000.0}
 
 
 def test_wilson_known_values():
@@ -25,16 +25,34 @@ def test_wilson_known_values():
 
 def test_pair_stats_orients_by_name_and_counts_draws():
     games = [
-        game(1, "b", "a", 0, margin=100),  # b (seat 0) beat a
-        game(1, "a", "b", 0, margin=50),  # a beat b
-        game(2, "a", "b", 1, margin=-200, adjudicated=True),  # b beat a
-        game(2, "b", "a", None),  # draw
+        game(1, "b", "a", 0, score_diff=100),  # b (seat 0) beat a
+        game(1, "a", "b", 0, score_diff=50),  # a beat b
+        game(2, "a", "b", 1, score_diff=-200),  # b beat a
+        game(2, "b", "a", None, capped=True),  # draw at the turn cap
     ]
     s = elo.pair_stats(games)[("a", "b")]
     assert (s["n"], s["wins_a"], s["wins_b"], s["draws"]) == (4, 1, 2, 1)
     assert abs(s["rate"] - 0.375) < 1e-9
-    assert abs(s["margin"] - (-100 + 50 - 200 + 0) / 4) < 1e-9
-    assert s["adjudicated"] == 0.25
+    assert abs(s["score_diff"] - (-100 + 50 - 200 + 0) / 4) < 1e-9
+    assert s["draw_rate"] == 0.25
+
+
+def test_draws_count_half_in_the_fit_and_old_adjudicated_lines_are_draws(tmp_path):
+    # 20 decisive games split evenly plus 20 draws: the two agents are equal.
+    games = [game(s, "x", "y", s % 2) for s in range(20)] + [game(100 + s, "x", "y", None, capped=True) for s in range(20)]
+    agents, e, _, _, _ = elo.elo_table(games, anchor="x", bootstrap=0)
+    assert abs(e[agents.index("y")] - 1000) < 5
+    lines = [
+        {"seed": 1, "agents": ["x", "y"], "winner": 0, "scores": [10, 5], "adjudicated": True, "wall_ms": 1},  # old: score winner ignored
+        {"seed": 2, "agents": ["x", "y"], "winner": 0, "scores": [10, 5], "capped": False, "wall_ms": 1},
+        {"seed": 3, "agents": ["x", "y"], "winner": -1, "scores": [10, 5], "capped": True, "wall_ms": 1},
+        {"seed": 4, "agents": ["x", "y"], "winner": 0, "scores": [10, 5], "capped": True, "wall_ms": 1},  # never a winner when capped
+    ]
+    path = tmp_path / "old.jsonl"
+    path.write_text("\n".join(json.dumps(r) for r in lines) + "\n")
+    loaded = elo.load_games([str(path)])
+    assert [g["winner"] for g in loaded] == [None, 0, None, None]
+    assert [g["capped"] for g in loaded] == [True, False, True, True]
 
 
 def test_bt_recovers_known_elo_gaps():
@@ -65,7 +83,7 @@ def test_cli_reads_jsonl(tmp_path, capsys):
     with open(path, "w") as f:
         for s in range(10):
             for swap, agents in ((0, ["retail:easy", "retail:normal"]), (1, ["retail:normal", "retail:easy"])):
-                f.write(json.dumps({"seed": 1000000 + s, "swap": swap, "agents": agents, "winner": 1 - swap, "scores": [1, 2], "adjudicated": False, "wall_ms": 5}) + "\n")
+                f.write(json.dumps({"seed": 1000000 + s, "swap": swap, "agents": agents, "winner": 1 - swap, "scores": [1, 2], "capped": False, "wall_ms": 5}) + "\n")
     assert elo.main([str(path), "--bootstrap", "10"]) == 0
     out = capsys.readouterr().out
-    assert "20 games, 10 seeds" in out and "retail:normal (anchor)" in out and "retail:easy vs retail:normal" in out
+    assert "20 games, 10 seeds, 0.0% draws" in out and "retail:normal (anchor)" in out and "retail:easy vs retail:normal" in out
