@@ -4,7 +4,9 @@
 
 use numpy::{PyArray1, PyArrayMethods, PyReadonlyArray1};
 use polyai_core::*;
+use polytopia_sim::engine::replay::{RawCmd, SaveFile};
 use polytopia_sim::engine::{Command, Engine, NATURE};
+use polytopia_sim::GameState;
 use pyo3::exceptions::{PyIndexError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict, PyList};
@@ -13,6 +15,8 @@ use std::collections::BTreeMap;
 use std::sync::Mutex;
 
 const MAX_THREADS: usize = 24;
+/// Players the encoding has slots for (the mover and 7 others).
+const MAX_PLAYERS: usize = 8;
 
 fn value_err(msg: impl Into<String>) -> PyErr {
     PyValueError::new_err(msg.into())
@@ -109,13 +113,106 @@ fn player_order(e: &Engine) -> Vec<u8> {
 // ---------------------------------------------------------------------------------------------------------------
 // Game
 
+fn no_setup() -> PyErr {
+    value_err("this game was rebuilt from a server state and has no setup")
+}
+
+/// Differences between the replayed engine and the server's own current state (the checks of the client's `play.rs`).
+fn server_diffs(e: &Engine, cur: &GameState, current: &[u8]) -> Vec<String> {
+    let mut d = Vec::new();
+    if e.s.current_turn != cur.current_turn {
+        d.push(format!("turn engine {} server {}", e.s.current_turn, cur.current_turn));
+    }
+    if e.current_player() != cur.current_player_id().unwrap_or(0) {
+        d.push(format!("current player engine {} server {}", e.current_player(), cur.current_player_id().unwrap_or(0)));
+    }
+    // While the server's action stack is paused on a trigger (a city reward) its score actions are still queued, so its
+    // stored scores lag; the engine has already recomputed them.
+    let paused = !e.deferred.is_empty() || e.pending_trigger(e.current_player()).is_some();
+    for p in cur.players.iter().filter(|p| p.id != NATURE) {
+        let mine = e.player(p.id).map(|q| (q.currency, if paused { p.score } else { q.score }));
+        if mine != Some((p.currency, p.score)) {
+            d.push(format!("p{} stars/score engine {:?} server ({}, {})", p.id, mine, p.currency, p.score));
+        }
+    }
+    for u in &cur.units {
+        match e.unit(u.id) {
+            None => d.push(format!("unit {} missing in engine", u.id)),
+            Some(m) if m.coordinates != u.coordinates || m.health != u.health || m.owner != u.owner || m.type_idx != u.type_idx => {
+                d.push(format!("unit {} engine {:?} hp {} server {:?} hp {}", u.id, m.coordinates, m.health, u.coordinates, u.health))
+            }
+            _ => {}
+        }
+    }
+    for u in &e.s.units {
+        if !cur.units.iter().any(|f| f.id == u.id) {
+            d.push(format!("unit {} extra in engine", u.id));
+        }
+    }
+    let server_trig: Vec<(u8, i32, i32)> =
+        SaveFile::live_triggers(current).unwrap_or_default().into_iter().filter(|t| t.1 == 1).map(|(p, _, w)| (p, w.x, w.y)).collect();
+    let engine_trig: Vec<(u8, i32, i32)> = e.triggers.iter().filter(|t| t.peace_from.is_none()).map(|t| (t.player, t.city.x, t.city.y)).collect();
+    if server_trig != engine_trig {
+        d.push(format!("city triggers engine {engine_trig:?} server {server_trig:?}"));
+    }
+    d
+}
+
+/// The engine at the end of the server's command stack, checked against the server's state, with `seat` to move.
+fn rebuild_server(initial: &[u8], current: &[u8], seat: u8) -> Result<Engine, String> {
+    if initial.is_empty() || current.is_empty() {
+        return Err("the game holds no state data".into());
+    }
+    let save = SaveFile::parse_server(initial, current).map_err(|e| format!("cannot decode the game state: {e}"))?;
+    let mut e = Engine::from_state(save.initial.clone());
+    if save.commands.iter().any(|c| c.kind == 20) {
+        e.start_match();
+    }
+    let mut unsupported = 0;
+    for c in &save.commands {
+        if c.kind == 20 || c.player == NATURE {
+            continue;
+        }
+        match e.command_from_raw(c) {
+            Some(cmd) => e.apply_unchecked(cmd),
+            None => {
+                e.s.current_command += 1;
+                unsupported += 1;
+            }
+        }
+    }
+    let d = server_diffs(&e, &save.current, current);
+    if !d.is_empty() {
+        let shown: Vec<_> = d.iter().take(5).cloned().collect();
+        return Err(format!("the engine does not agree with the server's state ({} differences, {unsupported} commands unsupported): {}", d.len(), shown.join("; ")));
+    }
+    if let Some(p) = e.s.players.iter().find(|p| p.id != NATURE && tribe_index(p.tribe).is_none()) {
+        return Err(format!("player {} has tribe {}, which is not one of the 13 supported tribes", p.id, p.tribe));
+    }
+    let n_players = e.s.players.iter().filter(|p| p.id != NATURE).count();
+    if n_players > MAX_PLAYERS {
+        return Err(format!("the game has {n_players} players; the encoding holds at most {MAX_PLAYERS}"));
+    }
+    if e.is_over() {
+        return Err("the game is over".into());
+    }
+    if !e.s.players.iter().any(|p| p.id == seat && p.id != NATURE) {
+        return Err(format!("seat {seat} is not a player of this game"));
+    }
+    if e.current_player() != seat {
+        return Err(format!("it is player {}'s turn, not seat {seat}'s", e.current_player()));
+    }
+    Ok(e)
+}
+
 /// One game. Seats are indices into the setup's seat list; Nature has no seat.
 #[pyclass(name = "Game")]
 struct PyGame(Mutex<GameInner>);
 
 struct GameInner {
     e: Engine,
-    setup: GameSetup,
+    /// `None` for a game rebuilt from a server's state blobs (`Game.from_server`), which has no setup.
+    setup: Option<GameSetup>,
     order: Vec<u8>,
     commands: Vec<Command>,
     counter: TurnCounter,
@@ -126,7 +223,7 @@ impl GameInner {
     fn from_parts(setup: GameSetup) -> Self {
         let e = setup.build();
         let order = player_order(&e);
-        Self { e, setup, order, commands: Vec::new(), counter: TurnCounter::default(), legal: None }
+        Self { e, setup: Some(setup), order, commands: Vec::new(), counter: TurnCounter::default(), legal: None }
     }
 
     fn legal(&mut self) -> &Vec<Command> {
@@ -161,6 +258,57 @@ impl PyGame {
         Ok(Self(Mutex::new(GameInner::from_parts(setup_from_dict(setup)?))))
     }
 
+    /// Rebuild a live game from the two state blobs the server holds (as `SaveFile::parse_server` reads them): the
+    /// initial state and the current state with its command stack. The commands are replayed on the engine and the
+    /// result is checked against the server's current state (turn, mover, scores, units, pending city rewards), as the
+    /// headless client does before it asks the retail AI. `seat` is the engine player id of our account; it must be
+    /// the player to move. Raises `ValueError` with the reason when the state cannot be used (undecodable, the engine
+    /// disagrees with the server, a tribe outside the 13 supported, the game is over, or it is not `seat`'s turn).
+    /// Such a game has no setup (`setup()` and `record()` raise) and its seats are player-list indices.
+    #[staticmethod]
+    fn from_server(py: Python<'_>, initial: &[u8], current: &[u8], seat: u8) -> PyResult<Self> {
+        let built = py.allow_threads(|| {
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| rebuild_server(initial, current, seat)))
+                .unwrap_or_else(|_| Err("the engine failed while replaying the game state".to_string()))
+        });
+        let e = built.map_err(value_err)?;
+        let order = player_order(&e);
+        Ok(Self(Mutex::new(GameInner { e, setup: None, order, commands: Vec::new(), counter: TurnCounter::default(), legal: None })))
+    }
+
+    /// Engine player id of the player to move (255 is Nature). For a server game this is the id `seat` names.
+    #[getter]
+    fn mover_id(&self) -> u8 {
+        let g = self.0.lock().unwrap();
+        g.e.current_player()
+    }
+
+    /// The command at `index` of the current legal list as the bytes a retail command stack holds
+    /// (`RawCmd::to_bytes`, no version prefix). A `Stay` is encoded like any other command. Raises `ValueError` when
+    /// the engine has no retail encoding for the command.
+    fn raw_command<'py>(&self, py: Python<'py>, index: usize) -> PyResult<Bound<'py, PyBytes>> {
+        let mut g = self.0.lock().unwrap();
+        let cmd = *g.legal().get(index).ok_or_else(|| PyIndexError::new_err("action index outside the legal list"))?;
+        let raw = g.e.command_to_raw(&cmd).ok_or_else(|| value_err(format!("the engine has no retail encoding for {cmd:?}")))?;
+        Ok(PyBytes::new(py, &raw.to_bytes()))
+    }
+
+    /// The inverse of `raw_command`: the legal-list index of a serialised command. Raises `ValueError` when the bytes
+    /// do not parse, the engine has no such command, or it is not in the current legal list.
+    fn index_of_raw(&self, raw: &[u8]) -> PyResult<usize> {
+        let mut g = self.0.lock().unwrap();
+        let raw = RawCmd::from_bytes(raw).map_err(|e| value_err(format!("cannot read a command: {e}")))?;
+        let cmd = g.e.command_from_raw(&raw).ok_or_else(|| value_err("the engine has no command for these bytes"))?;
+        g.legal().iter().position(|c| *c == cmd).ok_or_else(|| value_err(format!("{cmd:?} is not in the legal list")))
+    }
+
+    /// `format!("{cmd:?}")` of the command at `index` of the current legal list, for logs.
+    fn describe(&self, index: usize) -> PyResult<String> {
+        let mut g = self.0.lock().unwrap();
+        let cmd = *g.legal().get(index).ok_or_else(|| PyIndexError::new_err("action index outside the legal list"))?;
+        Ok(format!("{cmd:?}"))
+    }
+
     /// A game drawn from `seed` with the imitation-data distribution, optionally narrowed.
     #[staticmethod]
     #[pyo3(signature = (seed, n_players=None, sizes=None, presets=None, difficulty=None, turn_limit=DEFAULT_TURN_LIMIT))]
@@ -174,7 +322,7 @@ impl PyGame {
 
     fn setup<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         let g = self.0.lock().unwrap();
-        setup_to_dict(py, &g.setup)
+        setup_to_dict(py, g.setup.as_ref().ok_or_else(no_setup)?)
     }
 
     fn clone(&self) -> Self {
@@ -241,7 +389,7 @@ impl PyGame {
         let me = g.me().or_else(|_| Ok::<u8, PyErr>(NATURE))?;
         let slots = SlotMap::new(&g.e, me);
         let legal = g.legal().clone();
-        let tuples: Vec<[i16; 4]> = legal.iter().map(|c| encode_command(&g.e, &slots, c).ok_or_else(|| value_err("cannot encode a legal command"))).collect::<PyResult<_>>()?;
+        let tuples: Vec<[i16; 4]> = legal.iter().map(|c| encode_command(&g.e, &slots, c).ok_or_else(|| value_err(format!("cannot encode the legal command {c:?}")))).collect::<PyResult<_>>()?;
         actions_array(py, &tuples)
     }
 
@@ -316,10 +464,11 @@ impl PyGame {
     }
 
     /// The game so far as a compact record (bytes; see `docs/encoding.md` section 7).
-    fn record<'py>(&self, py: Python<'py>) -> Bound<'py, PyBytes> {
+    fn record<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyBytes>> {
         let g = self.0.lock().unwrap();
-        let rec = GameRecord { engine_version: polytopia_sim::GAME_VERSION, engine_commit: ENGINE_COMMIT.to_string(), setup: g.setup.clone(), commands: g.commands.clone(), outcome: Outcome::of(&g.e) };
-        PyBytes::new(py, &rec.to_bytes())
+        let setup = g.setup.clone().ok_or_else(no_setup)?;
+        let rec = GameRecord { engine_version: polytopia_sim::GAME_VERSION, engine_commit: ENGINE_COMMIT.to_string(), setup, commands: g.commands.clone(), outcome: Outcome::of(&g.e) };
+        Ok(PyBytes::new(py, &rec.to_bytes()))
     }
 }
 

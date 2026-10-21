@@ -245,6 +245,15 @@ final partial one. `--keep K` writes one position in `K` (default 4).
   `current_seat()` (`None` on Nature's turn, call `play_ai_move()`), `scores()`, `winners()` (empty for a draw), `capped()` (`adjudicated()` is an alias for one version), `is_over()`,
   `clone()`,
   `record()` (bytes of the section 7 format). Seats are indices into the setup's seat list.
+- `Game.from_server(initial, current, seat)` rebuilds a live game from the server's two state blobs
+  (`SaveFile::parse_server`, the command stack replayed as the client's `replay_save` does, then checked against the
+  server's own current state: turn, mover, scores, units, pending city rewards). `seat` is an engine player id and must
+  be the player to move. It raises `ValueError` with the reason for an undecodable state, a replay the engine disagrees
+  with, more than 8 players, a tribe outside the 13 supported, a finished game, an unknown seat or a seat that is not to
+  move. Such a game has no setup (`setup()` and `record()` raise) and `current_seat()` is the index in the player list;
+  `mover_id` is the engine player id. `raw_command(index)` is `Engine::command_to_raw(..).to_bytes()` of a legal-list
+  entry (a `Stay` included; no version prefix), `index_of_raw(bytes)` its inverse (`command_from_raw`, then the legal
+  list), `describe(index)` is `format!("{cmd:?}")`.
 - `VecEnv(n_games, seed_start=1, model_seats="rotate" | "all" | [seats], split="train" | "eval", n_players, sizes,
   presets, difficulty, turn_limit=150, threads=24, auto_reset=True, seat_difficulties=None)`. `seat_difficulties` is a
   per-seat handicap list (0..=3, by seat index) applied after `difficulty`. Seats the model does not control (and Nature) are
