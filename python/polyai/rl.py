@@ -64,7 +64,7 @@ from .rl_pool import (
 )
 from .train_bc import DEFAULT_RUNS_DIR, check_gpu_memory, load_checkpoint, make_optimizer, save_checkpoint
 
-SIZE_IDS = {"tiny": 1, "small": 2, "normal": 3}
+SIZE_IDS = {"tiny": 1, "small": 2, "normal": 3, "large": 4, "huge": 5, "massive": 6}
 PRESET_IDS = {"dryland": 1, "lakes": 2, "continents": 3, "archipelago": 4, "waterworld": 5, "pangea": 6}
 TRAIN_SEED_MAX = 100_000
 
@@ -80,8 +80,8 @@ class RLConfig:
     games: int = 128  # games in flight (all pool entries together)
     rollout_steps: int = 16384  # learner decisions collected per update
     n_players: str = "2:55,3:25,4:20"
-    sizes: str = ""  # subset of tiny,small,normal (default: the engine's)
-    presets: str = ""  # subset of dryland,lakes,continents,archipelago,waterworld,pangea (default: all)
+    sizes: str = ""  # from tiny,small,normal,large,huge,massive (default: the engine's tiny,small,normal)
+    presets: str = ""  # subset of dryland,lakes,continents,archipelago,waterworld,pangea (default: the engine's five, no waterworld)
     turn_limit: int = 150  # compute cap; a game that reaches it is a draw
     temperature: float = 1.0  # learner sampling temperature; the policy is softmax(logits / temperature) throughout
     opp_temperature: float = 1.0  # sampling temperature of model opponents

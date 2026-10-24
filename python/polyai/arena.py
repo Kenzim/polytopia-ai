@@ -36,8 +36,10 @@ from .policy import ModelPolicy, collate, resolve_checkpoint  # noqa: F401  (col
 
 EVAL_SEED_MIN = 1_000_000
 DIFFICULTIES = ["easy", "normal", "hard", "crazy"]  # engine difficulty ids 0 to 3
-SIZE_IDS = {"tiny": 1, "small": 2, "normal": 3}
-PRESET_IDS = {"dryland": 1, "lakes": 2, "continents": 3, "archipelago": 4, "pangea": 6}
+SIZE_IDS = {"tiny": 1, "small": 2, "normal": 3, "large": 4, "huge": 5, "massive": 6}
+PRESET_IDS = {"dryland": 1, "lakes": 2, "continents": 3, "archipelago": 4, "waterworld": 5, "pangea": 6}
+MAIN_SIZES = ("tiny", "small", "normal")  # the main 1v1 suite; larger maps and Water World only on request
+MAIN_PRESETS = ("dryland", "lakes", "continents", "archipelago", "pangea")
 MODEL_SEAT_DIFFICULTY = 1  # the model seat's handicap, as polyai-arena gives a non-retail agent (Normal)
 DEFAULT_ARENA_DIR = "/kvm/polytopia-ai-data/arena"
 
@@ -120,8 +122,8 @@ class Suite:
 
     seed_start: int = EVAL_SEED_MIN
     seeds: int = 50
-    sizes: list[int] = field(default_factory=lambda: [SIZE_IDS[k] for k in ("tiny", "small", "normal")])
-    presets: list[int] = field(default_factory=lambda: list(PRESET_IDS.values()))
+    sizes: list[int] = field(default_factory=lambda: [SIZE_IDS[k] for k in MAIN_SIZES])
+    presets: list[int] = field(default_factory=lambda: [PRESET_IDS[k] for k in MAIN_PRESETS])
     turn_limit: int = 150
     batch_games: int = 64  # games in flight per seat arm
     threads: int = 8  # VecEnv threads of both arms and torch together
@@ -308,8 +310,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--opponent", default="retail:easy", help="comma separated, retail:easy|normal|hard|crazy")
     ap.add_argument("--seeds", type=int, default=d.seeds, help="seeds per opponent; each is played with seats swapped")
     ap.add_argument("--seed-start", type=int, default=d.seed_start)
-    ap.add_argument("--sizes", default=None, help="comma separated subset of tiny,small,normal (default all)")
-    ap.add_argument("--presets", default=None, help="subset of dryland,lakes,continents,archipelago,pangea")
+    ap.add_argument("--sizes", default=None, help="comma separated, from tiny,small,normal,large,huge,massive (default tiny,small,normal)")
+    ap.add_argument("--presets", default=None, help="from dryland,lakes,continents,archipelago,waterworld,pangea "
+                                                     "(default all but waterworld)")
     ap.add_argument("--turn-limit", type=int, default=d.turn_limit, help="compute cap; a game that reaches it is a draw")
     ap.add_argument("--batch-games", type=int, default=d.batch_games, help="games in flight per seat arm")
     ap.add_argument("--max-batch", type=int, default=128, help="most positions per forward pass")
