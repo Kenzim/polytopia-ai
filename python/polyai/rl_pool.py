@@ -18,7 +18,7 @@ from .policy import ModelPolicy
 
 RETAIL_NAMES = ["easy", "normal", "hard", "crazy"]  # engine difficulty ids 0 to 3
 LEARNER_DIFFICULTY = 1  # the learner's own handicap: Normal
-MAX_SEATS = 4  # the largest player count of the setup sampler
+MAX_SEATS = 8  # the largest player count the encoding holds; seats no game reaches get probability 0 and no arm
 
 
 # ---------------------------------------------------------------------------------------------------------------
