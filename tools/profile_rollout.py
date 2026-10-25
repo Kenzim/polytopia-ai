@@ -33,13 +33,17 @@ ap.add_argument("--snapshots", type=int, default=0, help="frozen copies of the l
 ap.add_argument("--max-batch", type=int, default=256)
 ap.add_argument("--no-pad-sizes", dest="pad_sizes", action="store_false")
 ap.add_argument("--max-lead", type=int, default=RLConfig.max_lead, help="0 gives lockstep stepping")
+ap.add_argument("--arm-games", type=int, default=0)
+ap.add_argument("--min-infer", type=int, default=0)
+ap.add_argument("--gather-ms", type=float, default=20.0)
+ap.add_argument("--warmup", type=int, default=0, help="rollouts played before the profiled one (games mature)")
 a = ap.parse_args()
 
 torch.set_num_threads(4)
 dev = torch.device(a.device)
 cfg = RLConfig(games=a.games, rollout_steps=a.steps, threads=a.threads, n_players=a.n_players, sizes=a.sizes,
                presets=a.presets, max_batch=a.max_batch, device=a.device, pad_sizes=a.pad_sizes,
-               max_lead=a.max_lead)
+               max_lead=a.max_lead, arm_games=a.arm_games, min_infer=a.min_infer, gather_ms=a.gather_ms)
 net = load_checkpoint(Path(a.ckpt)).to(dev).eval()
 learner = NetPolicy(net, "learner", dev, max_batch=a.max_batch, seed=1)
 pool = Pool(cfg, NetPolicy(load_checkpoint(Path(a.ckpt)).to(dev).eval(), "bc", dev, max_batch=a.max_batch, seed=2),
@@ -50,6 +54,10 @@ for k in range(a.snapshots):
 ex = ThreadPoolExecutor(max_workers=a.threads)
 col = Collector(cfg, pe, learner, pool, np.random.default_rng(0), ex)
 col.set_quotas(plan_quotas(pool.weights(), cfg.games, col.seat_p, col.shards))
+for w in range(a.warmup):
+    t0 = time.perf_counter()
+    col.collect(cfg.rollout_steps)
+    print(f"warmup rollout {w + 1}: {time.perf_counter() - t0:.1f} s", flush=True)
 
 step_t = defaultdict(float)
 step_n = defaultdict(int)
@@ -96,6 +104,10 @@ for k, p in pool.nets.items():
 
 tick_steps: list[float] = []
 col.stores, col.results = {}, []
+col.n_learner = col.n_opp = 0
+col.t_infer = col.t_step = 0.0
+for arm in col.arms.values():
+    arm.steps = 0
 n_ticks = 0
 t_start = time.perf_counter()
 t_tick_total = 0.0
@@ -120,6 +132,7 @@ print(f"  step phase = slowest arm each tick: sum of per-tick max {sum(step_max_
 print("  inference by policy: calls, rows, mean rows/call, seconds")
 for k in sorted(infer_calls):
     print(f"    {k:14s} {infer_calls[k]:6d} {infer_rows[k]:8d} {infer_rows[k] / infer_calls[k]:8.1f} {infer_t[k]:7.1f}")
+print(f"  slowest single steps (s): {sorted(step_max_per_tick)[-5:]}")
 print("  engine step by arm: active games, steps, total s, mean ms")
 for k in sorted(step_t, key=lambda k: -step_t[k]):
     print(f"    {str(k):38s} {col.arms[k].n_active:4d} {step_n[k]:6d} {step_t[k]:7.1f} {1e3 * step_t[k] / step_n[k]:7.2f}")
