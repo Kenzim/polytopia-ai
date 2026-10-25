@@ -57,6 +57,49 @@ def merge(groups: list[dict]) -> dict:
     return out
 
 
+def pad_bucket(hw: tuple[int, int]) -> int:
+    """Map sizes that share one padded inference batch: up to Normal (16), Large and Huge (20), then each alone.
+    Padding Tiny to Normal costs little; padding everything to Massive (30) would cost several times the convolutions."""
+    side = max(hw)
+    return 16 if side <= 16 else 20 if side <= 20 else side
+
+
+def merge_padded(groups: list[dict]) -> dict:
+    """Concatenate observation groups of different map sizes into one, each board in the top-left corner of the
+    largest: tiles are zero-padded, the tile indices of the actions are re-based to the padded width, and a
+    `board_mask` marks the real cells (the network then sees each board as on its own, model.py). Groups of a single
+    size are merged without padding."""
+    shapes = {tuple(np.asarray(g["tiles"]).shape[1:3]) for g in groups}
+    if len(shapes) == 1:
+        return merge(groups)
+    hp = max(h for h, _ in shapes)
+    wp = max(w for _, w in shapes)
+    tiles, masks, actions = [], [], []
+    for g in groups:
+        t = np.asarray(g["tiles"])
+        n, h, w = t.shape[:3]
+        pt = np.zeros((n, hp, wp, t.shape[3]), t.dtype)
+        pt[:, :h, :w] = t
+        tiles.append(pt)
+        m = np.zeros((n, hp, wp), bool)
+        m[:, :h, :w] = True
+        masks.append(m)
+        a = np.array(g["actions"], dtype=np.int16, copy=True)
+        for c in (2, 3):
+            idx = a[:, c].astype(np.int32)
+            real = idx >= 0
+            a[real, c] = (idx[real] // w * wp + idx[real] % w).astype(np.int16)
+        actions.append(a)
+    lens = np.concatenate([np.diff(np.asarray(g["act_off"], dtype=np.int64)) for g in groups])
+    out = {k: np.concatenate([np.asarray(g[k]) for g in groups]) for k in OBS_ROW_KEYS
+           if k != "tiles" and k in groups[0]}
+    out["tiles"] = np.concatenate(tiles)
+    out["board_mask"] = np.concatenate(masks)
+    out["act_off"] = np.concatenate([[0], np.cumsum(lens)]).astype(np.int32)
+    out["actions"] = np.concatenate(actions)
+    return out
+
+
 # ---------------------------------------------------------------------------------------------------------------
 # The network as a Policy (interfaces.md section 1.1)
 # ---------------------------------------------------------------------------------------------------------------
@@ -207,8 +250,10 @@ def pool_weights(entries: list[str], base: dict[str, float], stats: OppStats, be
 # ---------------------------------------------------------------------------------------------------------------
 #
 # VecEnv fixes the model seats and the per-seat handicaps for all of its games, so the games are grouped in "arms":
-#   ("retail", entry, seat)  one model seat (the learner) at `seat` with Normal handicap, every other seat the retail
-#                            AI at that difficulty. Seat s only exists in games of more than s players.
+#   ("retail", entry, seat, shard)  one model seat (the learner) at `seat` with Normal handicap, every other seat
+#                            the retail AI at that difficulty. Seat s only exists in games of more than s players.
+#                            Split into shards of at most games / shards games, like the model arms, so that one
+#                            heavily weighted retail entry does not leave a single thread stepping most of the games.
 #   ("model", shard)         every seat is a model seat at Normal handicap; Python decides per game which seat is the
 #                            learner and which frozen network plays the others. Sharded so that it steps on several
 #                            threads.
@@ -230,11 +275,15 @@ def plan_quotas(weights: dict[str, float], games: int, seat_p: list[float], shar
     """Active games per arm so that the pool entries get their weights: the expected counts rounded by largest
     remainder to `games` in total."""
     expect: dict[tuple, float] = {}
+    per = games / shards  # games one arm holds at most, so that no arm steps far more games than the others
     for e, w in weights.items():
         if e.startswith("retail:"):
             for s, p in enumerate(seat_p):
                 if p > 0:
-                    expect[("retail", e, s)] = games * w * p
+                    v = games * w * p
+                    n = max(1, math.ceil(v / per - 1e-9))
+                    for k in range(n):
+                        expect[("retail", e, s, k)] = v / n
     model_w = sum(w for e, w in weights.items() if not e.startswith("retail:"))
     for k in range(shards):
         expect[("model", k)] = games * model_w / shards
@@ -249,7 +298,7 @@ def plan_quotas(weights: dict[str, float], games: int, seat_p: list[float], shar
 def arm_capacity(key: tuple, games: int, seat_p: list[float], shards: int) -> int:
     """Games an arm is built with: enough for it to carry the whole pool weight (plus rounding slack)."""
     if key[0] == "retail":
-        return math.ceil(games * seat_p[key[2]]) + 2
+        return min(math.ceil(games * seat_p[key[2]]), math.ceil(games / shards)) + 2
     return math.ceil(games / shards) + 2
 
 

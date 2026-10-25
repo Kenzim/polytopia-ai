@@ -57,7 +57,8 @@ class Policy(Protocol):
 
 
 def collate(obs: dict, sel: np.ndarray, device: torch.device) -> tuple[torch.Tensor, ...]:
-    """Positions `sel` of an observation group (one map size) -> tiles, globals, padded actions, action mask."""
+    """Positions `sel` of an observation group (one map size, or padded boards with a `board_mask`, see
+    `rl_pool.merge_padded`) -> tiles, globals, padded actions, action mask."""
     act_off = np.asarray(obs["act_off"], dtype=np.int64)
     starts, lens = act_off[:-1][sel], np.diff(act_off)[sel]
     amax = max(int(lens.max()), 1)
@@ -156,11 +157,15 @@ class ModelPolicy:
         value = np.empty(n, np.float32)
         top: list[list[tuple[int, float]]] = [[] for _ in range(n)]
         t0 = time.perf_counter()
+        board = obs.get("board_mask")
         for s in range(0, n, self.max_batch):
             sel = np.arange(s, min(n, s + self.max_batch))
             tiles, globals_, actions, mask = collate(obs, sel, self.device)
+            bmask = None
+            if board is not None:
+                bmask = torch.from_numpy(np.ascontiguousarray(np.asarray(board)[sel])).to(self.device, non_blocking=True)
             with torch.autocast(self.device.type, dtype=torch.bfloat16, enabled=self.device.type == "cuda"):
-                out = self.model(tiles, globals_, actions, mask)
+                out = self.model(tiles, globals_, actions, mask, bmask)
             logits = out.policy_logits.float()
             if temperature is None:
                 pick = logits.argmax(dim=1)
@@ -171,10 +176,13 @@ class ModelPolicy:
             win = torch.softmax(out.winner_logits.float(), dim=-1)[:, 0]
             k = min(TOP_K, logits.shape[1])
             top_lp, top_ix = log_probs.topk(k, dim=1)
-            index[sel] = pick.cpu().numpy()
-            logp[sel] = log_probs.gather(1, pick[:, None])[:, 0].cpu().numpy()
-            value[sel] = win.cpu().numpy()
-            top_p, top_i = top_lp.exp().cpu().numpy(), top_ix.cpu().numpy()
+            # one device-to-host copy for everything (each .cpu() is a synchronisation)
+            packed = torch.cat([pick[:, None].float(), log_probs.gather(1, pick[:, None]), win[:, None],
+                                top_lp.exp(), top_ix.float()], dim=1).cpu().numpy()
+            index[sel] = packed[:, 0].astype(np.int32)
+            logp[sel] = packed[:, 1]
+            value[sel] = packed[:, 2]
+            top_p, top_i = packed[:, 3:3 + k], packed[:, 3 + k:].astype(np.int64)
             for row, i in enumerate(sel):
                 top[i] = [(int(top_i[row, j]), float(top_p[row, j])) for j in range(k) if top_i[row, j] < lens[i]]
         self.infer_seconds += time.perf_counter() - t0

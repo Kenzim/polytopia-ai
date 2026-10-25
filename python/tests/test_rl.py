@@ -29,7 +29,9 @@ from polyai.rl_pool import (
     OppStats,
     arm_capacity,
     merge,
+    merge_padded,
     obs_len,
+    pad_bucket,
     parity_adjusted,
     plan_quotas,
     policy_id_of,
@@ -200,6 +202,23 @@ def test_take_and_merge_roundtrip():
     np.testing.assert_array_equal(both["act_off"], obs["act_off"])
 
 
+def test_padded_merge_gives_the_same_policy_as_each_size_alone():
+    model = tiny_model(3).eval()
+    a = fake_obs(lens=(4, 6, 3), size=11, seed=1)
+    b = fake_obs(lens=(5, 2), size=14, seed=2)
+    both = merge_padded([a, b])
+    assert both["tiles"].shape[1:3] == (14, 14) and both["board_mask"][:3, 11:, :].sum() == 0
+    assert obs_len(both) == 5
+    alone = [NetPolicy(model, "m", CPU).choose(o, temperature=None) for o in (a, b)]
+    padded = NetPolicy(model, "m", CPU).choose(both, temperature=None)
+    np.testing.assert_array_equal(padded.index, np.concatenate([c.index for c in alone]))
+    np.testing.assert_allclose(padded.logp, np.concatenate([c.logp for c in alone]), atol=1e-5)
+    np.testing.assert_allclose(padded.value, np.concatenate([c.value for c in alone]), atol=1e-5)
+    assert merge_padded([a, a])["tiles"].shape[1:3] == (11, 11) and "board_mask" not in merge_padded([a, a])
+    assert pad_bucket((11, 11)) == pad_bucket((16, 16)) != pad_bucket((18, 18)) == pad_bucket((20, 20))
+    assert pad_bucket((30, 30)) == 30
+
+
 def test_parity_adjustment():
     assert parity_adjusted(0.5, 2) == pytest.approx(0.5)
     assert parity_adjusted(0.25, 4) == pytest.approx(0.5)
@@ -252,6 +271,13 @@ def test_plan_quotas_sum_to_games_and_follow_weights():
     assert abs(sum(v for k, v in q.items() if k[0] == "model") - 50) <= 2  # rounding across arms
     for k, v in q.items():
         assert v <= arm_capacity(k, 100, seat_p, 3)
+    # a heavily weighted retail entry is split into arms no bigger than the model shards
+    q = plan_quotas({"retail:crazy": 0.9, "bc": 0.1}, 512, seat_p, 16)
+    assert sum(q.values()) == 512
+    crazy0 = [v for k, v in q.items() if k[:3] == ("retail", "retail:crazy", 0)]
+    assert len(crazy0) > 1 and max(crazy0) <= 512 / 16 + 1
+    for k, v in q.items():
+        assert v <= arm_capacity(k, 512, seat_p, 16)
 
 
 def test_policy_id():
@@ -279,8 +305,10 @@ def make_collector(cfg: RLConfig):
 
 
 @needs_engine
-def test_rollout_shapes_and_logp_match_a_fresh_forward_pass(tmp_path, init_run):
-    cfg = small_cfg(tmp_path, init_run, games=10, rollout_steps=150)
+@pytest.mark.parametrize("sizes", ["tiny", "tiny,small"])
+def test_rollout_shapes_and_logp_match_a_fresh_forward_pass(tmp_path, init_run, sizes):
+    # with two map sizes the rollout's inference runs on padded batches, the check below on each size alone
+    cfg = small_cfg(tmp_path, init_run, games=10, rollout_steps=150, sizes=sizes)
     col, model, _ = make_collector(cfg)
     try:
         col.set_quotas(plan_quotas(col.pool.weights(), cfg.games, col.seat_p, col.shards))
@@ -306,7 +334,8 @@ def test_rollout_shapes_and_logp_match_a_fresh_forward_pass(tmp_path, init_run):
         lp = torch.log_softmax(out.policy_logits.float(), 1).gather(1, torch.from_numpy(d["chosen"][sel]).long()[:, None])
         np.testing.assert_allclose(lp[:, 0].numpy(), d["logp"][sel], atol=1e-4)  # PPO ratio is 1 before any update
         seen.add(hw)
-    assert seen
+    shapes = {k: [g["tiles"].shape[1:3] for g in a.env.observe()] for k, a in col.arms.items()}
+    assert len(seen) == len(sizes.split(",")), (seen, shapes)
     for r in col.results:
         assert r["outcome"] in (0.0, 0.5, 1.0) and 2 <= r["n_players"] <= 4
         assert r["opponent_policy_id"]

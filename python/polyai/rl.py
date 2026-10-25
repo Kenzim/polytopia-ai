@@ -51,8 +51,9 @@ from .rl_pool import (
     NetPolicy,
     OppStats,
     arm_capacity,
-    merge,
+    merge_padded,
     obs_len,
+    pad_bucket,
     parse_pairs,
     parse_players,
     plan_quotas,
@@ -118,6 +119,7 @@ class RLConfig:
     torch_threads: int = 2
     bf16: bool = True  # autocast in the PPO update on CUDA (inference always runs bf16 on CUDA, as ModelPolicy)
     max_batch: int = 256  # positions per inference forward pass
+    pad_sizes: bool = True  # one inference call per network for all map sizes of a bucket (rl_pool.pad_bucket)
     need_gb: float = 2.5
     device: str = "cuda"
     resume: bool = False
@@ -486,9 +488,16 @@ class Collector:
     def _activate(self, arm: Arm) -> None:
         need = arm.quota - arm.n_active
         taken = 0
-        for g in arm.env.observe():
+        groups = arm.env.observe()
+        # pick the slots to activate at random: observe() groups the games by map size, so taking them in order
+        # would start an arm on its smallest maps only
+        if need <= 0 or not groups:
+            return
+        idle_slots = np.concatenate([np.asarray(g["game"])[~arm.active[np.asarray(g["game"])]] for g in groups])
+        chosen = list(self.rng.permutation(idle_slots)[:need])
+        for g in groups:
             slots = np.asarray(g["game"])
-            idle = np.nonzero(~arm.active[slots])[0][: need - taken]
+            idle = np.nonzero(~arm.active[slots] & np.isin(slots, chosen))[0]
             if not len(idle):
                 continue
             sub = take(g, idle)
@@ -507,21 +516,21 @@ class Collector:
         for arm in self.arms.values():
             arm.choices = []
             for g in arm.ready:
-                hw = tuple(g["tiles"].shape[1:3])
+                bucket = pad_bucket(tuple(g["tiles"].shape[1:3])) if cfg.pad_sizes else tuple(g["tiles"].shape[1:3])
                 if arm.kind == "retail":
-                    parts[("learner", hw)].append((arm, g))
+                    parts[("learner", bucket)].append((arm, g))
                     continue
                 slots = np.asarray(g["game"])
                 is_learner = np.asarray(g["seat"]) == arm.learner[slots]
                 keys = np.where(is_learner, "learner", arm.opp[slots])
                 for key in np.unique(keys.astype(str)):
                     sel = np.nonzero(keys == key)[0]
-                    parts[(str(key), hw)].append((arm, g if len(sel) == len(keys) else take(g, sel)))
+                    parts[(str(key), bucket)].append((arm, g if len(sel) == len(keys) else take(g, sel)))
         if not parts:
             raise RuntimeError("no game is waiting for a decision")
         t0 = time.perf_counter()
-        for (key, hw), lst in parts.items():
-            merged = merge([sub for _, sub in lst])
+        for (key, _), lst in parts.items():
+            merged = merge_padded([sub for _, sub in lst])
             if key == "learner":
                 ch = self.learner.choose(merged, temperature=cfg.temperature)
             else:
@@ -533,6 +542,7 @@ class Collector:
                 pos += b
                 arm.choices.append((np.asarray(sub["game"], dtype=np.int32), ch.index[s]))
                 if key == "learner":
+                    hw = tuple(sub["tiles"].shape[1:3])
                     store = self.stores.setdefault(hw, SizeStore())
                     ids = store.add(sub, ch.index[s], ch.logp[s], ch.value[s])
                     for slot, i in zip(np.asarray(sub["game"]).tolist(), ids.tolist()):
