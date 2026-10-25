@@ -32,12 +32,14 @@ ap.add_argument("--presets", default="")
 ap.add_argument("--snapshots", type=int, default=0, help="frozen copies of the learner in the pool")
 ap.add_argument("--max-batch", type=int, default=256)
 ap.add_argument("--no-pad-sizes", dest="pad_sizes", action="store_false")
+ap.add_argument("--max-lead", type=int, default=RLConfig.max_lead, help="0 gives lockstep stepping")
 a = ap.parse_args()
 
 torch.set_num_threads(4)
 dev = torch.device(a.device)
 cfg = RLConfig(games=a.games, rollout_steps=a.steps, threads=a.threads, n_players=a.n_players, sizes=a.sizes,
-               presets=a.presets, max_batch=a.max_batch, device=a.device, pad_sizes=a.pad_sizes)
+               presets=a.presets, max_batch=a.max_batch, device=a.device, pad_sizes=a.pad_sizes,
+               max_lead=a.max_lead)
 net = load_checkpoint(Path(a.ckpt)).to(dev).eval()
 learner = NetPolicy(net, "learner", dev, max_batch=a.max_batch, seed=1)
 pool = Pool(cfg, NetPolicy(load_checkpoint(Path(a.ckpt)).to(dev).eval(), "bc", dev, max_batch=a.max_batch, seed=2),
@@ -104,6 +106,8 @@ while col.n_learner < cfg.rollout_steps:
     t_tick_total += time.perf_counter() - t0
     step_max_per_tick.append(max(tick_steps) if tick_steps else 0.0)
     n_ticks += 1
+for arm in col.arms.values():
+    col._settle(arm)
 wall = time.perf_counter() - t_start
 ex.shutdown()
 

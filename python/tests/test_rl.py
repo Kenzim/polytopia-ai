@@ -305,10 +305,11 @@ def make_collector(cfg: RLConfig):
 
 
 @needs_engine
-@pytest.mark.parametrize("sizes", ["tiny", "tiny,small"])
-def test_rollout_shapes_and_logp_match_a_fresh_forward_pass(tmp_path, init_run, sizes):
-    # with two map sizes the rollout's inference runs on padded batches, the check below on each size alone
-    cfg = small_cfg(tmp_path, init_run, games=10, rollout_steps=150, sizes=sizes)
+@pytest.mark.parametrize("sizes,max_lead", [("tiny", 0), ("tiny", 4), ("tiny,small", 0), ("tiny,small", 4)])
+def test_rollout_shapes_and_logp_match_a_fresh_forward_pass(tmp_path, init_run, sizes, max_lead):
+    # with two map sizes the rollout's inference runs on padded batches, the check below on each size alone;
+    # max_lead 0 steps the arms in lockstep, 4 lets them run ahead asynchronously
+    cfg = small_cfg(tmp_path, init_run, games=10, rollout_steps=150, sizes=sizes, max_lead=max_lead)
     col, model, _ = make_collector(cfg)
     try:
         col.set_quotas(plan_quotas(col.pool.weights(), cfg.games, col.seat_p, col.shards))

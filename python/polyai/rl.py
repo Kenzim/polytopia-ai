@@ -31,7 +31,7 @@ import os
 import sys
 import time
 from collections import defaultdict
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from dataclasses import asdict, dataclass, fields
 from pathlib import Path
 
@@ -120,6 +120,7 @@ class RLConfig:
     bf16: bool = True  # autocast in the PPO update on CUDA (inference always runs bf16 on CUDA, as ModelPolicy)
     max_batch: int = 256  # positions per inference forward pass
     pad_sizes: bool = True  # one inference call per network for all map sizes of a bucket (rl_pool.pad_bucket)
+    max_lead: int = 4  # steps an arm may run ahead of the slowest arm in a rollout (0: lockstep, see Collector.tick)
     need_gb: float = 2.5
     device: str = "cuda"
     resume: bool = False
@@ -424,6 +425,8 @@ class Arm:
         self.ready: list[dict] = []  # observation groups of the active games awaiting a decision
         self.traj: dict[int, tuple[tuple, list[int]]] = {}  # slot -> (board size, ids in the SizeStore)
         self.choices: list[tuple[np.ndarray, np.ndarray]] = []
+        self.future = None  # the engine step in flight on the executor, if any
+        self.steps = 0  # engine steps in the current rollout (bounded lead over the slowest arm, see Collector.tick)
 
 
 class Collector:
@@ -477,6 +480,7 @@ class Collector:
             if key not in quotas:
                 arm.quota = 0
             if arm.n_active < arm.quota:
+                self._settle(arm)  # observe() must not run while the arm's engine is stepping
                 self._activate(arm)
 
     def _assign_roles(self, arm: Arm, g: dict, only: set[int] | None = None) -> None:
@@ -510,10 +514,44 @@ class Collector:
 
     # --- one tick: choose for every waiting game, step the engines -----------------------------------------
 
+    def _harvest(self, block: bool) -> None:
+        """Take in the engine steps that have finished; with `block`, first wait until at least one has."""
+        pending = [arm for arm in self.arms.values() if arm.future is not None]
+        if block and pending:
+            t0 = time.perf_counter()
+            wait([arm.future for arm in pending], return_when=FIRST_COMPLETED)
+            self.t_step += time.perf_counter() - t0
+        for arm in pending:
+            if arm.future.done():
+                self._settle(arm)
+
+    def _settle(self, arm: Arm) -> None:
+        """Wait for the arm's step in flight, if any, and take in its result."""
+        if arm.future is None:
+            return
+        fut, arm.future = arm.future, None
+        groups, finished = fut.result()
+        self._after_step(arm, groups, finished)
+
     def tick(self) -> None:
+        """Choose for the waiting games of every arm that may step, and start those steps on the executor.
+
+        Arms step asynchronously: a tick does not wait for every arm's step to come back, only takes in those that
+        have, so a slow step (a retail AI playing out a turn on a large map) holds up its own arm only. To keep
+        the decisions from tilting towards the arms with fast games, an arm may run at most `cfg.max_lead` steps
+        ahead of the slowest arm in the rollout (0 gives lockstep)."""
         cfg = self.cfg
+        self._harvest(block=False)
+        live = [a for a in self.arms.values() if a.future is not None or a.ready]
+        if not live:
+            raise RuntimeError("no game is waiting for a decision")
+        floor = min(a.steps for a in live)
+        go = [a for a in live if a.future is None and a.ready and a.steps <= floor + cfg.max_lead]
+        if not go:
+            self._harvest(block=True)
+            return
         parts: dict[tuple, list] = defaultdict(list)
-        for arm in self.arms.values():
+        for arm in go:
             arm.choices = []
             for g in arm.ready:
                 bucket = pad_bucket(tuple(g["tiles"].shape[1:3])) if cfg.pad_sizes else tuple(g["tiles"].shape[1:3])
@@ -526,8 +564,6 @@ class Collector:
                 for key in np.unique(keys.astype(str)):
                     sel = np.nonzero(keys == key)[0]
                     parts[(str(key), bucket)].append((arm, g if len(sel) == len(keys) else take(g, sel)))
-        if not parts:
-            raise RuntimeError("no game is waiting for a decision")
         t0 = time.perf_counter()
         for (key, _), lst in parts.items():
             merged = merge_padded([sub for _, sub in lst])
@@ -550,19 +586,14 @@ class Collector:
                     self.n_learner += b
                 else:
                     self.n_opp += b
-        t1 = time.perf_counter()
-        futures = []
-        for arm in self.arms.values():
-            if arm.choices:
-                games = np.concatenate([c[0] for c in arm.choices])
-                picks = np.concatenate([c[1] for c in arm.choices]).astype(np.int32)
-                futures.append((arm, self.executor.submit(arm.env.step, games, picks)))
+        self.t_infer += time.perf_counter() - t0
+        for arm in go:
+            games = np.concatenate([c[0] for c in arm.choices])
+            picks = np.concatenate([c[1] for c in arm.choices]).astype(np.int32)
+            arm.future = self.executor.submit(arm.env.step, games, picks)
+            arm.steps += 1
             arm.ready = []
-        for arm, fut in futures:
-            groups, finished = fut.result()
-            self._after_step(arm, groups, finished)
-        self.t_infer += t1 - t0
-        self.t_step += time.perf_counter() - t1
+            arm.choices = []
 
     def _after_step(self, arm: Arm, groups: list[dict], finished: list[dict]) -> None:
         reset: set[int] = set()
@@ -637,8 +668,12 @@ class Collector:
         self.results = []
         self.n_learner = self.n_opp = 0
         self.t_infer = self.t_step = 0.0
+        for arm in self.arms.values():
+            arm.steps = 0
         while self.n_learner < steps:
             self.tick()
+        for arm in self.arms.values():  # games finishing in the steps still in flight end in this rollout
+            self._settle(arm)
         self.cut()
 
 
