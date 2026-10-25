@@ -343,6 +343,30 @@ def test_rollout_shapes_and_logp_match_a_fresh_forward_pass(tmp_path, init_run, 
 
 
 @needs_engine
+def test_small_arms_and_gathered_inference_still_give_the_behaviour_logp(tmp_path, init_run):
+    cfg = small_cfg(tmp_path, init_run, games=12, rollout_steps=150, sizes="tiny,small", max_lead=8, arm_games=2,
+                    min_infer=6, gather_ms=5.0)
+    col, model, _ = make_collector(cfg)
+    try:
+        assert col.shards == 6  # 12 games / 2 per arm, more than the 2 env threads
+        col.set_quotas(plan_quotas(col.pool.weights(), cfg.games, col.seat_p, col.shards))
+        assert sum(a.n_active for a in col.arms.values()) == cfg.games
+        assert max(a.n_active for a in col.arms.values()) <= 2
+        col.collect(cfg.rollout_steps)
+    finally:
+        col.executor.shutdown()
+    assert col.n_learner >= cfg.rollout_steps
+    for st in col.stores.values():
+        d = st.finalize()
+        sel = d["train"][:32]
+        tiles, glob, actions, mask = collate(d, sel, CPU)
+        with torch.no_grad():
+            out = model.eval()(tiles, glob, actions, mask)
+        lp = torch.log_softmax(out.policy_logits.float(), 1).gather(1, torch.from_numpy(d["chosen"][sel]).long()[:, None])
+        np.testing.assert_allclose(lp[:, 0].numpy(), d["logp"][sel], atol=1e-4)
+
+
+@needs_engine
 def test_ppo_update_runs_and_changes_the_policy(tmp_path, init_run):
     cfg = small_cfg(tmp_path, init_run, games=8, rollout_steps=100, lr=1e-3, critic_warmup=0)
     col, model, ref = make_collector(cfg)
@@ -414,6 +438,26 @@ def test_two_update_run_writes_metrics_and_checkpoints_and_resumes(tmp_path, ini
     recs = [r for r in read_metrics(run / "metrics.jsonl") if r["kind"] == "update"]
     assert [r["update"] for r in recs] == [1, 2, 3]
     assert torch.load(run / "ckpt_final.pt", map_location="cpu", weights_only=False)["step"] == 3
+
+
+@needs_engine
+def test_overlapped_run_trains_on_rollouts_of_the_previous_weights(tmp_path, init_run):
+    cfg = small_cfg(tmp_path, init_run, updates=3, overlap=True, lr=1e-3)
+    summary = train(cfg)
+    run = tmp_path / "t"
+    assert summary["updates"] == 3
+    recs = [r for r in read_metrics(run / "metrics.jsonl") if r["kind"] == "update"]
+    assert [r["update"] for r in recs] == [1, 2, 3]
+    # the first rollout is played by the start weights, each later one by the weights before the update alongside it
+    assert [r["behaviour_policy_id"] for r in recs] == ["t@0", "t@0", "t@1"]
+    for r in recs:
+        assert r["learner_decisions"] >= cfg.rollout_steps and r["minibatches"] > 0 and np.isfinite(r["loss"])
+    games = [json.loads(line) for line in (run / "games.jsonl").read_text().splitlines()]
+    assert {g["update"] for g in games} <= {0, 1, 2}
+    assert torch.load(run / "ckpt_final.pt", map_location="cpu", weights_only=False)["step"] == 3
+
+    cfg2 = small_cfg(tmp_path, init_run, updates=4, overlap=True, resume=True)
+    assert train(cfg2)["updates"] == 4
 
 
 def test_resume_without_a_checkpoint_fails(tmp_path, init_run):

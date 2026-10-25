@@ -25,6 +25,7 @@ optimiser and pool state, for --resume), ckpt_u<update>.pt, ckpt_final.pt, pool/
 from __future__ import annotations
 
 import argparse
+import copy
 import json
 import math
 import os
@@ -121,6 +122,10 @@ class RLConfig:
     max_batch: int = 256  # positions per inference forward pass
     pad_sizes: bool = True  # one inference call per network for all map sizes of a bucket (rl_pool.pad_bucket)
     max_lead: int = 4  # steps an arm may run ahead of the slowest arm in a rollout (0: lockstep, see Collector.tick)
+    arm_games: int = 0  # games per arm at most (0: games / env threads); smaller arms stall less on one slow game
+    min_infer: int = 0  # positions to gather for one inference round before running it (0: run what is ready)
+    gather_ms: float = 20.0  # longest wait for min_infer positions
+    overlap: bool = False  # play the next rollout (with the weights before this update) while the PPO update runs
     need_gb: float = 2.5
     device: str = "cuda"
     resume: bool = False
@@ -438,6 +443,8 @@ class Collector:
         self.n_players = parse_players(cfg.n_players)
         self.seat_p = seat_probs(self.n_players)
         self.shards = executor._max_workers
+        if cfg.arm_games > 0:
+            self.shards = max(self.shards, math.ceil(cfg.games / cfg.arm_games))
         self.arms: dict[tuple, Arm] = {}
         self.stores: dict[tuple, SizeStore] = {}
         self.games_log = games_log
@@ -533,6 +540,14 @@ class Collector:
         groups, finished = fut.result()
         self._after_step(arm, groups, finished)
 
+    def _may_step(self) -> list[Arm]:
+        """Arms with games awaiting a decision, no step in flight and no more than `max_lead` steps ahead."""
+        live = [a for a in self.arms.values() if a.future is not None or a.ready]
+        if not live:
+            raise RuntimeError("no game is waiting for a decision")
+        floor = min(a.steps for a in live)
+        return [a for a in live if a.future is None and a.ready and a.steps <= floor + self.cfg.max_lead]
+
     def tick(self) -> None:
         """Choose for the waiting games of every arm that may step, and start those steps on the executor.
 
@@ -542,11 +557,20 @@ class Collector:
         ahead of the slowest arm in the rollout (0 gives lockstep)."""
         cfg = self.cfg
         self._harvest(block=False)
-        live = [a for a in self.arms.values() if a.future is not None or a.ready]
-        if not live:
-            raise RuntimeError("no game is waiting for a decision")
-        floor = min(a.steps for a in live)
-        go = [a for a in live if a.future is None and a.ready and a.steps <= floor + cfg.max_lead]
+        go = self._may_step()
+        if cfg.min_infer > 0 and go:
+            # many small arms come back one by one: gather a batch worth a GPU call, but never wait long
+            deadline = time.perf_counter() + cfg.gather_ms / 1000
+            while sum(obs_len(g) for a in go for g in a.ready) < cfg.min_infer:
+                pending = [a.future for a in self.arms.values() if a.future is not None]
+                left = deadline - time.perf_counter()
+                if not pending or left <= 0:
+                    break
+                t0 = time.perf_counter()
+                wait(pending, timeout=left, return_when=FIRST_COMPLETED)
+                self.t_step += time.perf_counter() - t0
+                self._harvest(block=False)
+                go = self._may_step()
         if not go:
             self._harvest(block=True)
             return
@@ -758,7 +782,14 @@ def train(cfg: RLConfig) -> dict:
 
     rng = np.random.default_rng(cfg.seed + 7919 * update0)
     torch.manual_seed(cfg.seed + update0)
-    learner = NetPolicy(model, f"{cfg.name}@{update0}", device, max_batch=cfg.max_batch, seed=cfg.seed + update0)
+    # with overlap the rollouts are played by a copy of the learner (the weights before the update running alongside),
+    # so the PPO update can change `model` meanwhile; the stored logp are the copy's, so the ratio stays correct
+    actor = copy.deepcopy(model).eval() if cfg.overlap else model
+    if actor is not model:
+        for p in actor.parameters():
+            p.requires_grad_(False)
+    ppo_rng = np.random.default_rng(cfg.seed + 7919 * update0 + 1) if cfg.overlap else rng
+    learner = NetPolicy(actor, f"{cfg.name}@{update0}", device, max_batch=cfg.max_batch, seed=cfg.seed + update0)
     ref_id = policy_id_of(ref_path, checkpoint_step(ref_path))
     pool = Pool(cfg, NetPolicy(ref, ref_id, device, max_batch=cfg.max_batch, seed=cfg.seed + 1),
                 EntryInfo("bc", ref_id, str(ref_path)))
@@ -809,33 +840,56 @@ def train(cfg: RLConfig) -> dict:
         return {"stats": pool.stats.state_dict(),
                 "snapshots": [{"update": int(e.split("u")[-1]), "path": pool.info[e].path} for e in pool.snapshots]}
 
-    last_rec: dict = {}
-    t_start = time.perf_counter()
-    for update in range(update0, cfg.updates):
-        t0 = time.perf_counter()
-        learner.policy_id = f"{cfg.name}@{update}"
+    def begin_rollout(update: int, played_by: int) -> dict:
+        """Plan the rollout of `update` (the collector must be idle) and return the pool weights it uses."""
         weights = pool.weights()
         col.update = update
         col.set_quotas(plan_quotas(weights, cfg.games, seat_p, col.shards))
+        if actor is not model:
+            actor.load_state_dict(model.state_dict())
+        learner.policy_id = f"{cfg.name}@{played_by}"
+        return weights
+
+    def run_rollout() -> float:
+        t = time.perf_counter()
         col.collect(cfg.rollout_steps)
+        return time.perf_counter() - t
+
+    roll_ex = ThreadPoolExecutor(max_workers=1) if cfg.overlap else None
+    last_rec: dict = {}
+    t_start = time.perf_counter()
+    weights = begin_rollout(update0, update0) if update0 < cfg.updates else {}
+    roll_secs = run_rollout() if update0 < cfg.updates else 0.0
+    for update in range(update0, cfg.updates):
+        # this update's rollout is complete and the collector idle: take its results before the next one starts
+        stores, results = col.stores, col.results
+        n_learner, n_opp, t_infer, t_step = col.n_learner, col.n_opp, col.t_infer, col.t_step
+        behaviour_id = learner.policy_id
+        nxt = None
+        if roll_ex is not None and update + 1 < cfg.updates:
+            next_weights = begin_rollout(update + 1, update)
+            nxt = roll_ex.submit(run_rollout)
         t1 = time.perf_counter()
-        res = ppo_update(model, ref, opt, col.stores, cfg, update, device, rng)
+        res = ppo_update(model, ref, opt, stores, cfg, update, device, ppo_rng)
         t2 = time.perf_counter()
+        next_roll_secs = nxt.result() if nxt is not None else 0.0
+        res["overlap_wait_secs"] = time.perf_counter() - t2  # PPO waiting for the next rollout (overlap only)
         done = update + 1
         if done % cfg.snapshot_every == 0:
             add_snapshot(done)
             pool.drop_oldest(cfg.max_snapshots, col.in_use())
         pool.collect_garbage(col.in_use())
 
-        outcomes = outcome_summary(col.results)
+        outcomes = outcome_summary(results)
         rec = {
             "kind": "update", "update": done, "learner_policy_id": f"{cfg.name}@{done}",
-            "learner_decisions": col.n_learner, "opponent_decisions": col.n_opp,
-            "games_finished": len(col.results), "capped_games": sum(r["capped"] for r in col.results),
-            "mean_turns": float(np.mean([r["turns"] for r in col.results])) if col.results else None,
-            "rollout_secs": t1 - t0, "update_secs": t2 - t1, "infer_secs": col.t_infer, "step_secs": col.t_step,
-            "decisions_per_sec": col.n_learner / max(t1 - t0, 1e-9),
-            "all_decisions_per_sec": (col.n_learner + col.n_opp) / max(t1 - t0, 1e-9),
+            "behaviour_policy_id": behaviour_id,
+            "learner_decisions": n_learner, "opponent_decisions": n_opp,
+            "games_finished": len(results), "capped_games": sum(r["capped"] for r in results),
+            "mean_turns": float(np.mean([r["turns"] for r in results])) if results else None,
+            "rollout_secs": roll_secs, "update_secs": t2 - t1, "infer_secs": t_infer, "step_secs": t_step,
+            "decisions_per_sec": n_learner / max(roll_secs, 1e-9),
+            "all_decisions_per_sec": (n_learner + n_opp) / max(roll_secs, 1e-9),
             "win_rate": outcomes, "running_win_rate": {e: pool.stats.rate(e) for e in pool.entries()},
             "pool_weights": weights, "pool_policy_ids": {e: pool.info[e].policy_id for e in pool.entries()},
             **res,
@@ -852,7 +906,14 @@ def train(cfg: RLConfig) -> dict:
         if done % cfg.ckpt_every == 0 and done < cfg.updates:
             save_rl_checkpoint(run_dir / "ckpt_last.pt", model, done, opt, snapshot_state(done))
             save_checkpoint(run_dir / f"ckpt_u{done:05d}.pt", model, done)
+        if nxt is not None:
+            weights, roll_secs = next_weights, next_roll_secs
+        elif done < cfg.updates:
+            weights = begin_rollout(done, done)
+            roll_secs = run_rollout()
 
+    if roll_ex is not None:
+        roll_ex.shutdown()
     done = max(update0, cfg.updates)
     save_rl_checkpoint(run_dir / "ckpt_last.pt", model, done, opt, snapshot_state(done))
     save_checkpoint(run_dir / "ckpt_final.pt", model, done)
