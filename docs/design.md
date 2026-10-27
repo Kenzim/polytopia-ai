@@ -8,7 +8,15 @@ then by self-play. It is measured against the retail AI at each difficulty and a
 just against the retail AI. It plays to win by elimination only (Domination); points are ignored. The value target
 and the RL reward are win 1 / loss 0 and nothing else. Scores stay in the observation because players can see them.
 It must be general across setups (tribes, map sizes, presets, player counts), with 1v1 weighted at about half or
-more of all games, because top-level human play is mostly 1v1. Might mode is out of scope unless Kenzi adds it.
+more of all games, because top-level human play is mostly 1v1.
+
+**Might is now the training mode (Kenzi, 2026-10-27).** Self-play and evaluation move to Might: a game is won by
+holding every capital (or by being the last player left). The rest of the objective is unchanged: win 1 / loss 0,
+no score term, the 150-turn compute cap makes a draw. The engine applies its capital rule only to a game without a
+turn limit, so a Might game is built with none and polyai-core stops it at the cap itself (`GameSetup::own_cap`).
+Every tool takes `--mode might` (`mode=pe.MIGHT` in Python); Domination stays available and the default. The first
+Might run (`might1_b6c96`) continues from rl3 u480. BPolait, the rival bot, plays Might on Tiny and Small maps, so
+those sizes are where it can be measured. The Domination tables in `arena.md` stay as they are.
 
 v1.1 changes from v1 (2026-10-20): no score-margin value heads or shaped score reward; no top-score adjudication
 at a turn limit (a high cap for compute only, capped games are draws); 1v1-weighted setup sampler; 1v1 main eval
