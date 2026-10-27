@@ -27,12 +27,19 @@ pub struct Outcome {
 
 impl Outcome {
     pub fn of(e: &Engine) -> Self {
+        Self::with_cap(e, 0)
+    }
+
+    /// Like [`Self::of`] for a game that also stops at `own_cap` (the cap a Might game has instead of an engine turn
+    /// limit, [`GameSetup::own_cap`]; 0 for none). A game stopped there counts as over and capped.
+    pub fn with_cap(e: &Engine, own_cap: i32) -> Self {
         let scores = e.s.players.iter().filter(|p| p.id != NATURE).map(|p| (p.id, e.score(p.id))).collect();
         let alive = e.living_players().len();
         let limit = e.s.settings.turn_limit;
-        let capped = e.is_over() && alive > 1 && limit > 0 && e.s.current_turn as i32 >= limit;
+        let stopped = crate::setup::cap_reached(e, own_cap);
+        let capped = stopped || (e.is_over() && alive > 1 && limit > 0 && e.s.current_turn as i32 >= limit);
         Outcome {
-            over: e.is_over(),
+            over: e.is_over() || stopped,
             turns: e.s.current_turn,
             winners: if capped { Vec::new() } else { e.winners.clone() },
             scores,
@@ -381,7 +388,7 @@ impl GameRecord {
             }
             e.apply_unchecked(*c);
         }
-        let got = Outcome::of(&e);
+        let got = Outcome::with_cap(&e, self.setup.own_cap());
         if got != self.outcome {
             return Err(format!("outcome differs on replay: recorded {:?}, replayed {:?}", self.outcome, got));
         }

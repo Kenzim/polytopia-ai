@@ -52,6 +52,35 @@ def test_capped_game_is_a_draw_with_no_winner():
     assert g.capped() and g.winners() == []
 
 
+def test_might_mode():
+    assert (pe.DOMINATION, pe.MIGHT) == (2, 4)
+    s = pe.sample_setup(3, mode=pe.MIGHT)
+    assert s["mode"] == pe.MIGHT and s["turn_limit"] == 150
+    with pytest.raises(ValueError):
+        pe.sample_setup(3, mode=1)
+    # Our own cap stops a Might game (the engine has no turn limit there) as a draw.
+    g = pe.Game.sample(5, n_players=[2], sizes=[1], turn_limit=3, mode=pe.MIGHT)
+    while not g.is_over():
+        g.play_ai_move()
+    assert g.capped() and g.winners() == []
+    # Uncapped, a 1v1 Might game ends with a winner.
+    g = pe.Game.sample(5, n_players=[2], sizes=[1], mode=pe.MIGHT)
+    while not g.is_over():
+        g.play_ai_move()
+    assert len(g.winners()) == 1 and not g.capped()
+    env = pe.VecEnv(8, seed_start=1, model_seats="all", sizes=[1], turn_limit=4, threads=2, mode=pe.MIGHT)
+    rng = np.random.default_rng(0)
+    groups, done = env.observe(), []
+    for _ in range(2000):
+        ids = np.concatenate([g["game"] for g in groups])
+        lens = np.concatenate([np.diff(g["act_off"]) for g in groups])
+        groups, finished = env.step(ids, (rng.random(len(lens)) * lens).astype(np.int32))
+        done += finished
+        if len(done) >= 8:
+            break
+    assert len(done) >= 8 and all(f["capped"] and not f["winners"] and f["turns"] <= 5 for f in done)
+
+
 def test_defaults_and_player_weights():
     s = pe.sample_setup(3)
     assert s["turn_limit"] == 150

@@ -175,6 +175,12 @@ impl AgentSpec {
 /// different tribes from the 13, all drawn from the seed, with the compute cap `DEFAULT_TURN_LIMIT` (a game still
 /// running then is a draw). Both games of a seed share it; only the agents change seats.
 pub fn eval_setup(seed: i32, seat_difficulty: [u8; 2]) -> GameSetup {
+    eval_setup_mode(seed, seat_difficulty, DOMINATION)
+}
+
+/// [`eval_setup`] in another game mode (`polyai_core::setup::MIGHT`); the map, preset and tribes of a seed are the
+/// same in every mode.
+pub fn eval_setup_mode(seed: i32, seat_difficulty: [u8; 2], mode: i32) -> GameSetup {
     let mut rng = Rng::new(u64::from(seed as u32) | 0xA2E4_0000_0000);
     let mut pool: Vec<i32> = TRIBES.to_vec();
     let t0 = pool.remove(rng.below(pool.len()));
@@ -185,7 +191,7 @@ pub fn eval_setup(seed: i32, seat_difficulty: [u8; 2]) -> GameSetup {
         seed,
         size,
         preset,
-        mode: DOMINATION,
+        mode,
         turn_limit: DEFAULT_TURN_LIMIT,
         seats: vec![Seat { tribe: t0, difficulty: seat_difficulty[0] }, Seat { tribe: t1, difficulty: seat_difficulty[1] }],
     }
@@ -223,7 +229,8 @@ pub fn play_game(setup: &GameSetup, agents: &mut [Box<dyn Agent>; 2]) -> (GameRe
     let mut commands = 0usize;
     let mut illegal = [0u32; 2];
     let mut think = [0f64; 2];
-    while !e.is_over() && commands < MAX_COMMANDS {
+    let cap = setup.own_cap();
+    while !polyai_core::setup::finished(&e, cap) && commands < MAX_COMMANDS {
         let me = e.current_player();
         let (turn, player) = (e.s.current_turn, me);
         let cmd = match order.iter().position(|&id| id == me) {
@@ -245,7 +252,7 @@ pub fn play_game(setup: &GameSetup, agents: &mut [Box<dyn Agent>; 2]) -> (GameRe
         commands += 1;
         counter.after(&e, &cmd, turn, player);
     }
-    let o = Outcome::of(&e);
+    let o = Outcome::with_cap(&e, cap);
     let winner = o.winners.first().and_then(|w| order.iter().position(|id| id == w));
     let result = GameResult {
         seed: setup.seed,
@@ -271,8 +278,13 @@ fn is_legal(e: &Engine, cmd: &Command) -> bool {
 
 /// Play `a` against `b` on `seed`; `swap` puts `b` in seat 0 (same setup, same tribes in the same seats).
 pub fn play_pair(a: &AgentSpec, b: &AgentSpec, seed: i32, swap: u8) -> GameResult {
+    play_pair_mode(a, b, seed, swap, DOMINATION)
+}
+
+/// [`play_pair`] in game mode `mode`.
+pub fn play_pair_mode(a: &AgentSpec, b: &AgentSpec, seed: i32, swap: u8, mode: i32) -> GameResult {
     let (s0, s1) = if swap == 0 { (a, b) } else { (b, a) };
-    let setup = eval_setup(seed, [s0.difficulty(), s1.difficulty()]);
+    let setup = eval_setup_mode(seed, [s0.difficulty(), s1.difficulty()], mode);
     let mut agents = [s0.build(seed, 0), s1.build(seed, 1)];
     let (mut r, _) = play_game(&setup, &mut agents);
     r.swap = swap;

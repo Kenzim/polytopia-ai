@@ -66,8 +66,11 @@ enum PlayerCounts {
     Weighted(BTreeMap<usize, u32>),
 }
 
-fn make_spec(n_players: Option<PlayerCounts>, sizes: Option<Vec<u8>>, presets: Option<Vec<u8>>, turn_limit: i32) -> PyResult<SetupSpec> {
-    let mut spec = SetupSpec { turn_limit, ..Default::default() };
+fn make_spec(n_players: Option<PlayerCounts>, sizes: Option<Vec<u8>>, presets: Option<Vec<u8>>, turn_limit: i32, mode: i32) -> PyResult<SetupSpec> {
+    if mode != DOMINATION && mode != MIGHT {
+        return Err(value_err(format!("mode is {DOMINATION} (Domination) or {MIGHT} (Might)")));
+    }
+    let mut spec = SetupSpec { turn_limit, mode, ..Default::default() };
     if let Some(n) = n_players {
         let (counts, weights) = match n {
             PlayerCounts::List(v) => (v, Vec::new()),
@@ -241,6 +244,15 @@ impl GameInner {
         self.legal = None;
     }
 
+    /// Our own cap of a Might game; 0 for other modes and for server games, which have no setup.
+    fn own_cap(&self) -> i32 {
+        self.setup.as_ref().map_or(0, GameSetup::own_cap)
+    }
+
+    fn outcome(&self) -> Outcome {
+        Outcome::with_cap(&self.e, self.own_cap())
+    }
+
     fn me(&self) -> PyResult<u8> {
         let me = self.e.current_player();
         if me == NATURE {
@@ -311,9 +323,10 @@ impl PyGame {
 
     /// A game drawn from `seed` with the imitation-data distribution, optionally narrowed.
     #[staticmethod]
-    #[pyo3(signature = (seed, n_players=None, sizes=None, presets=None, difficulty=None, turn_limit=DEFAULT_TURN_LIMIT))]
-    fn sample(seed: i32, n_players: Option<PlayerCounts>, sizes: Option<Vec<u8>>, presets: Option<Vec<u8>>, difficulty: Option<u8>, turn_limit: i32) -> PyResult<Self> {
-        let mut setup = GameSetup::sample(seed, &make_spec(n_players, sizes, presets, turn_limit)?);
+    #[pyo3(signature = (seed, n_players=None, sizes=None, presets=None, difficulty=None, turn_limit=DEFAULT_TURN_LIMIT, mode=DOMINATION))]
+    #[allow(clippy::too_many_arguments)]
+    fn sample(seed: i32, n_players: Option<PlayerCounts>, sizes: Option<Vec<u8>>, presets: Option<Vec<u8>>, difficulty: Option<u8>, turn_limit: i32, mode: i32) -> PyResult<Self> {
+        let mut setup = GameSetup::sample(seed, &make_spec(n_players, sizes, presets, turn_limit, mode)?);
         if let Some(d) = difficulty {
             setup = setup.with_difficulty(d);
         }
@@ -330,9 +343,10 @@ impl PyGame {
         Self(Mutex::new(GameInner { e: g.e.clone(), setup: g.setup.clone(), order: g.order.clone(), commands: g.commands.clone(), counter: g.counter, legal: g.legal.clone() }))
     }
 
+    /// The game ended, or a Might game reached its turn cap (see `polyai_core::setup::MIGHT`).
     fn is_over(&self) -> bool {
         let g = self.0.lock().unwrap();
-        g.e.is_over()
+        finished(&g.e, g.own_cap())
     }
 
     #[getter]
@@ -369,13 +383,13 @@ impl PyGame {
     /// Winning seats by elimination (empty while the game is running and for a draw at the turn cap).
     fn winners(&self) -> Vec<usize> {
         let g = self.0.lock().unwrap();
-        Outcome::of(&g.e).winners.iter().filter_map(|&w| seat_of(&g.order, w)).collect()
+        g.outcome().winners.iter().filter_map(|&w| seat_of(&g.order, w)).collect()
     }
 
     /// True when the game was stopped at the turn cap with more than one player alive (a draw).
     fn capped(&self) -> bool {
         let g = self.0.lock().unwrap();
-        Outcome::of(&g.e).capped
+        g.outcome().capped
     }
 
     /// Alias of `capped()`, kept for one version.
@@ -467,7 +481,8 @@ impl PyGame {
     fn record<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyBytes>> {
         let g = self.0.lock().unwrap();
         let setup = g.setup.clone().ok_or_else(no_setup)?;
-        let rec = GameRecord { engine_version: polytopia_sim::GAME_VERSION, engine_commit: ENGINE_COMMIT.to_string(), setup, commands: g.commands.clone(), outcome: Outcome::of(&g.e) };
+        let outcome = g.outcome();
+        let rec = GameRecord { engine_version: polytopia_sim::GAME_VERSION, engine_commit: ENGINE_COMMIT.to_string(), setup, commands: g.commands.clone(), outcome };
         Ok(PyBytes::new(py, &rec.to_bytes()))
     }
 }
@@ -519,7 +534,7 @@ impl Slot {
     }
 
     fn done(&self) -> bool {
-        self.e.is_over() || self.commands >= MAX_COMMANDS
+        finished(&self.e, self.setup.own_cap()) || self.commands >= MAX_COMMANDS
     }
 
     fn apply(&mut self, cmd: Command) {
@@ -571,7 +586,7 @@ struct Finished {
 
 impl Finished {
     fn of(game: usize, s: &Slot) -> Self {
-        let o = Outcome::of(&s.e);
+        let o = Outcome::with_cap(&s.e, s.setup.own_cap());
         Finished {
             game,
             setup: s.setup.clone(),
@@ -711,7 +726,7 @@ impl PyVecEnv {
     /// `seed_start >= 1000000`. `seat_difficulties` sets each seat's handicap by seat index (applied after
     /// `difficulty`; every value 0..=3, one per seat of the largest player count).
     #[new]
-    #[pyo3(signature = (n_games, seed_start=1, model_seats=None, split="train", n_players=None, sizes=None, presets=None, difficulty=None, turn_limit=DEFAULT_TURN_LIMIT, threads=24, auto_reset=true, seat_difficulties=None))]
+    #[pyo3(signature = (n_games, seed_start=1, model_seats=None, split="train", n_players=None, sizes=None, presets=None, difficulty=None, turn_limit=DEFAULT_TURN_LIMIT, threads=24, auto_reset=true, seat_difficulties=None, mode=DOMINATION))]
     #[allow(clippy::too_many_arguments)]
     fn new(
         py: Python<'_>,
@@ -727,6 +742,7 @@ impl PyVecEnv {
         threads: usize,
         auto_reset: bool,
         seat_difficulties: Option<Vec<u8>>,
+        mode: i32,
     ) -> PyResult<Self> {
         if let Some(ds) = &seat_difficulties {
             if ds.iter().any(|&d| d > 3) {
@@ -760,7 +776,7 @@ impl PyVecEnv {
         let mut env = EnvInner {
             slots: Vec::new(),
             pool,
-            spec: make_spec(n_players, sizes, presets, turn_limit)?,
+            spec: make_spec(n_players, sizes, presets, turn_limit, mode)?,
             model,
             difficulty,
             seat_difficulties,
@@ -848,9 +864,10 @@ impl PyVecEnv {
 
 /// The setup `seed` draws, as a dict (see `Game.from_setup`).
 #[pyfunction]
-#[pyo3(signature = (seed, n_players=None, sizes=None, presets=None, difficulty=None, turn_limit=DEFAULT_TURN_LIMIT))]
-fn sample_setup<'py>(py: Python<'py>, seed: i32, n_players: Option<PlayerCounts>, sizes: Option<Vec<u8>>, presets: Option<Vec<u8>>, difficulty: Option<u8>, turn_limit: i32) -> PyResult<Bound<'py, PyDict>> {
-    let mut setup = GameSetup::sample(seed, &make_spec(n_players, sizes, presets, turn_limit)?);
+#[pyo3(signature = (seed, n_players=None, sizes=None, presets=None, difficulty=None, turn_limit=DEFAULT_TURN_LIMIT, mode=DOMINATION))]
+#[allow(clippy::too_many_arguments)]
+fn sample_setup<'py>(py: Python<'py>, seed: i32, n_players: Option<PlayerCounts>, sizes: Option<Vec<u8>>, presets: Option<Vec<u8>>, difficulty: Option<u8>, turn_limit: i32, mode: i32) -> PyResult<Bound<'py, PyDict>> {
+    let mut setup = GameSetup::sample(seed, &make_spec(n_players, sizes, presets, turn_limit, mode)?);
     if let Some(d) = difficulty {
         setup = setup.with_difficulty(d);
     }
@@ -877,5 +894,7 @@ fn polyai_engine(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add("KIND_NAMES", KIND_NAMES.to_vec())?;
     m.add("CAT_VOCABS", CAT_VOCABS.to_vec())?;
     m.add("ENGINE_COMMIT", ENGINE_COMMIT)?;
+    m.add("DOMINATION", DOMINATION)?;
+    m.add("MIGHT", MIGHT)?;
     Ok(())
 }

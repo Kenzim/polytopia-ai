@@ -45,7 +45,8 @@ pub fn play_ai_game(setup: &GameSetup, mut on_decision: impl FnMut(&mut Engine, 
     let mut e = setup.build();
     let mut commands = Vec::new();
     let mut counter = TurnCounter::default();
-    while !e.is_over() && commands.len() < MAX_COMMANDS {
+    let cap = setup.own_cap();
+    while !crate::setup::finished(&e, cap) && commands.len() < MAX_COMMANDS {
         let cmd = ai_pick(&mut e, counter.0);
         on_decision(&mut e, &cmd);
         let (turn, player) = (e.s.current_turn, e.current_player());
@@ -58,7 +59,7 @@ pub fn play_ai_game(setup: &GameSetup, mut on_decision: impl FnMut(&mut Engine, 
         engine_commit: ENGINE_COMMIT.to_string(),
         setup: setup.clone(),
         commands,
-        outcome: Outcome::of(&e),
+        outcome: Outcome::with_cap(&e, cap),
     };
     (record, e)
 }

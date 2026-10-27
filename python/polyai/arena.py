@@ -125,8 +125,17 @@ class Suite:
     sizes: list[int] = field(default_factory=lambda: [SIZE_IDS[k] for k in MAIN_SIZES])
     presets: list[int] = field(default_factory=lambda: [PRESET_IDS[k] for k in MAIN_PRESETS])
     turn_limit: int = 150
+    mode: int = 2  # game mode: 2 Domination, 4 Might (MODES)
     batch_games: int = 64  # games in flight per seat arm
     threads: int = 8  # VecEnv threads of both arms and torch together
+
+
+MODES = {"domination": 2, "might": 4}
+
+
+def mode_kw(mode: int) -> dict:
+    """`mode=` for `polyai_engine` calls; left out for Domination so an older module without the argument still works."""
+    return {} if mode == MODES["domination"] else {"mode": mode}
 
 
 def _supports_seat_difficulties(pe) -> bool:
@@ -141,7 +150,7 @@ class Arm:
         self.seed_end = suite.seed_start + suite.seeds
         self.per_seat = _supports_seat_difficulties(pe)
         kw = dict(n_players=[2], sizes=suite.sizes, presets=suite.presets, turn_limit=suite.turn_limit,
-                  threads=env_threads, split="eval", auto_reset=True)
+                  threads=env_threads, split="eval", auto_reset=True, **mode_kw(suite.mode))
         if self.per_seat:
             kw["seat_difficulties"] = [MODEL_SEAT_DIFFICULTY if s == model_seat else opp_difficulty for s in range(2)]
         else:
@@ -256,7 +265,7 @@ def play_pairing(agent: ModelAgent, opponent: str, suite: Suite, done: set | Non
                 continue
             if seed not in setups:
                 setups[seed] = pe.sample_setup(seed, n_players=[2], sizes=suite.sizes, presets=suite.presets,
-                                               turn_limit=suite.turn_limit)
+                                               turn_limit=suite.turn_limit, **mode_kw(suite.mode))
             r = game_record(a.finished[seed], pe, suite, swap, names[swap], setups[seed], str(agent.path))
             r["wall_ms"] = wall_ms / max(n_games, 1)
             r["think_ms"] = [think_ms if s == swap else 0.0 for s in range(2)]
@@ -314,6 +323,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--presets", default=None, help="from dryland,lakes,continents,archipelago,waterworld,pangea "
                                                      "(default all but waterworld)")
     ap.add_argument("--turn-limit", type=int, default=d.turn_limit, help="compute cap; a game that reaches it is a draw")
+    ap.add_argument("--mode", choices=list(MODES), default="domination", help="game mode of the suite")
     ap.add_argument("--batch-games", type=int, default=d.batch_games, help="games in flight per seat arm")
     ap.add_argument("--max-batch", type=int, default=128, help="most positions per forward pass")
     ap.add_argument("--threads", type=int, default=d.threads, help="VecEnv and torch threads together (at most 8)")
@@ -337,7 +347,7 @@ def main(argv: list[str] | None = None) -> int:
     suite = Suite(seed_start=a.seed_start, seeds=a.seeds,
                   sizes=parse_names(a.sizes, SIZE_IDS, "size") or d.sizes,
                   presets=parse_names(a.presets, PRESET_IDS, "preset") or d.presets,
-                  turn_limit=a.turn_limit, batch_games=a.batch_games, threads=threads)
+                  turn_limit=a.turn_limit, mode=MODES[a.mode], batch_games=a.batch_games, threads=threads)
     opponents = [o.strip() for o in a.opponent.split(",") if o.strip()]
     for o in opponents:
         parse_opponent(o)

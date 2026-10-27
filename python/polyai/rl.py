@@ -64,6 +64,7 @@ from .rl_pool import (
     seat_probs,
     take,
 )
+from .arena import MODES, mode_kw
 from .train_bc import DEFAULT_RUNS_DIR, check_gpu_memory, load_checkpoint, make_optimizer, save_checkpoint
 
 SIZE_IDS = {"tiny": 1, "small": 2, "normal": 3, "large": 4, "huge": 5, "massive": 6}
@@ -85,6 +86,7 @@ class RLConfig:
     sizes: str = ""  # from tiny,small,normal,large,huge,massive (default: the engine's tiny,small,normal)
     presets: str = ""  # subset of dryland,lakes,continents,archipelago,waterworld,pangea (default: the engine's five, no waterworld)
     turn_limit: int = 150  # compute cap; a game that reaches it is a draw
+    mode: str = "domination"  # game mode of every rollout game: domination or might
     temperature: float = 1.0  # learner sampling temperature; the policy is softmax(logits / temperature) throughout
     opp_temperature: float = 1.0  # sampling temperature of model opponents
     drop_capped: bool = False  # leave capped (drawn) games out of training instead of rewarding 0.5
@@ -464,7 +466,7 @@ class Collector:
         cap = arm_capacity(key, self.cfg.games, self.seat_p, self.shards)
         seed_start = int(self.rng.integers(1, TRAIN_SEED_MAX + 1))
         kw = dict(split="train", sizes=self.sizes, presets=self.presets, turn_limit=self.cfg.turn_limit,
-                  threads=1, auto_reset=True)
+                  threads=1, auto_reset=True, **mode_kw(MODES[self.cfg.mode]))
         if key[0] == "retail":
             difficulty = RETAIL_NAMES.index(key[1].split(":")[1])
             seat = key[2]
@@ -951,6 +953,8 @@ def parse_args(argv: list[str] | None = None) -> RLConfig:
                             required=f.name in ("init",) and "--resume" not in (argv or sys.argv))
     a = ap.parse_args(argv)
     cfg = RLConfig(**vars(a))
+    if cfg.mode not in MODES:
+        raise SystemExit(f"--mode is one of {', '.join(MODES)}")
     if cfg.resume and not cfg.init:  # a resumed run needs its stored init / ref paths again
         stored = Path(cfg.runs_dir) / cfg.name / "config.json"
         if not stored.exists():

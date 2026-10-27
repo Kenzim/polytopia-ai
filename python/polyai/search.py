@@ -423,9 +423,10 @@ class _Live:
 
 def _search_setup(pe, suite, seed: int, model_seat: int, opp_difficulty: int) -> dict:
     """The setup `Arm` plays: the suite's draw for the seed, the model seat at the Normal handicap."""
-    from .arena import MODEL_SEAT_DIFFICULTY
+    from .arena import MODEL_SEAT_DIFFICULTY, mode_kw
 
-    setup = pe.sample_setup(seed, n_players=[2], sizes=suite.sizes, presets=suite.presets, turn_limit=suite.turn_limit)
+    setup = pe.sample_setup(seed, n_players=[2], sizes=suite.sizes, presets=suite.presets, turn_limit=suite.turn_limit,
+                            **mode_kw(getattr(suite, "mode", 2)))
     setup["seats"] = [(t, MODEL_SEAT_DIFFICULTY if s == model_seat else opp_difficulty)
                       for s, (t, _) in enumerate(setup["seats"])]
     return setup

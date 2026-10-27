@@ -6,7 +6,7 @@
 //! seeds are training data. One JSON line per game goes to `--out` (appended; games already in the file are
 //! skipped, so an interrupted run resumes). Run long jobs under `nice -n 10`.
 
-use polyai_arena::{job_key, line_key, play_pair, AgentSpec, EVAL_SEED_MIN};
+use polyai_arena::{job_key, line_key, play_pair_mode, AgentSpec, EVAL_SEED_MIN};
 use rayon::prelude::*;
 use std::collections::HashSet;
 use std::io::Write;
@@ -16,7 +16,7 @@ use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
 const MAX_THREADS: usize = 24;
-const USAGE: &str = "usage: polyai-arena --agents A,B[,C...] --seeds N [--seed-start 1000000] [--out FILE.jsonl] [--threads T<=24]\n\
+const USAGE: &str = "usage: polyai-arena --agents A,B[,C...] --seeds N [--seed-start 1000000] [--out FILE.jsonl] [--threads T<=24] [--mode domination|might]\n\
     agents: retail:easy|normal|hard|crazy, random, mcts:<iterations>[:depth=D][:topk=K]";
 
 struct Args {
@@ -25,10 +25,11 @@ struct Args {
     seed_start: i32,
     out: Option<PathBuf>,
     threads: usize,
+    mode: i32,
 }
 
 fn parse_args() -> Result<Args, String> {
-    let mut a = Args { agents: Vec::new(), seeds: 0, seed_start: EVAL_SEED_MIN, out: None, threads: MAX_THREADS };
+    let mut a = Args { agents: Vec::new(), seeds: 0, seed_start: EVAL_SEED_MIN, out: None, threads: MAX_THREADS, mode: polyai_core::setup::DOMINATION };
     let mut it = std::env::args().skip(1);
     while let Some(flag) = it.next() {
         let mut val = || it.next().ok_or(format!("{flag} needs a value"));
@@ -39,6 +40,13 @@ fn parse_args() -> Result<Args, String> {
             "--seed-start" => a.seed_start = val()?.parse().map_err(|_| bad(&flag))?,
             "--out" => a.out = Some(PathBuf::from(val()?)),
             "--threads" => a.threads = val()?.parse().map_err(|_| bad(&flag))?,
+            "--mode" => {
+                a.mode = match val()?.as_str() {
+                    "domination" => polyai_core::setup::DOMINATION,
+                    "might" => polyai_core::setup::MIGHT,
+                    _ => return Err(bad(&flag)),
+                }
+            }
             _ => return Err(format!("unknown argument {flag}\n{USAGE}")),
         }
     }
@@ -133,7 +141,7 @@ fn main() {
         let _stop = StopOnDrop(&stop);
         pool.install(|| {
             jobs.par_iter().for_each(|&(i, j, seed, swap)| {
-                let r = play_pair(&args.agents[i], &args.agents[j], seed, swap);
+                let r = play_pair_mode(&args.agents[i], &args.agents[j], seed, swap, args.mode);
                 if let Some(out) = &out {
                     let mut f = out.lock().unwrap();
                     writeln!(f, "{}", r.to_json()).expect("write result");

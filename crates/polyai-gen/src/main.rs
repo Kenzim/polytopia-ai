@@ -1,7 +1,7 @@
 //! Plays retail-AI games on N threads and writes game records and `.npz` training shards.
 //!
 //! `polyai-gen --out DIR --games N [--seed-start S] [--threads T] [--keep K] [--shard-size P] [--difficulty D]
-//!  [--turn-limit L] [--players 2:55,3:25,4:20]`
+//!  [--turn-limit L] [--players 2:55,3:25,4:20] [--mode domination|might]`
 //!
 //! `--players` is a weighted list of player counts (`2:55,3:25,4:20` is the default) or a plain list (`2,3`, uniform).
 //! `--turn-limit` is the compute cap (default 150): a game still running then is a draw (`capped`), never adjudicated.
@@ -33,10 +33,11 @@ struct Args {
     difficulty: Option<u8>,
     turn_limit: Option<i32>,
     players: Option<String>,
+    mode: i32,
 }
 
 fn parse_args() -> Result<Args, String> {
-    let mut a = Args { out: PathBuf::new(), games: 0, seed_start: 1, threads: MAX_THREADS, keep: 4, shard_size: 50_000, difficulty: None, turn_limit: None, players: None };
+    let mut a = Args { out: PathBuf::new(), games: 0, seed_start: 1, threads: MAX_THREADS, keep: 4, shard_size: 50_000, difficulty: None, turn_limit: None, players: None, mode: DOMINATION };
     let mut it = std::env::args().skip(1);
     while let Some(flag) = it.next() {
         let mut val = || it.next().ok_or(format!("{flag} needs a value"));
@@ -51,11 +52,18 @@ fn parse_args() -> Result<Args, String> {
             "--difficulty" => a.difficulty = Some(val()?.parse().map_err(|_| bad(&flag))?),
             "--turn-limit" => a.turn_limit = Some(val()?.parse().map_err(|_| bad(&flag))?),
             "--players" => a.players = Some(val()?),
+            "--mode" => {
+                a.mode = match val()?.as_str() {
+                    "domination" => DOMINATION,
+                    "might" => MIGHT,
+                    _ => return Err(bad(&flag)),
+                }
+            }
             _ => return Err(format!("unknown argument {flag}")),
         }
     }
     if a.out.as_os_str().is_empty() || a.games == 0 {
-        return Err("usage: polyai-gen --out DIR --games N [--seed-start S] [--threads T<=24] [--keep K] [--shard-size P] [--difficulty 0..3] [--turn-limit L] [--players 2:55,3:25,4:20]".into());
+        return Err("usage: polyai-gen --out DIR --games N [--seed-start S] [--threads T<=24] [--keep K] [--shard-size P] [--difficulty 0..3] [--turn-limit L] [--players 2:55,3:25,4:20] [--mode domination|might]".into());
     }
     a.threads = a.threads.clamp(1, MAX_THREADS);
     a.keep = a.keep.max(1);
@@ -199,7 +207,7 @@ fn main() {
         by_players: Mutex::new(BTreeMap::new()),
         shards: Mutex::new(Vec::new()),
     };
-    let mut spec = SetupSpec::default();
+    let mut spec = SetupSpec { mode: args.mode, ..SetupSpec::default() };
     if let Some(l) = args.turn_limit {
         spec.turn_limit = l;
     }

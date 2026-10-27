@@ -18,8 +18,8 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from .arena import (DEFAULT_ARENA_DIR, MODEL_SEAT_DIFFICULTY, PRESET_IDS, SIZE_IDS, EVAL_SEED_MIN, ModelAgent, Suite,
-                    _take, game_record, load_done, parse_model_spec, parse_names, summarise)
+from .arena import (DEFAULT_ARENA_DIR, MODEL_SEAT_DIFFICULTY, MODES, PRESET_IDS, SIZE_IDS, EVAL_SEED_MIN, ModelAgent,
+                    Suite, _take, game_record, load_done, mode_kw, parse_model_spec, parse_names, summarise)
 
 
 class PairArm:
@@ -31,7 +31,7 @@ class PairArm:
         self.env = pe.VecEnv(min(suite.batch_games, suite.seeds), suite.seed_start, "all", split="eval", n_players=[2],
                              sizes=suite.sizes, presets=suite.presets, turn_limit=suite.turn_limit,
                              threads=env_threads, auto_reset=True,
-                             seat_difficulties=[MODEL_SEAT_DIFFICULTY, MODEL_SEAT_DIFFICULTY])
+                             seat_difficulties=[MODEL_SEAT_DIFFICULTY, MODEL_SEAT_DIFFICULTY], **mode_kw(suite.mode))
         self.groups = list(self.env.observe())
         self.finished: dict[int, dict] = {}
 
@@ -92,7 +92,7 @@ def play_h2h(a: ModelAgent, b: ModelAgent, suite: Suite, done: set, log=print) -
             if (seed, sw, tuple(names)) in done:
                 continue
             setup = pe.sample_setup(seed, n_players=[2], sizes=suite.sizes, presets=suite.presets,
-                                    turn_limit=suite.turn_limit)
+                                    turn_limit=suite.turn_limit, **mode_kw(suite.mode))
             r = game_record(arm.finished[seed], pe, suite, sw, names, setup, f"{a.path}|{b.path}")
             r["wall_ms"] = wall_ms
             records.append(r)
@@ -109,6 +109,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--sizes", default=None)
     ap.add_argument("--presets", default=None)
     ap.add_argument("--turn-limit", type=int, default=d.turn_limit)
+    ap.add_argument("--mode", choices=list(MODES), default="domination")
     ap.add_argument("--batch-games", type=int, default=d.batch_games)
     ap.add_argument("--max-batch", type=int, default=128)
     ap.add_argument("--threads", type=int, default=d.threads, help="VecEnv and torch threads together (at most 8)")
@@ -124,7 +125,7 @@ def main(argv: list[str] | None = None) -> int:
     suite = Suite(seed_start=args.seed_start, seeds=args.seeds,
                   sizes=parse_names(args.sizes, SIZE_IDS, "size") or d.sizes,
                   presets=parse_names(args.presets, PRESET_IDS, "preset") or d.presets,
-                  turn_limit=args.turn_limit, batch_games=args.batch_games, threads=threads)
+                  turn_limit=args.turn_limit, mode=MODES[args.mode], batch_games=args.batch_games, threads=threads)
     agents = []
     for i, spec in enumerate((args.a, args.b)):
         path, temperature = parse_model_spec(spec)

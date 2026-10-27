@@ -148,6 +148,36 @@ fn a_game_cut_off_at_the_cap_is_a_draw_and_the_model_never_sees_the_cap() {
 }
 
 #[test]
+fn might_games_end_on_capitals_and_stop_at_our_own_cap() {
+    let spec = SetupSpec { mode: MIGHT, n_players: vec![2], n_player_weights: vec![], ..Default::default() };
+    // The engine gets no turn limit (its capital rule only runs without one); the cap is ours.
+    let s0 = GameSetup::sample(7, &spec);
+    assert_eq!((s0.mode, s0.turn_limit, s0.own_cap()), (MIGHT, DEFAULT_TURN_LIMIT, DEFAULT_TURN_LIMIT));
+    let e0 = s0.build();
+    assert!(e0.s.settings.win_by_capital && e0.s.settings.turn_limit == 0);
+    let mut by_capital = 0;
+    for seed in 1..=12 {
+        let setup = GameSetup::sample(seed, &spec);
+        let (rec, e) = play_ai_game(&setup, |_, _| {});
+        assert!(rec.outcome.over, "seed {seed} did not finish");
+        if !rec.outcome.capped {
+            let w = rec.outcome.winners[0];
+            assert_eq!(e.capital_holder(), Some(w), "seed {seed}: the winner holds every capital");
+            by_capital += usize::from(e.living_players().len() > 1);
+        }
+        GameRecord::from_bytes(&rec.to_bytes()).unwrap().replay(false).expect("replay");
+    }
+    assert!(by_capital > 0, "no 1v1 Might game ended with both players alive (a capital win)");
+    // A short cap of our own stops the game as a draw.
+    let mut setup = GameSetup::sample(3, &spec);
+    setup.turn_limit = 4;
+    let (rec, e) = play_ai_game(&setup, |_, _| {});
+    assert!(rec.outcome.over && rec.outcome.capped && rec.outcome.winners.is_empty() && !e.is_over());
+    assert_eq!(e.s.current_turn, 4);
+    GameRecord::from_bytes(&rec.to_bytes()).unwrap().replay(true).expect("replay");
+}
+
+#[test]
 fn observation_honours_fog_and_slots() {
     let setup = setup_for(11, &[TRIBES[0], TRIBES[1], TRIBES[2]]);
     let mut checked = 0;

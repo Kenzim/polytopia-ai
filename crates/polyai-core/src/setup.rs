@@ -9,6 +9,10 @@ pub const TRAIN_SEED_MAX: i32 = 100_000;
 pub const EVAL_SEED_MIN: i32 = 1_000_000;
 
 pub const DOMINATION: i32 = 2;
+/// Might: the game ends when one player holds every capital (or is the last one left). The engine applies that rule
+/// only to a game without a turn limit, so a Might game is built with none and the compute cap is checked here
+/// ([`GameSetup::cap_reached`]).
+pub const MIGHT: i32 = polytopia_sim::GAME_MODE_MIGHT;
 /// The turn at which a game is stopped for compute only. A game still running with more than one player alive at
 /// this turn is a draw (`Outcome::capped`); the engine's top-score rule is never used as a result.
 pub const DEFAULT_TURN_LIMIT: i32 = 150;
@@ -109,6 +113,8 @@ pub struct SetupSpec {
     /// Weights for difficulty 0..3.
     pub difficulty_weights: [u32; 4],
     pub turn_limit: i32,
+    /// Game mode of every sampled game: [`DOMINATION`] or [`MIGHT`].
+    pub mode: i32,
 }
 
 impl Default for SetupSpec {
@@ -120,6 +126,7 @@ impl Default for SetupSpec {
             presets: PRESETS.to_vec(),
             difficulty_weights: [10, 20, 35, 35],
             turn_limit: DEFAULT_TURN_LIMIT,
+            mode: DOMINATION,
         }
     }
 }
@@ -174,7 +181,22 @@ impl GameSetup {
             let difficulty = rng.weighted(&spec.difficulty_weights) as u8;
             seats.push(Seat { tribe, difficulty });
         }
-        Self { seed, size, preset, mode: DOMINATION, turn_limit: spec.turn_limit, seats }
+        Self { seed, size, preset, mode: spec.mode, turn_limit: spec.turn_limit, seats }
+    }
+
+    /// The compute cap this crate enforces itself: the turn limit of a Might game (built without an engine limit, see
+    /// [`MIGHT`]); 0 for every other mode, where the engine ends the game at its turn limit.
+    pub fn own_cap(&self) -> i32 {
+        if self.mode == MIGHT {
+            self.turn_limit
+        } else {
+            0
+        }
+    }
+
+    /// The game has reached the cap of [`Self::own_cap`] without ending.
+    pub fn cap_reached(&self, e: &Engine) -> bool {
+        cap_reached(e, self.own_cap())
     }
 
     /// The setup with every seat's difficulty replaced.
@@ -194,7 +216,7 @@ impl GameSetup {
             players: self.seats.iter().map(|s| PlayerSetup { tribe: s.tribe, human: false }).collect(),
             difficulty: BotDifficulty::Normal,
             mode: self.mode,
-            turn_limit: self.turn_limit,
+            turn_limit: if self.mode == MIGHT { 0 } else { self.turn_limit },
             score_limit: 0,
         }
     }
@@ -211,4 +233,14 @@ impl GameSetup {
     pub fn is_training_seed(&self) -> bool {
         (1..=TRAIN_SEED_MAX).contains(&self.seed)
     }
+}
+
+/// A running game has reached `cap` (0: no cap of our own). See [`GameSetup::own_cap`].
+pub fn cap_reached(e: &Engine, cap: i32) -> bool {
+    cap > 0 && !e.is_over() && e.s.current_turn as i32 >= cap
+}
+
+/// The game is over, or stopped at our own cap.
+pub fn finished(e: &Engine, cap: i32) -> bool {
+    e.is_over() || cap_reached(e, cap)
 }
