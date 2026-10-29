@@ -155,6 +155,24 @@ gain may be specific to exploiting it; human and live games are the check on tha
 to 2.6 as the KL weight fell to 0.01, so the follow-up run (rl3) keeps the KL weight at 0.03 to 0.02 and the entropy
 bonus at 0.0005.
 
+### Might 1v1 suite (2026-10-29)
+
+Same 1v1 suite with `--mode might` (win by holding every capital), greedy, no search, model seat at Normal, 200 seeds
+x 2 seats, 0 illegal commands, CPU. `might1_b6c96` is 600 updates of Might self-play from rl3 u480 (rl3 settings, 3060,
+6.4 h). `rl3 u480` has had no Might training. Results: `/kvm/polytopia-ai-data/arena/might/`.
+
+| model | vs retail:hard | vs retail:crazy |
+|---|---|---|
+| rl3 u480 (Domination only) | 370-30-0, 92.5% (89.5 to 94.7) | 303-97-0, 75.8% (71.3 to 79.7) |
+| might1 final | 367-33-0, 91.8% (88.6 to 94.1) | 325-74-1, 81.4% (77.3 to 84.9) |
+
+Head to head, might1 against rl3 u480 in Might: 179-218-3, **45.1%** (40.3 to 50.0).
+
+Reading it: the Domination model carries over to Might almost unchanged, since the two modes differ mainly in the
+win condition. Might self-play raised the score against retail Crazy by about 6 points but lost head to head, so the
+gain looks specific to the retail AI (which is in the opponent pool) rather than general strength. The Might
+baseline stays **rl3 u480** (`policy_id rl3_b6c96@480`), for live and BPolait games too.
+
 ### Older results (suite v1: Small, Continents, 50 turns, adjudicated on score)
 
 The first table (2026-10-20) used the old suite and is not comparable with the one above: 15% of its games were
