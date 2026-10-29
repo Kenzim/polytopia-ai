@@ -49,3 +49,41 @@ against the always-most-common-value baseline, cross entropy against the cross e
 non-majority precision and recall. The enemy capital is also scored as a location: how often the true capital is among
 the top 1 or top 3 hidden land tiles by predicted probability, against picking uniformly among the hidden land tiles.
 The same numbers appear as `belief` in the `val` records of `metrics.jsonl`.
+
+## Results (2026-10-29)
+
+Data: `bc-might-truth`, 20,000 Might games from seeds 50001..70000 (default 1v1-weighted mix), written with `--truth`;
+135 shards to train and 10 held out (every 15th). Both arms fine-tune `might1_b6c96/ckpt_final.pt` (b6c96) by behaviour
+cloning: 12,000 steps, batch 256, lr 2e-4, warm-up 100, seed 0. Arm A (`truthab_b0`) has belief weight 0; arm B
+(`truthab_b1`) has weight 0.5 and 32-wide heads (1.59M params; the heads are dropped at play time).
+
+Belief accuracy of `truthab_b1` on the held-out shards, hidden tiles only (25.0M tiles). Baseline is always the most
+common value; skill is 1 minus CE over the CE of the class frequencies.
+
+| channel | acc | baseline acc | CE | baseline CE | skill |
+|---|---|---|---|---|---|
+| terrain | 0.453 | 0.332 | 1.285 | 1.513 | 0.150 |
+| resource | 0.683 | 0.683 | 1.158 | 1.245 | 0.070 |
+| site | 0.966 | 0.966 | 0.141 | 0.172 | 0.179 |
+| enemy_city | 0.967 | 0.966 | 0.105 | 0.150 | 0.300 |
+| enemy_capital | 0.991 | 0.991 | 0.045 | 0.062 | 0.279 |
+| unit | 0.925 | 0.925 | 0.229 | 0.266 | 0.138 |
+
+Enemy capital as a location (163,530 positions): true capital is the top-1 hidden land tile in 29.2% of positions
+(uniform 3.6%) and in the top 3 in 52.4% (uniform 10.6%). Accuracy beats the majority baseline only for terrain, since
+the other channels are mostly one class; the cross entropy shows the heads do learn.
+
+Play, Might 1v1 suite, 200 seeds, both seats (400 games), CPU, greedy:
+
+| match | W-L-D | score (95% CI) |
+|---|---|---|
+| belief 0.5 vs belief 0 (head to head) | 202-197-1 | 50.6% (45.7 to 55.5) |
+| belief 0 vs retail:crazy | 38-359-3 | 9.9% (7.3 to 13.2) |
+| belief 0.5 vs retail:crazy | 57-341-2 | 14.5% (11.4 to 18.3) |
+
+Reading: head to head is a tie. Against Crazy belief 0.5 scores 4.6 points higher (z about 2.0, borderline, one seed of
+each arm). More important, both arms are far below their starting point: `might1_b6c96` scores 81.4% against Crazy, so
+behaviour cloning on this dataset wrecks play whatever the belief weight. The retail-AI moves in the data are a worse
+teacher than the self-play policy it starts from. The A/B therefore says little about whether belief heads help a
+strong policy; a fair test needs the belief loss added to RL (or BC on stronger-play data) and a policy that starts
+and stays strong.
