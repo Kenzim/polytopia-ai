@@ -93,7 +93,7 @@ def save_shard(path: str | Path, arrays: dict[str, np.ndarray]) -> None:
     for k, spec in S.OPTIONAL_FIELDS.items():
         if k in arrays:
             out[k] = np.asarray(arrays[k], dtype=str if spec.dtype == "str" else spec.dtype)
-    for k, spec in S.TRUTH_FIELDS.items():
+    for k, spec in {**S.TRUTH_FIELDS, **S.FEAT_FIELDS}.items():
         if k in arrays:
             out[k] = np.asarray(arrays[k], dtype=spec.dtype)
     np.savez(path, **out)
@@ -143,6 +143,7 @@ class Shard:
         self.n, self.h, self.w = n, h, w
         self._fill_optional()
         self._check_truth()
+        self._check_features()
 
     def _fill_optional(self) -> None:
         """The optional provenance keys, as stored or defaulted (a shard without them is a retail-generator shard)."""
@@ -173,9 +174,25 @@ class Shard:
             if a["truth_mask"].shape != (self.n, self.h, self.w):
                 raise ValueError(f"truth_mask has shape {a['truth_mask'].shape}, expected {(self.n, self.h, self.w)}")
 
+    def _check_features(self) -> None:
+        a = self.a
+        have = [k for k in S.FEAT_FIELDS if k in a]
+        if have and len(have) != len(S.FEAT_FIELDS):
+            raise ValueError(f"a shard holds all of {list(S.FEAT_FIELDS)} or none, this one has {have}")
+        if have:
+            want = {"f_tiles": (self.n, self.h, self.w, S.FEAT_T), "f_globals": (self.n, S.FEAT_G),
+                    "f_actions": (int(a["act_off"][-1]), S.FEAT_A)}
+            for k, shape in want.items():
+                if a[k].shape != shape:
+                    raise ValueError(f"{k} has shape {a[k].shape}, expected {shape}")
+
     @property
     def has_truth(self) -> bool:
         return "truth" in self.a
+
+    @property
+    def has_features(self) -> bool:
+        return "f_tiles" in self.a
 
     @property
     def game_key(self) -> np.ndarray:
@@ -196,7 +213,7 @@ class Shard:
             if "version" not in z.files:
                 raise ValueError(f"{path} has no version field")
             wanted = S.V1_REQUIRED_FIELDS if int(z["version"].reshape(-1)[0]) == 1 else S.REQUIRED_FIELDS
-            return cls({k: z[k] for k in (*wanted, *S.OPTIONAL_FIELDS, *S.TRUTH_FIELDS) if k in z.files})
+            return cls({k: z[k] for k in (*wanted, *S.OPTIONAL_FIELDS, *S.TRUTH_FIELDS, *S.FEAT_FIELDS) if k in z.files})
 
     def __len__(self) -> int:
         return self.n
@@ -219,6 +236,7 @@ class Shard:
         tiles = a["tiles"][idx]
         truth = a["truth"][idx] if self.has_truth else None
         truth_mask = a["truth_mask"][idx] if self.has_truth else None
+        feat_tiles = a["f_tiles"][idx] if self.has_features else None
         if augment:
             if rng is None:
                 rng = np.random.default_rng()
@@ -233,6 +251,8 @@ class Shard:
                 if truth is not None:
                     truth[sel] = transform_tiles(truth[sel], int(s))
                     truth_mask[sel] = transform_tiles(truth_mask[sel][..., None], int(s))[..., 0]
+                if feat_tiles is not None:  # the per-action features do not depend on the orientation
+                    feat_tiles[sel] = transform_tiles(feat_tiles[sel], int(s))
 
         out = {
             "tiles": tiles,
@@ -250,6 +270,10 @@ class Shard:
         }
         if truth is not None:
             out["truth"], out["truth_mask"] = truth, truth_mask
+        if feat_tiles is not None:
+            f_actions = np.zeros((b, amax, S.FEAT_A), np.float32)
+            f_actions[mask] = a["f_actions"][rows[mask]]
+            out["f_tiles"], out["f_globals"], out["f_actions"] = feat_tiles, a["f_globals"][idx], f_actions
         return out
 
 
@@ -348,14 +372,16 @@ class BatchLoader:
 
 def make_synthetic_shard(
     n: int, size: int = 16, seed: int = 0, n_cand: int = S.N_CANDIDATES, max_actions: int = 40,
-    with_truth: bool = False,
+    with_truth: bool = False, with_features: bool = False,
 ) -> dict:
     """Random positions with a learnable structure: the chosen action is the legal one with the highest hidden score
     that depends on its kind, argument and the terrain of its source tile; the winner is a function of the globals (-1 for the few capped games).
     Like the real data, the candidate list holds only some of the positions' top actions, `chosen` is sometimes not
     its first entry, some scores are +inf and padding scores are 0. With `with_truth` the shard also holds the optional
     `truth` keys: about a third of the tiles are hidden (their `unexplored` column set) and every label channel is a
-    function of the tile's climate, so a belief head can learn it."""
+    function of the tile's climate, so a belief head can learn it. With `with_features` it holds the optional engine
+    feature keys (random values from a separate generator, so the rest of the shard is unchanged) and the hidden score
+    of an action also depends on its first feature column, so a model that reads the features can beat one that does not."""
     rng = np.random.default_rng(seed)
     h = w = size
     tiles = np.zeros((n, h, w, S.F_TILE), np.int16)
@@ -383,6 +409,16 @@ def make_synthetic_shard(
 
     terrain_at_src = tiles[pos_of, np.clip(src, 0, h * w - 1) // w, np.clip(src, 0, h * w - 1) % w, 0]
     hidden = (kinds * 7 % 11) + 0.5 * (args % 5) + 0.8 * terrain_at_src * (src >= 0) + rng.normal(0, 0.05, total)
+
+    feat_extra = {}
+    if with_features:
+        frng = np.random.default_rng(seed + 987_654_321)
+        f_actions = (frng.random((total, S.FEAT_A)) * (frng.random((total, S.FEAT_A)) < 0.3)).astype(np.float32)
+        hidden = hidden + 6.0 * f_actions[:, 0]
+        feat_extra = {
+            "f_tiles": (frng.integers(0, 4, size=(n, h, w, S.FEAT_T)) * (frng.random((n, h, w, S.FEAT_T)) < 0.2)).astype(np.int16),
+            "f_globals": frng.normal(size=(n, S.FEAT_G)).astype(np.float32), "f_actions": f_actions,
+        }
 
     chosen = np.zeros(n, np.int16)
     cand_idx = -np.ones((n, n_cand), np.int16)
@@ -412,7 +448,7 @@ def make_synthetic_shard(
         truth = np.stack([climate % v for v in S.TRUTH_VOCABS], axis=-1) * hidden[..., None]
         extra = {"truth": truth.astype(np.int16), "truth_mask": hidden.astype(np.uint8)}
     return {
-        **extra,
+        **extra, **feat_extra,
         "tiles": tiles, "globals": globals_, "act_off": off, "actions": actions, "chosen": chosen,
         "cand_idx": cand_idx, "cand_score": cand_score, "winner": winner, "final_scores": final_scores,
         "capped": capped, "turn": turn,

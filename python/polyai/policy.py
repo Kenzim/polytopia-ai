@@ -56,15 +56,33 @@ class Policy(Protocol):
 # ---------------------------------------------------------------------------------------------------------------
 
 
-def collate(obs: dict, sel: np.ndarray, device: torch.device) -> tuple[torch.Tensor, ...]:
-    """Positions `sel` of an observation group (one map size, or padded boards with a `board_mask`, see
-    `rl_pool.merge_padded`) -> tiles, globals, padded actions, action mask."""
+def _legal_rows(obs: dict, sel: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """(rows, mask) of positions `sel`: the padded [B, A] index into the flat legal-action arrays and which entries are real."""
     act_off = np.asarray(obs["act_off"], dtype=np.int64)
     starts, lens = act_off[:-1][sel], np.diff(act_off)[sel]
     amax = max(int(lens.max()), 1)
     cols = np.arange(amax)[None, :]
     mask = cols < lens[:, None]
-    rows = np.where(mask, starts[:, None] + cols, 0)
+    return np.where(mask, starts[:, None] + cols, 0), mask
+
+
+def collate_features(obs: dict, sel: np.ndarray, device: torch.device) -> dict[str, torch.Tensor]:
+    """The optional engine features (`f_tiles`, `f_globals`, `f_actions`, encoding.md section 12) of positions `sel`,
+    laid out like `collate` does (`f_actions` padded with zeros to [B, A, FEAT_A]). Empty when `obs` has none."""
+    if "f_tiles" not in obs:
+        return {}
+    rows, mask = _legal_rows(obs, sel)
+    f_actions = np.zeros((*mask.shape, S.FEAT_A), np.float32)
+    f_actions[mask] = np.asarray(obs["f_actions"])[rows[mask]]
+    return {k: torch.from_numpy(np.ascontiguousarray(v)).to(device, non_blocking=True) for k, v in (
+        ("f_tiles", np.asarray(obs["f_tiles"])[sel]), ("f_globals", np.asarray(obs["f_globals"])[sel]),
+        ("f_actions", f_actions))}
+
+
+def collate(obs: dict, sel: np.ndarray, device: torch.device) -> tuple[torch.Tensor, ...]:
+    """Positions `sel` of an observation group (one map size, or padded boards with a `board_mask`, see
+    `rl_pool.merge_padded`) -> tiles, globals, padded actions, action mask."""
+    rows, mask = _legal_rows(obs, sel)
     actions = np.asarray(obs["actions"])[rows].astype(np.int16)
     actions[~mask] = (S.KIND_PAD, 0, -1, -1)
 
@@ -143,6 +161,11 @@ class ModelPolicy:
         self.infer_seconds = 0.0
         self.decisions = 0
 
+    @property
+    def features(self) -> bool:
+        """Whether the network reads the engine features (the observations then need `VecEnv(features=True)`)."""
+        return bool(self.model.cfg.features)
+
     @torch.inference_mode()
     def choose(self, obs: dict, *, temperature: float | None = None) -> Choices:
         if temperature is not None and not temperature > 0:
@@ -161,11 +184,15 @@ class ModelPolicy:
         for s in range(0, n, self.max_batch):
             sel = np.arange(s, min(n, s + self.max_batch))
             tiles, globals_, actions, mask = collate(obs, sel, self.device)
+            feats = collate_features(obs, sel, self.device) if self.model.cfg.features else {}
+            if self.model.cfg.features and not feats:
+                raise ValueError(f"{self.policy_id} reads the engine features, but the observation has none "
+                                 "(build the VecEnv with features=True)")
             bmask = None
             if board is not None:
                 bmask = torch.from_numpy(np.ascontiguousarray(np.asarray(board)[sel])).to(self.device, non_blocking=True)
             with torch.autocast(self.device.type, dtype=torch.bfloat16, enabled=self.device.type == "cuda"):
-                out = self.model(tiles, globals_, actions, mask, bmask)
+                out = self.model(tiles, globals_, actions, mask, bmask, **feats)
             logits = out.policy_logits.float()
             if temperature is None:
                 pick = logits.argmax(dim=1)

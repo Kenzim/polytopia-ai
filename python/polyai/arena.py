@@ -98,6 +98,7 @@ class ModelAgent:
         self.name = agent_label(path, temperature)
         self.model = self.policy.model
         self.step = self.policy.step
+        self.features = self.policy.features  # the suite's VecEnv must be built with features=True
 
     @property
     def infer_seconds(self) -> float:
@@ -138,6 +139,12 @@ def mode_kw(mode: int) -> dict:
     return {} if mode == MODES["domination"] else {"mode": mode}
 
 
+def feature_kw(features: bool) -> dict:
+    """`features=True` for `VecEnv` when a model reads the engine features; left out otherwise, so the observations
+    (and the engine's work) are what they were without them."""
+    return {"features": True} if features else {}
+
+
 def _supports_seat_difficulties(pe) -> bool:
     return "seat_difficulties" in (getattr(pe.VecEnv, "__text_signature__", None) or "")
 
@@ -145,12 +152,13 @@ def _supports_seat_difficulties(pe) -> bool:
 class Arm:
     """One VecEnv in which the model holds a fixed seat: all seeds of the suite, one seat assignment."""
 
-    def __init__(self, pe, suite: Suite, opp_difficulty: int, model_seat: int, env_threads: int):
+    def __init__(self, pe, suite: Suite, opp_difficulty: int, model_seat: int, env_threads: int,
+                 features: bool = False):
         self.pe, self.suite, self.model_seat = pe, suite, model_seat
         self.seed_end = suite.seed_start + suite.seeds
         self.per_seat = _supports_seat_difficulties(pe)
         kw = dict(n_players=[2], sizes=suite.sizes, presets=suite.presets, turn_limit=suite.turn_limit,
-                  threads=env_threads, split="eval", auto_reset=True, **mode_kw(suite.mode))
+                  threads=env_threads, split="eval", auto_reset=True, **mode_kw(suite.mode), **feature_kw(features))
         if self.per_seat:
             kw["seat_difficulties"] = [MODEL_SEAT_DIFFICULTY if s == model_seat else opp_difficulty for s in range(2)]
         else:
@@ -192,6 +200,9 @@ def _take(g: dict, sel: np.ndarray) -> dict:
     out = {k: np.asarray(g[k])[sel] for k in ("game", "seat", "n_players", "turn", "seed", "tiles", "globals")}
     out["act_off"] = np.concatenate([[0], np.cumsum(lens)]).astype(np.int32)
     out["actions"] = np.asarray(g["actions"])[rows]
+    if "f_tiles" in g:  # the optional engine features (encoding.md section 12)
+        out["f_tiles"], out["f_globals"] = np.asarray(g["f_tiles"])[sel], np.asarray(g["f_globals"])[sel]
+        out["f_actions"] = np.asarray(g["f_actions"])[rows]
     return out
 
 
@@ -242,7 +253,7 @@ def play_pairing(agent: ModelAgent, opponent: str, suite: Suite, done: set | Non
     if not _supports_seat_difficulties(pe):
         log("warning: this polyai_engine has no per-seat difficulties, so the model seat gets the opponent's handicap "
             f"(retail:{DIFFICULTIES[opp_difficulty]}) instead of Normal; results are not comparable with polyai-arena")
-    live = [Arm(pe, suite, opp_difficulty, swap, env_threads) for swap in todo]
+    live = [Arm(pe, suite, opp_difficulty, swap, env_threads, agent.features) for swap in todo]
     t0, last = time.perf_counter(), 0.0
     infer0, dec0 = agent.infer_seconds, agent.decisions
     while not all(a.done for a in live):

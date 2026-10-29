@@ -41,8 +41,8 @@ import torch
 import torch.nn.functional as F
 
 from . import schema as S
-from .model import ModelOutput, PolyNet
-from .policy import collate, resolve_checkpoint
+from .model import ModelOutput, PolyNet, add_features, feature_inputs
+from .policy import collate, collate_features, resolve_checkpoint
 from .rl_pool import (
     DEFAULT_POOL_WEIGHTS,
     LEARNER_DIFFICULTY,
@@ -64,7 +64,7 @@ from .rl_pool import (
     seat_probs,
     take,
 )
-from .arena import MODES, mode_kw
+from .arena import MODES, feature_kw, mode_kw
 from .train_bc import DEFAULT_RUNS_DIR, check_gpu_memory, load_checkpoint, make_optimizer, save_checkpoint
 
 SIZE_IDS = {"tiny": 1, "small": 2, "normal": 3, "large": 4, "huge": 5, "massive": 6}
@@ -131,6 +131,7 @@ class RLConfig:
     need_gb: float = 2.5
     device: str = "cuda"
     resume: bool = False
+    features: bool = False  # the learner reads the engine features (encoding.md section 12); zero-initialised on top of init
 
 
 # ---------------------------------------------------------------------------------------------------------------
@@ -181,6 +182,7 @@ class SizeStore:
         self.globals: list[np.ndarray] = []
         self.lens: list[np.ndarray] = []
         self.actions: list[np.ndarray] = []
+        self.feats: dict[str, list[np.ndarray]] = {}  # the engine features, when the observations have them
         self.n = 0
         self._cap = 1024
         self._chosen = np.zeros(self._cap, np.int32)
@@ -210,6 +212,9 @@ class SizeStore:
         self.globals.append(np.asarray(obs["globals"]))
         self.lens.append(np.diff(np.asarray(obs["act_off"], dtype=np.int64)))
         self.actions.append(np.asarray(obs["actions"]))
+        for k in ("f_tiles", "f_globals", "f_actions"):
+            if k in obs:
+                self.feats.setdefault(k, []).append(np.asarray(obs[k]))
         ids = np.arange(self.n, self.n + b)
         self.n += b
         return ids
@@ -229,6 +234,7 @@ class SizeStore:
             "tiles": np.concatenate(self.tiles), "globals": np.concatenate(self.globals),
             "act_off": np.concatenate([[0], np.cumsum(lens)]).astype(np.int64),
             "actions": np.concatenate(self.actions),
+            **{k: np.concatenate(v) for k, v in self.feats.items()},
             "chosen": self._chosen[:n], "logp": self._logp[:n], "value": self._value[:n],
             "adv": self._adv[:n], "ret": self._ret[:n], "train": np.nonzero(self._train[:n])[0],
         }
@@ -325,6 +331,7 @@ def ppo_update(model: PolyNet, ref: PolyNet | None, opt: torch.optim.Optimizer, 
                 continue
             d = data[hw]
             tiles, globals_, actions, mask = collate(d, sel, device)
+            feats = feature_inputs(collate_features(d, sel, device), model)
 
             def tens(a: np.ndarray, dtype=None) -> torch.Tensor:
                 t = torch.from_numpy(np.ascontiguousarray(a[sel])).to(device)
@@ -333,11 +340,11 @@ def ppo_update(model: PolyNet, ref: PolyNet | None, opt: torch.optim.Optimizer, 
             mb = {"mask": mask, "chosen": tens(d["chosen"], torch.long), "old_logp": tens(d["logp"]),
                   "adv": tens(d["adv_n"]), "ret": tens(d["ret_c"])}
             with torch.autocast(device.type, dtype=torch.bfloat16, enabled=cfg.bf16 and device.type == "cuda"):
-                out = model(tiles, globals_, actions, mask)
+                out = model(tiles, globals_, actions, mask, **feats)
                 ref_logits = None
                 if ref is not None:
                     with torch.no_grad():
-                        ref_logits = ref(tiles, globals_, actions, mask).policy_logits
+                        ref_logits = ref(tiles, globals_, actions, mask, **feature_inputs(feats, ref)).policy_logits
             losses = ppo_loss(out, ref_logits, mb, cfg, kl_coef, policy_scale)
             opt.zero_grad(set_to_none=True)
             losses["loss"].backward()
@@ -466,7 +473,7 @@ class Collector:
         cap = arm_capacity(key, self.cfg.games, self.seat_p, self.shards)
         seed_start = int(self.rng.integers(1, TRAIN_SEED_MAX + 1))
         kw = dict(split="train", sizes=self.sizes, presets=self.presets, turn_limit=self.cfg.turn_limit,
-                  threads=1, auto_reset=True, **mode_kw(MODES[self.cfg.mode]))
+                  threads=1, auto_reset=True, **mode_kw(MODES[self.cfg.mode]), **feature_kw(self.cfg.features))
         if key[0] == "retail":
             difficulty = RETAIL_NAMES.index(key[1].split(":")[1])
             seat = key[2]
@@ -764,7 +771,9 @@ def train(cfg: RLConfig) -> dict:
     ref = load_checkpoint(ref_path).to(device).to(memory_format=torch.channels_last).eval()
     for p in ref.parameters():
         p.requires_grad_(False)
-    if model.cfg.to_dict() != ref.cfg.to_dict():
+    if cfg.features:  # the learner gets the feature inputs, zero-initialised; the reference stays as it is
+        model = add_features(model).to(memory_format=torch.channels_last).eval()
+    if {**model.cfg.to_dict(), "features": False} != {**ref.cfg.to_dict(), "features": False}:  # features may differ
         raise SystemExit("the init and ref checkpoints have different model configurations")
     opt = make_optimizer(model, cfg)
     update0 = 0

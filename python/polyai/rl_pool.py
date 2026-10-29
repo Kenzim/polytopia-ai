@@ -26,6 +26,9 @@ MAX_SEATS = 8  # the largest player count the encoding holds; seats no game reac
 # ---------------------------------------------------------------------------------------------------------------
 
 OBS_ROW_KEYS = ("game", "seat", "n_players", "turn", "seed", "tiles", "globals")
+# Optional engine features (encoding.md section 12): f_tiles and f_globals have a row per position, f_actions one per
+# legal action like `actions`.
+FEAT_ROW_KEYS = ("f_tiles", "f_globals")
 
 
 def obs_len(g: dict) -> int:
@@ -40,9 +43,11 @@ def take(g: dict, sel: np.ndarray) -> dict:
         rows = np.concatenate([np.arange(act_off[i], act_off[i + 1]) for i in sel])
     else:
         rows = np.zeros(0, np.int64)
-    out = {k: np.asarray(g[k])[sel] for k in OBS_ROW_KEYS if k in g}
+    out = {k: np.asarray(g[k])[sel] for k in (*OBS_ROW_KEYS, *FEAT_ROW_KEYS) if k in g}
     out["act_off"] = np.concatenate([[0], np.cumsum(lens)]).astype(np.int32)
     out["actions"] = np.asarray(g["actions"])[rows]
+    if "f_actions" in g:
+        out["f_actions"] = np.asarray(g["f_actions"])[rows]
     return out
 
 
@@ -51,9 +56,11 @@ def merge(groups: list[dict]) -> dict:
     if len(groups) == 1:
         return groups[0]
     lens = np.concatenate([np.diff(np.asarray(g["act_off"], dtype=np.int64)) for g in groups])
-    out = {k: np.concatenate([np.asarray(g[k]) for g in groups]) for k in OBS_ROW_KEYS if k in groups[0]}
+    out = {k: np.concatenate([np.asarray(g[k]) for g in groups]) for k in (*OBS_ROW_KEYS, *FEAT_ROW_KEYS) if k in groups[0]}
     out["act_off"] = np.concatenate([[0], np.cumsum(lens)]).astype(np.int32)
     out["actions"] = np.concatenate([np.asarray(g["actions"]) for g in groups])
+    if "f_actions" in groups[0]:
+        out["f_actions"] = np.concatenate([np.asarray(g["f_actions"]) for g in groups])
     return out
 
 
@@ -74,13 +81,18 @@ def merge_padded(groups: list[dict]) -> dict:
         return merge(groups)
     hp = max(h for h, _ in shapes)
     wp = max(w for _, w in shapes)
-    tiles, masks, actions = [], [], []
+    tiles, ftiles, masks, actions = [], [], [], []
     for g in groups:
         t = np.asarray(g["tiles"])
         n, h, w = t.shape[:3]
         pt = np.zeros((n, hp, wp, t.shape[3]), t.dtype)
         pt[:, :h, :w] = t
         tiles.append(pt)
+        if "f_tiles" in g:
+            ft = np.asarray(g["f_tiles"])
+            pf = np.zeros((n, hp, wp, ft.shape[3]), ft.dtype)
+            pf[:, :h, :w] = ft
+            ftiles.append(pf)
         m = np.zeros((n, hp, wp), bool)
         m[:, :h, :w] = True
         masks.append(m)
@@ -91,9 +103,12 @@ def merge_padded(groups: list[dict]) -> dict:
             a[real, c] = (idx[real] // w * wp + idx[real] % w).astype(np.int16)
         actions.append(a)
     lens = np.concatenate([np.diff(np.asarray(g["act_off"], dtype=np.int64)) for g in groups])
-    out = {k: np.concatenate([np.asarray(g[k]) for g in groups]) for k in OBS_ROW_KEYS
+    out = {k: np.concatenate([np.asarray(g[k]) for g in groups]) for k in (*OBS_ROW_KEYS, "f_globals")
            if k != "tiles" and k in groups[0]}
     out["tiles"] = np.concatenate(tiles)
+    if ftiles:
+        out["f_tiles"] = np.concatenate(ftiles)
+        out["f_actions"] = np.concatenate([np.asarray(g["f_actions"]) for g in groups])
     out["board_mask"] = np.concatenate(masks)
     out["act_off"] = np.concatenate([[0], np.cumsum(lens)]).astype(np.int32)
     out["actions"] = np.concatenate(actions)

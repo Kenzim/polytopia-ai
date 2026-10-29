@@ -191,3 +191,18 @@ TRUTH_NAMES = [n for n, _ in TRUTH_CHANNELS]
 TRUTH_VOCABS = [v for _, v in TRUTH_CHANNELS]
 TRUTH_K = len(TRUTH_CHANNELS)
 WATER_TERRAIN = (1, 2)  # engine terrain idx of water and ocean; every other terrain value is land
+
+# Engine feature keys written by `polyai-gen --features` and returned by `VecEnv(features=True)` (encoding.md section 12):
+# what the engine already computes for the mover (combat previews, threats, reach, projected income), handed to the
+# network instead of making it learn them. Optional; `f_tiles` and `f_actions` are aligned with `tiles` and `actions`.
+# `f_tiles` stores integers, the model divides by FEAT_T_DIVISORS; the other two are already scaled.
+FEAT_T_NAMES = ["threat_n", "threat_dmg", "reach_n", "attack_reach_n", "siege", "dist_enemy_capital", "dist_enemy_city"]
+FEAT_T_DIVISORS = [4.0, 100.0, 4.0, 4.0, 3.0, 30.0, 30.0]
+FEAT_T = len(FEAT_T_NAMES)
+FEAT_G = 14
+FEAT_A = 13
+FEAT_FIELDS: dict[str, ShardField] = {
+    "f_tiles": ShardField("int16", "[N, H, W, FEAT_T]", "per tile engine features, see FEAT_T_NAMES"),
+    "f_globals": ShardField("float32", "[N, FEAT_G]", "per position engine features"),
+    "f_actions": ShardField("float32", "[T, FEAT_A]", "per legal action engine features, row j belongs to actions[j]"),
+}

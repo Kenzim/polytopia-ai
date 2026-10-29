@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from typing import NamedTuple
 
 import torch
@@ -26,11 +26,17 @@ class ModelConfig:
     # Width of the auxiliary belief heads (one small conv head per truth channel, docs/belief.md); 0 = no heads. The key
     # is left out of `to_dict` when 0, so a config without heads is exactly what it was before the heads existed.
     belief_hidden: int = 0
+    # Engine features (encoding.md section 12) as extra inputs, all zero-initialised so the model starts as the same
+    # function without them: tiles through a 3x3 conv into the trunk input, globals through a linear layer into the
+    # global vector, actions through a linear layer into the policy MLP's first layer. Left out of `to_dict` when False.
+    features: bool = False
 
     def to_dict(self) -> dict:
         d = asdict(self)
         if not d["belief_hidden"]:
             del d["belief_hidden"]
+        if not d["features"]:
+            del d["features"]
         return d
 
 
@@ -140,6 +146,13 @@ class PolyNet(nn.Module):
             self.belief_heads = nn.ModuleList(
                 [nn.Sequential(nn.Conv2d(c, bh, 3, padding=1), nn.ReLU(), nn.Conv2d(bh, v, 1)) for v in S.TRUTH_VOCABS]
             )
+        # Engine features, zero-initialised additions (see ModelConfig.features).
+        self.feat_tile_conv = self.feat_global_proj = self.feat_action_proj = None
+        if cfg.features:
+            self.feat_tile_conv = nn.Conv2d(S.FEAT_T, c, 3, padding=1, bias=False)
+            self.feat_global_proj = nn.Linear(S.FEAT_G, c, bias=False)
+            self.feat_action_proj = nn.Linear(S.FEAT_A, ph, bias=False)
+            self.register_buffer("feat_scale", torch.tensor(S.FEAT_T_DIVISORS, dtype=torch.float32), persistent=False)
         self._init()
 
     def _init(self) -> None:
@@ -153,14 +166,20 @@ class PolyNet(nn.Module):
         nn.init.zeros_(self.policy_mlp[-1].bias)
         nn.init.zeros_(self.value_mlp[-1].weight)
         nn.init.zeros_(self.value_mlp[-1].bias)
+        if self.feat_tile_conv is not None:
+            for m in (self.feat_tile_conv, self.feat_global_proj, self.feat_action_proj):
+                nn.init.zeros_(m.weight)
 
     def n_params(self) -> int:
         return sum(p.numel() for p in self.parameters())
 
     def encode(
-        self, tiles: torch.Tensor, globals_: torch.Tensor, board_mask: torch.Tensor | None
+        self, tiles: torch.Tensor, globals_: torch.Tensor, board_mask: torch.Tensor | None,
+        f_tiles: torch.Tensor | None = None, f_globals: torch.Tensor | None = None,
     ) -> tuple[torch.Tensor, torch.Tensor | None]:
-        """tiles int [B, H, W, F], globals [B, G] -> (trunk features [B, C, H, W] after BN + ReLU, board mask or None)."""
+        """tiles int [B, H, W, F], globals [B, G] -> (trunk features [B, C, H, W] after BN + ReLU, board mask or None).
+        `f_tiles` int [B, H, W, FEAT_T] and `f_globals` [B, FEAT_G] are the optional engine features; a model built
+        without `features` ignores them, one built with them treats missing ones as zeros."""
         x = None
         for i, emb in enumerate(self.cat_embed):
             e = emb(tiles[..., i].long().clamp(0, S.CAT_VOCABS[i] - 1))
@@ -170,7 +189,14 @@ class PolyNet(nn.Module):
         gl = globals_.float()
         gl = torch.where(self.g_large, torch.asinh(gl), gl)  # stars, income and scores run into the tens
         x = x + self.global_mlp(gl.to(x.dtype))[:, None, None, :]
+        if self.feat_global_proj is not None and f_globals is not None:
+            x = x + self.feat_global_proj(f_globals.to(x.dtype))[:, None, None, :]
         x = x.permute(0, 3, 1, 2).contiguous(memory_format=torch.channels_last)
+        if self.feat_tile_conv is not None and f_tiles is not None:
+            ft = (f_tiles.to(self.feat_scale.dtype) / self.feat_scale).permute(0, 3, 1, 2)
+            if board_mask is not None:
+                ft = ft * board_mask[:, None].to(ft.dtype)
+            x = x + self.feat_tile_conv(ft.contiguous(memory_format=torch.channels_last)).to(x.dtype)
         mask = None
         if board_mask is not None:
             mask = board_mask[:, None].to(x.dtype)
@@ -187,12 +213,17 @@ class PolyNet(nn.Module):
         action_mask: torch.Tensor,
         board_mask: torch.Tensor | None = None,
         belief: bool = False,
+        f_tiles: torch.Tensor | None = None,
+        f_globals: torch.Tensor | None = None,
+        f_actions: torch.Tensor | None = None,
     ) -> ModelOutput | BeliefOutput:
         """tiles int [B, H, W, F]; globals [B, G]; actions int [B, A, 4] = (kind, arg, src, dst) with -1 for no
         tile; action_mask bool [B, A] (True = real legal action); board_mask optional bool [B, H, W]. With `belief`
-        (and a model that has the heads) the output also carries the belief logits."""
+        (and a model that has the heads) the output also carries the belief logits. `f_tiles`, `f_globals` and `f_actions`
+        (float [B, A, FEAT_A], padded like `actions`) are the optional engine features, used only by a model built
+        with `ModelConfig.features`."""
         b, h, w, _ = tiles.shape
-        feat, mask = self.encode(tiles, globals_, board_mask)
+        feat, mask = self.encode(tiles, globals_, board_mask, f_tiles, f_globals)
         pooled = masked_mean_max(feat, mask)
         g = self.pool_fc(pooled)  # [B, C]
 
@@ -223,6 +254,8 @@ class PolyNet(nn.Module):
             + self.arg_embed(kind * S.ARG_MAX + arg).to(src_f.dtype)
             + self.off_embed(off).to(src_f.dtype)
         )
+        if self.feat_action_proj is not None and f_actions is not None:
+            z = z + self.feat_action_proj(f_actions[bi, ai].to(src_f.dtype)).to(src_f.dtype)
         flat = self.policy_mlp(z).squeeze(-1).float()
         logits = torch.full(action_mask.shape, MASK_FILL, dtype=torch.float32, device=tiles.device)
         logits = logits.index_put((bi, ai), flat)
@@ -238,6 +271,34 @@ def build_model(name_or_cfg: str | ModelConfig) -> PolyNet:
     return PolyNet(cfg)
 
 
+FEAT_PREFIX = "feat_"  # parameter names of the engine-feature inputs
+FEAT_KEYS = ("f_tiles", "f_globals", "f_actions")
+
+
+def feature_inputs(batch: dict, model: PolyNet) -> dict:
+    """The keyword arguments of `PolyNet.forward` that carry the engine features: those of `batch` (a data batch or
+    an observation) when the model uses them, none otherwise."""
+    if not model.cfg.features:
+        return {}
+    missing = [k for k in FEAT_KEYS if k not in batch]
+    if missing:
+        raise ValueError(f"this model reads the engine features, but the input has no {missing} "
+                         "(shards need polyai-gen --features, VecEnv needs features=True)")
+    return {k: batch[k] for k in FEAT_KEYS}
+
+
+def add_features(model: PolyNet) -> PolyNet:
+    """A copy of a plain model with the engine-feature inputs added. They start at zero, so the copy computes exactly
+    what `model` does until they are trained."""
+    if model.cfg.features:
+        return model
+    new = build_model(replace(model.cfg, features=True))
+    missing, unexpected = new.load_state_dict(model.state_dict(), strict=False)
+    if unexpected or any(not k.startswith(FEAT_PREFIX) for k in missing):
+        raise ValueError(f"cannot add features: missing {missing}, unexpected {unexpected}")
+    return new.to(next(model.parameters()).device).train(model.training)
+
+
 def win_probability(out: ModelOutput) -> torch.Tensor:
     """My win probability (slot 0 of the winner softmax)."""
     return F.softmax(out.winner_logits, dim=-1)[:, 0]
@@ -245,5 +306,5 @@ def win_probability(out: ModelOutput) -> torch.Tensor:
 
 __all__ = [
     "CONFIGS", "ModelConfig", "ModelOutput", "PolyNet", "build_model", "eval_pawns", "masked_mean_max",
-    "win_probability", "MASK_FILL",
+    "win_probability", "MASK_FILL", "add_features", "feature_inputs", "FEAT_PREFIX", "FEAT_KEYS",
 ]

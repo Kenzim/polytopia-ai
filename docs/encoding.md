@@ -432,5 +432,25 @@ left out.
 | 12 | `my_cities_threatened` | own cities with `siege > 0`, / 8 |
 | 13 | `my_units_threatened` | own units standing on a threatened tile, / 16 |
 
+### As model inputs (`python/polyai`)
+
+`ModelConfig(features=True)` (key `features` in the checkpoint's `model_config`, absent when false) adds three inputs, all
+zero-initialised, so the model computes exactly the function of the plain model it was made from until they are trained
+(`model.add_features(model)`, tested for exact equality of the logits):
+
+- `f_tiles / divisor` through a 3x3 conv (`feat_tile_conv`, 7 to C channels) added to the trunk input;
+- `f_globals` through a linear layer (`feat_global_proj`) added to the global vector;
+- `f_actions` through a linear layer (`feat_action_proj`, 13 to the policy hidden width) added to the first layer of the
+  per-action policy MLP, so the MLP's nonlinearity can combine them with the tile context.
+
+Data: `data.Shard` loads the three keys together or none (a partial set is refused), `batch()` returns `f_tiles`,
+`f_globals` and `f_actions` (padded like `actions`), and the symmetry augmentation moves `f_tiles` with `tiles`
+(`f_actions` and `f_globals` do not depend on the orientation). Training: `train_bc --features` (needs shards from
+`polyai-gen --features`; `--init` accepts a plain checkpoint) and `rl --features` (the learner gets the inputs on top of
+`--init`, the KL reference and all pool opponents stay as they are; `VecEnv` is built with `features=True`). Playing:
+`ModelPolicy` and the arena/h2h build their `VecEnv` with `features=True` when a model reads them, and a features model
+given an observation without the keys raises. `polyai.search` does not pass features, so `:search=K` is for plain
+models only.
+
 Engine requests: none needed. The enemy's real defence bonus (from its techs) would be a better figure for combat
 previews, but it is hidden information, so the mover's own bonus is used.

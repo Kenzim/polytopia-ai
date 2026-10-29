@@ -29,7 +29,8 @@ import torch.nn.functional as F
 from . import schema as S
 from .belief import BeliefMeter, belief_loss
 from .data import BatchLoader
-from .model import CONFIGS, ModelConfig, ModelOutput, PolyNet, build_model, win_probability
+from .model import (CONFIGS, FEAT_PREFIX, ModelConfig, ModelOutput, PolyNet, build_model, feature_inputs,
+                    win_probability)
 
 DEFAULT_RUNS_DIR = "/kvm/polytopia-ai-data/runs"
 BRIER_TURN_BUCKET = 10
@@ -66,6 +67,7 @@ class TrainConfig:
     init: str | None = None  # start from this checkpoint's weights (fine-tuning); belief heads are added fresh if missing
     belief_weight: float = 0.0
     belief_hidden: int = 32  # width of each belief head, used when belief_weight > 0
+    features: bool = False  # give the model the engine features (shards made with polyai-gen --features)
 
 
 # ---------------------------------------------------------------------------------------------------------------
@@ -180,7 +182,7 @@ def evaluate(model: PolyNet, loader: BatchLoader, cfg: TrainConfig, device: torc
             break
         with torch.autocast(device.type, dtype=torch.bfloat16, enabled=cfg.bf16 and device.type == "cuda"):
             out = model(batch["tiles"], batch["globals"], batch["actions"], batch["action_mask"],
-                        belief=model.belief_heads is not None)
+                        belief=model.belief_heads is not None, **feature_inputs(batch, model))
         meter.add(out, batch, compute_losses(out, batch, cfg))
     model.train(was_training)
     return meter.result()
@@ -212,6 +214,13 @@ def _has_truth(path: Path) -> bool:
 
     with zipfile.ZipFile(path) as z:
         return "truth.npy" in z.namelist()
+
+
+def _has_features(path: Path) -> bool:
+    import zipfile
+
+    with zipfile.ZipFile(path) as z:
+        return "f_tiles.npy" in z.namelist()
 
 
 def lr_at(step: int, cfg: TrainConfig) -> float:
@@ -287,15 +296,17 @@ def load_init(model: PolyNet, path: str | Path) -> None:
     the checkpoint has none (or are left out of the model when it has none)."""
     state = torch.load(path, map_location="cpu", weights_only=False)
     _check_heads(state, path)
-    ckpt_cfg = {k: v for k, v in state["model_config"].items() if k != "belief_hidden"}
-    model_cfg = {k: v for k, v in model.cfg.to_dict().items() if k != "belief_hidden"}
+    ckpt_cfg = {k: v for k, v in state["model_config"].items() if k not in ("belief_hidden", "features")}
+    model_cfg = {k: v for k, v in model.cfg.to_dict().items() if k not in ("belief_hidden", "features")}
     if ckpt_cfg != model_cfg:
         raise SystemExit(f"--init {path} was written by a different model configuration ({ckpt_cfg} against {model_cfg})")
     weights = state["model"]
     if model.belief_heads is not None and state["model_config"].get("belief_hidden", 0) != model.cfg.belief_hidden:
         weights = {k: v for k, v in weights.items() if not k.startswith(BELIEF_PREFIX)}
     missing, unexpected = model.load_state_dict(weights, strict=False)
-    bad = [k for k in missing if not k.startswith(BELIEF_PREFIX)] + [k for k in unexpected if not k.startswith(BELIEF_PREFIX)]
+    # engine-feature inputs may be missing (a plain checkpoint starts a model with features: they stay zero) but not extra
+    bad = [k for k in missing if not k.startswith((BELIEF_PREFIX, FEAT_PREFIX))] + \
+        [k for k in unexpected if not k.startswith(BELIEF_PREFIX)]
     if bad:
         raise SystemExit(f"--init {path}: weights do not fit the model: {bad[:5]}")
 
@@ -338,6 +349,11 @@ def train(cfg: TrainConfig) -> dict:
         stale = [str(p) for p in expand_shards(cfg.train) if not _has_truth(p)]
         if stale:
             raise SystemExit(f"--belief-weight needs shards made with polyai-gen --truth; no truth keys in {stale[:3]}")
+    if cfg.features:
+        model_cfg = replace(model_cfg, features=True)
+        stale = [str(p) for p in expand_shards(cfg.train) if not _has_features(p)]
+        if stale:
+            raise SystemExit(f"--features needs shards made with polyai-gen --features; no f_tiles key in {stale[:3]}")
     model = build_model(model_cfg)
     if cfg.init:
         load_init(model, cfg.init)
@@ -382,7 +398,7 @@ def train(cfg: TrainConfig) -> dict:
             g["lr"] = lr_at(step, cfg)
         with torch.autocast(device.type, dtype=torch.bfloat16, enabled=cfg.bf16 and device.type == "cuda"):
             out = model(batch["tiles"], batch["globals"], batch["actions"], batch["action_mask"],
-                        belief=cfg.belief_weight > 0)
+                        belief=cfg.belief_weight > 0, **feature_inputs(batch, model))
         losses = compute_losses(out, batch, cfg)
         opt.zero_grad(set_to_none=True)
         losses["loss"].backward()
@@ -444,6 +460,8 @@ def parse_args(argv: list[str] | None = None) -> TrainConfig:
         ap.add_argument(f"--{f.replace('_', '-')}", type=float, default=getattr(d, f))
     ap.add_argument("--init", default=None, help="checkpoint to start from (fine-tuning)")
     ap.add_argument("--resume", action="store_true", help="continue the run NAME from its ckpt_last.pt")
+    ap.add_argument("--features", action="store_true",
+                    help="give the model the engine features (docs/encoding.md section 12); shards need polyai-gen --features")
     ap.add_argument("--no-augment", action="store_true")
     ap.add_argument("--no-bf16", action="store_true")
     ap.add_argument("--runs-dir", default=d.runs_dir)
