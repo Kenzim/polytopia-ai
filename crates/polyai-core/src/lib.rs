@@ -6,6 +6,7 @@ pub mod game;
 pub mod record;
 pub mod setup;
 pub mod slots;
+pub mod truth;
 
 pub use action::*;
 pub use encoding::*;
