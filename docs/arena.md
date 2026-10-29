@@ -173,6 +173,32 @@ win condition. Might self-play raised the score against retail Crazy by about 6 
 gain looks specific to the retail AI (which is in the opponent pool) rather than general strength. The Might
 baseline stays **rl3 u480** (`policy_id rl3_b6c96@480`), for live and BPolait games too.
 
+Paired on the identical 400 games (`tools/cells.py --paired`): against Crazy might1 did better than rl3 u480 in 53
+games and worse in 31 (sign test p = 0.021), so the Crazy gain is real; against Hard 21 against 24 (p = 0.77), no
+difference.
+
+#### Weak cells for rl3 u480 in Might (`tools/cells.py`, 2026-10-29)
+
+Cells whose 95% interval lies wholly below the pooled score. Against Crazy (pooled 75.8%): playing Luxidoor 51.7%
+(n=29) and Oumaji 53.6% (n=28); Dryland maps 58.0% (n=100) and Archipelago 63.2% (n=76), against 85 to 92% on Lakes,
+Continents and Pangea. Against Hard (92.5%) the same two tribes and Dryland, plus Tiny maps 87.1% and opponents Vengir
+and Xin-xi. Seat 1 is a little weaker than seat 0 against both (72.0% against 79.5% versus Crazy, intervals
+overlapping). These are the first targets for the exploiter, set plays and live-loss review.
+
+#### bengreff's cell: 1v1 Might, Lakes, Small (2026-10-29)
+
+`--sizes small --presets lakes --mode might`, 200 seeds x 2 seats, greedy, model at Normal. Results:
+`/kvm/polytopia-ai-data/arena/bengreff/`.
+
+| model | vs retail:hard | vs retail:crazy |
+|---|---|---|
+| rl3 u480 | 391-9-0, 97.8% (95.8 to 98.8) | 357-43-0, 89.2% (85.8 to 91.9) |
+
+bengreff report 94% (188/200) after their human fine-tune and 98% (196/200) for self-play generation 7, against
+Crazy on this cell (`docs/research.md` 2.1). Not directly comparable: their engine is the game's own compiled code at
+game version 123 and their seat and handicap rules differ, so read this as "the same band", not a ranking. Lakes is
+one of our strongest presets; the weak ones are Dryland and Archipelago.
+
 ### Older results (suite v1: Small, Continents, 50 turns, adjudicated on score)
 
 The first table (2026-10-20) used the old suite and is not comparable with the one above: 15% of its games were
