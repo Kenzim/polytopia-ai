@@ -2,6 +2,7 @@
 
 pub mod action;
 pub mod encoding;
+pub mod features;
 pub mod game;
 pub mod record;
 pub mod setup;

@@ -354,3 +354,83 @@ seeds, Tiny/Small/Normal; elimination turn = the turn the game ended): median 38
 1.0%. The tail beyond 150 is almost all games that never end (7 of 8 games alive at 200 were still alive at 300), and
 a stuck game costs 6 to 11 s of CPU at 300 turns against 0.5 to 0.9 s for an average game. The cap is therefore 150: a
 draw rate of about 1.3% (1v1) to 1.8% (mix) with 4-player games the worst (3.9%).
+
+## 12. Engine features (optional shard keys, `crates/polyai-core/src/features.rs`)
+
+Quantities the engine already computes, handed to the network instead of making it learn them. They are optional:
+`polyai-gen --features` appends three keys to each shard (the same way `--truth` does, in `feat_shard.rs`, so `shard.rs`
+and `npz.rs` and the client's `shardify` are untouched), and a shard written without the flag is byte for byte what it
+was. `Game.features()` and `VecEnv(..., features=True)` return the same arrays from Python (VecEnv adds `f_tiles`,
+`f_globals`, `f_actions` to each observation dict, aligned with `tiles`, `globals`, `actions`). Python names and
+divisors: `polyai_engine.FEAT_{T,G,A}`, `FEAT_{T,G,A}_NAMES`, `FEAT_T_DIVISORS`.
+
+Everything is from the mover's point of view and honest under fog:
+
+- an enemy unit counts only when the mover could see it (explored tile, not cloaked); features of tiles the mover has
+  not explored are 0 (the two distance columns are the exception: they use known cities only);
+- a defender's defence bonus uses the mover's own techs for that terrain (the real bonus for the mover's own units);
+  the enemy's techs are never read for combat figures;
+- an enemy unit's reach next turn is the engine's movement options for it, asked of a copy of the game in which only the
+  mover's exploration is known, unseen units are gone and every other player has the mover's techs (`honest_view`).
+
+| key | dtype | shape |
+|---|---|---|
+| `f_tiles` | int16 | `[N, H, W, 7]`, row `i` belongs to row `i` of `tiles` |
+| `f_globals` | float32 | `[N, 14]` |
+| `f_actions` | float32 | `[A, 13]`, row `j` belongs to row `j` of `actions` (same `act_off`) |
+
+### `f_actions` (13 columns, per legal action; 0 where not applicable)
+
+Attacks use the engine's `get_battle_results`, the calculation that `Attack` applies (damage is in units of a full-health
+Warrior = 1.0, that is hit points / 100). Conversion and infiltration attacks have no damage figures.
+
+| col | name | value |
+|---|---|---|
+| 0 | `dmg_dealt` | damage the attack deals |
+| 1 | `dmg_taken` | retaliation damage (0 when the target dies or the attacker is out of the defender's reach) |
+| 2 | `kills` | 1 if the target dies |
+| 3 | `attacker_dies` | 1 if the retaliation kills the attacker |
+| 4 | `target_hp_after` | target health left, fraction of its maximum |
+| 5 | `trade` | (cost of the target destroyed, pro rata) minus (cost of own health lost), stars / 10 |
+| 6 | `captures_city` | `Capture` of an owned city |
+| 7 | `captures_village` | `Capture` of a neutral village |
+| 8 | `end_threat_n` | visible enemies that can attack the tile the unit ends on next turn, / 4 |
+| 9 | `end_threat_max` | the most damage one of them does to this unit (health after retaliation), hit points / 100 |
+| 10 | `end_threat_sum` | the damage of all of them together |
+| 11 | `end_adjacent_enemies` | visible enemies next to the end tile, / 4 (a kill removes the target) |
+| 12 | `end_could_die` | 1 if the summed threat is at least the unit's health |
+
+The end tile is where the unit stands after the command: the destination of a `Move`, the target tile after a melee kill
+that the engine lets the attacker walk onto, otherwise its own tile. Commands without a unit (research, end turn, build
+by a city) and `Disband`, `Explode` have 0.
+
+### `f_tiles` (7 columns per tile, `int16`; the model divides by the divisor)
+
+| col | name | divisor | value |
+|---|---|---|---|
+| 0 | `threat_n` | 4 | visible hostile units that can attack this tile next turn (move, then strike at range), capped at 15 |
+| 1 | `threat_dmg` | 100 | most damage one of them does to a full-health Warrior on open ground, hit points |
+| 2 | `reach_n` | 4 | own units with a legal `Move` onto this tile, capped at 15 |
+| 3 | `attack_reach_n` | 4 | own units that could attack this tile from where they stand or after a legal move |
+| 4 | `siege` | 3 | own city only: 1 an enemy could attack it, 2 and it is empty of our units, 3 an enemy stands on it |
+| 5 | `dist_enemy_capital` | 30 | 1 + Chebyshev distance to the nearest known enemy capital (0 if none known) |
+| 6 | `dist_enemy_city` | 30 | the same for any known enemy city |
+
+Hostile means a visible unit of another player the mover is not at peace with; Nature's animals do not attack and are
+left out.
+
+### `f_globals` (14 columns)
+
+| col | name | value |
+|---|---|---|
+| 0 | `stars_next` | (stars + the engine's `income`) / 10, the projected stars at the start of the next turn |
+| 1 | `techs_researchable` | number of techs that can be researched now / 10 |
+| 2 | `techs_affordable` | of those, how many cost at most the stars in hand / 10 |
+| 3 | `cheapest_tech` | price of the cheapest researchable tech / 10 |
+| 4 | `techs_affordable_next` | how many are affordable with next turn's stars / 10 |
+| 5 to 11 | `hostile_units_slot1..7` | visible hostile units of each opponent slot, / 16 |
+| 12 | `my_cities_threatened` | own cities with `siege > 0`, / 8 |
+| 13 | `my_units_threatened` | own units standing on a threatened tile, / 16 |
+
+Engine requests: none needed. The enemy's real defence bonus (from its techs) would be a better figure for combat
+previews, but it is hidden information, so the mover's own bonus is used.

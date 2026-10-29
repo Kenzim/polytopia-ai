@@ -184,3 +184,27 @@ def test_vecenv_throughput(capsys):
         n += len(ids)
     with capsys.disabled():
         print(f"\nVecEnv(512 games, random model seat): {n / (time.time() - t0):.0f} decisions/s")
+
+
+def test_engine_features_game_and_vecenv():
+    assert (pe.FEAT_T, pe.FEAT_G, pe.FEAT_A) == (len(pe.FEAT_T_NAMES), len(pe.FEAT_G_NAMES), len(pe.FEAT_A_NAMES))
+    g = pe.Game.sample(5, n_players=[2], sizes=[1], turn_limit=40, mode=pe.MIGHT)
+    seen = 0
+    while not g.is_over() and seen < 30:
+        if g.current_seat() is not None:
+            ft, fg, fa = g.features()
+            assert ft.shape == (11, 11, pe.FEAT_T) and ft.dtype == np.int16
+            assert fg.shape == (pe.FEAT_G,) and fg.dtype == np.float32
+            assert fa.shape == (len(g.legal_actions()), pe.FEAT_A) and fa.dtype == np.float32
+            seen += 1
+        g.play_ai_move()
+    assert seen == 30
+    plain = pe.VecEnv(4, seed_start=1, model_seats="all", n_players=[2], sizes=[1], threads=2, mode=pe.MIGHT)
+    rich = pe.VecEnv(4, seed_start=1, model_seats="all", n_players=[2], sizes=[1], threads=2, mode=pe.MIGHT, features=True)
+    assert all("f_tiles" not in d for d in plain.observe())
+    for d, p in zip(rich.observe(), plain.observe()):
+        b = len(d["game"])
+        assert d["f_tiles"].shape == (b, d["tiles"].shape[1], d["tiles"].shape[2], pe.FEAT_T)
+        assert d["f_globals"].shape == (b, pe.FEAT_G)
+        assert d["f_actions"].shape == (len(d["actions"]), pe.FEAT_A)
+        assert (d["tiles"] == p["tiles"]).all() and (d["actions"] == p["actions"]).all()

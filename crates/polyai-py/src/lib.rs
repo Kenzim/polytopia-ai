@@ -3,6 +3,7 @@
 //! Layouts (tiles, globals, actions) are those of `docs/encoding.md`.
 
 use numpy::{PyArray1, PyArrayMethods, PyReadonlyArray1};
+use polyai_core::features::{self, Features};
 use polyai_core::*;
 use polytopia_sim::engine::replay::{RawCmd, SaveFile};
 use polytopia_sim::engine::{Command, Engine, NATURE};
@@ -417,6 +418,22 @@ impl PyGame {
         Ok((tiles_array(py, obs.tiles, &[obs.h, obs.w, F_TILE])?, PyArray1::from_vec(py, obs.globals).into_any()))
     }
 
+    /// The engine features (docs/encoding.md section 12) for the player to move:
+    /// `(f_tiles int16[H, W, T_F], f_globals float32[G_F], f_actions float32[N, A_F])`, the last aligned with
+    /// `legal_actions()`. They use only what the mover can see.
+    fn features<'py>(&self, py: Python<'py>) -> PyResult<(Bound<'py, PyAny>, Bound<'py, PyAny>, Bound<'py, PyAny>)> {
+        let mut g = self.0.lock().unwrap();
+        let me = g.me()?;
+        let slots = SlotMap::new(&g.e, me);
+        let legal = g.legal().clone();
+        let f = features::features(&g.e, me, &slots, &legal);
+        Ok((
+            tiles_array(py, f.tiles, &[f.h, f.w, features::T_F])?,
+            PyArray1::from_vec(py, f.globals).into_any(),
+            PyArray1::from_vec(py, f.actions).reshape([legal.len(), features::A_F])?.into_any(),
+        ))
+    }
+
     /// Play the command at `index` of the current legal list.
     fn step(&self, index: usize) -> PyResult<()> {
         let mut g = self.0.lock().unwrap();
@@ -502,6 +519,7 @@ struct Pending {
     legal_len: usize,
     obs: Obs,
     actions: Vec<[i16; 4]>,
+    feats: Option<Features>,
     seat: i8,
     turn: i16,
 }
@@ -516,10 +534,12 @@ struct Slot {
     decisions: u32,
     legal: Vec<Command>,
     pending: Option<Pending>,
+    /// Compute the engine features of every pending decision.
+    with_features: bool,
 }
 
 impl Slot {
-    fn new(setup: GameSetup, model: &ModelSeats) -> Self {
+    fn new(setup: GameSetup, model: &ModelSeats, with_features: bool) -> Self {
         let e = setup.build();
         let order = player_order(&e);
         let n = order.len();
@@ -528,7 +548,7 @@ impl Slot {
             ModelSeats::All => vec![true; n],
             ModelSeats::Fixed(v) => (0..n).map(|s| v.contains(&s)).collect(),
         };
-        let mut slot = Slot { setup, e, order, is_model, counter: TurnCounter::default(), commands: 0, decisions: 0, legal: Vec::new(), pending: None };
+        let mut slot = Slot { setup, e, order, is_model, counter: TurnCounter::default(), commands: 0, decisions: 0, legal: Vec::new(), pending: None, with_features };
         slot.advance();
         slot
     }
@@ -554,7 +574,8 @@ impl Slot {
                 let legal = legal_actions(&self.e);
                 let obs = encode(&self.e, me, &slots, &legal);
                 let actions = legal.iter().map(|c| encode_command(&self.e, &slots, c).expect("legal command encodes")).collect();
-                self.pending = Some(Pending { legal_len: legal.len(), obs, actions, seat: seat as i8, turn: self.e.s.current_turn as i16 });
+                let feats = self.with_features.then(|| features::features(&self.e, me, &slots, &legal));
+                self.pending = Some(Pending { legal_len: legal.len(), obs, actions, feats, seat: seat as i8, turn: self.e.s.current_turn as i16 });
                 self.legal = legal;
                 return;
             }
@@ -633,6 +654,11 @@ struct Group {
     globals: Vec<f32>,
     act_off: Vec<i32>,
     actions: Vec<[i16; 4]>,
+    /// Engine features, only when the env was built with `features=True`.
+    with_features: bool,
+    f_tiles: Vec<i16>,
+    f_globals: Vec<f32>,
+    f_actions: Vec<f32>,
 }
 
 impl Group {
@@ -648,6 +674,11 @@ impl Group {
         d.set_item("globals", PyArray1::from_vec(py, self.globals.clone()).reshape([b, G_DIM])?)?;
         d.set_item("act_off", PyArray1::from_vec(py, self.act_off.clone()))?;
         d.set_item("actions", actions_array(py, &self.actions)?)?;
+        if self.with_features {
+            d.set_item("f_tiles", tiles_array(py, self.f_tiles.clone(), &[b, self.h, self.w, features::T_F])?)?;
+            d.set_item("f_globals", PyArray1::from_vec(py, self.f_globals.clone()).reshape([b, features::G_F])?)?;
+            d.set_item("f_actions", PyArray1::from_vec(py, self.f_actions.clone()).reshape([self.actions.len(), features::A_F])?)?;
+        }
         Ok(d)
     }
 }
@@ -657,7 +688,7 @@ fn groups_of(slots: &[Slot], which: &[usize]) -> Vec<Group> {
     for &i in which {
         let s = &slots[i];
         let Some(p) = s.pending.as_ref() else { continue };
-        let g = groups.entry((p.obs.h, p.obs.w)).or_insert_with(|| Group { h: p.obs.h, w: p.obs.w, act_off: vec![0], ..Default::default() });
+        let g = groups.entry((p.obs.h, p.obs.w)).or_insert_with(|| Group { h: p.obs.h, w: p.obs.w, act_off: vec![0], with_features: p.feats.is_some(), ..Default::default() });
         g.game.push(i as i32);
         g.seat.push(p.seat);
         g.n_players.push(s.order.len() as i8);
@@ -666,6 +697,11 @@ fn groups_of(slots: &[Slot], which: &[usize]) -> Vec<Group> {
         g.tiles.extend_from_slice(&p.obs.tiles);
         g.globals.extend_from_slice(&p.obs.globals);
         g.actions.extend_from_slice(&p.actions);
+        if let Some(f) = &p.feats {
+            g.f_tiles.extend_from_slice(&f.tiles);
+            g.f_globals.extend_from_slice(&f.globals);
+            g.f_actions.extend_from_slice(&f.actions);
+        }
         g.act_off.push(g.actions.len() as i32);
     }
     groups.into_values().collect()
@@ -686,6 +722,7 @@ struct EnvInner {
     eval: bool,
     seed_start: i64,
     drawn: i64,
+    features: bool,
 }
 
 impl EnvInner {
@@ -708,7 +745,8 @@ impl EnvInner {
     fn fill(&mut self, which: &[usize]) {
         let setups: Vec<GameSetup> = which.iter().map(|_| self.next_setup()).collect();
         let model = self.model.clone();
-        let built: Vec<Slot> = self.pool.install(|| setups.into_par_iter().map(|s| Slot::new(s, &model)).collect());
+        let features = self.features;
+        let built: Vec<Slot> = self.pool.install(|| setups.into_par_iter().map(|s| Slot::new(s, &model, features)).collect());
         for (&i, slot) in which.iter().zip(built) {
             if i < self.slots.len() {
                 self.slots[i] = slot;
@@ -726,7 +764,7 @@ impl PyVecEnv {
     /// `seed_start >= 1000000`. `seat_difficulties` sets each seat's handicap by seat index (applied after
     /// `difficulty`; every value 0..=3, one per seat of the largest player count).
     #[new]
-    #[pyo3(signature = (n_games, seed_start=1, model_seats=None, split="train", n_players=None, sizes=None, presets=None, difficulty=None, turn_limit=DEFAULT_TURN_LIMIT, threads=24, auto_reset=true, seat_difficulties=None, mode=DOMINATION))]
+    #[pyo3(signature = (n_games, seed_start=1, model_seats=None, split="train", n_players=None, sizes=None, presets=None, difficulty=None, turn_limit=DEFAULT_TURN_LIMIT, threads=24, auto_reset=true, seat_difficulties=None, mode=DOMINATION, features=false))]
     #[allow(clippy::too_many_arguments)]
     fn new(
         py: Python<'_>,
@@ -743,6 +781,7 @@ impl PyVecEnv {
         auto_reset: bool,
         seat_difficulties: Option<Vec<u8>>,
         mode: i32,
+        features: bool,
     ) -> PyResult<Self> {
         if let Some(ds) = &seat_difficulties {
             if ds.iter().any(|&d| d > 3) {
@@ -784,6 +823,7 @@ impl PyVecEnv {
             eval,
             seed_start: i64::from(seed_start),
             drawn: 0,
+            features,
         };
         let which: Vec<usize> = (0..n_games).collect();
         py.allow_threads(|| env.fill(&which));
@@ -806,7 +846,9 @@ impl PyVecEnv {
     }
 
     /// All games awaiting a model decision, one dict per map size (keys: game, seat, n_players, turn, seed, tiles,
-    /// globals, act_off, actions; the legal list of the i-th game is `actions[act_off[i]:act_off[i + 1]]`).
+    /// globals, act_off, actions; the legal list of the i-th game is `actions[act_off[i]:act_off[i + 1]]`). Built with
+    /// `features=True` each dict also holds f_tiles, f_globals and f_actions (docs/encoding.md section 12), aligned
+    /// with tiles, globals and actions.
     fn observe<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyList>> {
         let env = self.0.lock().unwrap();
         let all: Vec<usize> = (0..env.slots.len()).collect();
@@ -890,6 +932,13 @@ fn polyai_engine(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add("F_TILE", F_TILE)?;
     m.add("G_DIM", G_DIM)?;
     m.add("N_KINDS", N_KINDS)?;
+    m.add("FEAT_T", features::T_F)?;
+    m.add("FEAT_G", features::G_F)?;
+    m.add("FEAT_A", features::A_F)?;
+    m.add("FEAT_T_NAMES", features::TF_NAMES.to_vec())?;
+    m.add("FEAT_G_NAMES", features::GF_NAMES.to_vec())?;
+    m.add("FEAT_A_NAMES", features::A_NAMES.to_vec())?;
+    m.add("FEAT_T_DIVISORS", features::TF_DIVISORS.to_vec())?;
     m.add("TRIBES", TRIBES.to_vec())?;
     m.add("KIND_NAMES", KIND_NAMES.to_vec())?;
     m.add("CAT_VOCABS", CAT_VOCABS.to_vec())?;

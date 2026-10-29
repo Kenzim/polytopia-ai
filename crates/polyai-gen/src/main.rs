@@ -1,24 +1,30 @@
 //! Plays retail-AI games on N threads and writes game records and `.npz` training shards.
 //!
 //! `polyai-gen --out DIR --games N [--seed-start S] [--threads T] [--keep K] [--shard-size P] [--difficulty D]
-//!  [--turn-limit L] [--players 2:55,3:25,4:20] [--mode domination|might] [--truth]`
+//!  [--turn-limit L] [--players 2:55,3:25,4:20] [--mode domination|might] [--truth] [--features]`
 //!
 //! `--truth` adds the optional shard keys `truth` and `truth_mask` (labels of the tiles the mover has not explored,
 //! docs/belief.md); without it the shards are exactly what they were.
+//!
+//! `--features` adds the optional shard keys `f_tiles`, `f_globals` and `f_actions` (the engine's own combat previews,
+//! threats and reach, docs/encoding.md section 12); without it the shards are exactly what they were.
 //!
 //! `--players` is a weighted list of player counts (`2:55,3:25,4:20` is the default) or a plain list (`2,3`, uniform).
 //! `--turn-limit` is the compute cap (default 150): a game still running then is a draw (`capped`), never adjudicated.
 //!
 //! Seeds `S..S+N` must lie in the training range 1..=100000 (evaluation seeds start at 1,000,000).
 
+mod feat_shard;
 mod npz;
 mod shard;
 mod truth_shard;
 
 use polyai_core::*;
 use polytopia_sim::engine::{Command, Engine, NATURE};
+use polyai_core::features::{features, Features};
 use polyai_core::truth::{truth, Truth};
 use shard::{Labels, Row, ShardBuf, K_CAND, MAX_SLOTS};
+use feat_shard::FeatBuf;
 use truth_shard::TruthBuf;
 use std::collections::{BTreeMap, HashMap};
 use std::io::Write;
@@ -41,10 +47,11 @@ struct Args {
     players: Option<String>,
     mode: i32,
     truth: bool,
+    features: bool,
 }
 
 fn parse_args() -> Result<Args, String> {
-    let mut a = Args { out: PathBuf::new(), games: 0, seed_start: 1, threads: MAX_THREADS, keep: 4, shard_size: 50_000, difficulty: None, turn_limit: None, players: None, mode: DOMINATION, truth: false };
+    let mut a = Args { out: PathBuf::new(), games: 0, seed_start: 1, threads: MAX_THREADS, keep: 4, shard_size: 50_000, difficulty: None, turn_limit: None, players: None, mode: DOMINATION, truth: false, features: false };
     let mut it = std::env::args().skip(1);
     while let Some(flag) = it.next() {
         let mut val = || it.next().ok_or(format!("{flag} needs a value"));
@@ -60,6 +67,7 @@ fn parse_args() -> Result<Args, String> {
             "--turn-limit" => a.turn_limit = Some(val()?.parse().map_err(|_| bad(&flag))?),
             "--players" => a.players = Some(val()?),
             "--truth" => a.truth = true,
+            "--features" => a.features = true,
             "--mode" => {
                 a.mode = match val()?.as_str() {
                     "domination" => DOMINATION,
@@ -71,7 +79,7 @@ fn parse_args() -> Result<Args, String> {
         }
     }
     if a.out.as_os_str().is_empty() || a.games == 0 {
-        return Err("usage: polyai-gen --out DIR --games N [--seed-start S] [--threads T<=24] [--keep K] [--shard-size P] [--difficulty 0..3] [--turn-limit L] [--players 2:55,3:25,4:20] [--mode domination|might] [--truth]".into());
+        return Err("usage: polyai-gen --out DIR --games N [--seed-start S] [--threads T<=24] [--keep K] [--shard-size P] [--difficulty 0..3] [--turn-limit L] [--players 2:55,3:25,4:20] [--mode domination|might] [--truth] [--features]".into());
     }
     a.threads = a.threads.clamp(1, MAX_THREADS);
     a.keep = a.keep.max(1);
@@ -103,15 +111,18 @@ struct Played {
     labels: Vec<Labels>,
     /// The truth labels of `rows`, when asked for (`--truth`).
     truths: Vec<Truth>,
+    /// The engine features of `rows`, when asked for (`--features`).
+    feats: Vec<Features>,
     misses: usize,
     h: usize,
     w: usize,
 }
 
-fn play_one(setup: &GameSetup, keep: u64, with_truth: bool) -> Played {
+fn play_one(setup: &GameSetup, keep: u64, with_truth: bool, with_features: bool) -> Played {
     let order: Vec<u8> = setup.build().s.players.iter().map(|p| p.id).filter(|&id| id != NATURE).collect();
     let mut rows: Vec<Row> = Vec::new();
     let mut truths: Vec<Truth> = Vec::new();
+    let mut feats: Vec<Features> = Vec::new();
     let mut misses = 0usize;
     let mut cmd_index = 0u32;
     let (record, last) = play_ai_game(setup, |e: &mut Engine, cmd: &Command| {
@@ -130,6 +141,9 @@ fn play_one(setup: &GameSetup, keep: u64, with_truth: bool) -> Played {
         let obs = encode(e, me, &slots, &legal);
         if with_truth {
             truths.push(truth(e, me, &slots));
+        }
+        if with_features {
+            feats.push(features(e, me, &slots, &legal));
         }
         let actions: Vec<[i16; 4]> = legal.iter().map(|c| encode_command(e, &slots, c).expect("legal command encodes")).collect();
         let mut cand_idx = [-1i16; K_CAND];
@@ -177,11 +191,11 @@ fn play_one(setup: &GameSetup, keep: u64, with_truth: bool) -> Played {
             Labels { winner, final_scores, capped: i8::from(o.is_draw()) }
         })
         .collect();
-    Played { record, rows, labels, truths, misses, h: last.height() as usize, w: last.width() as usize }
+    Played { record, rows, labels, truths, feats, misses, h: last.height() as usize, w: last.width() as usize }
 }
 
 struct Shared {
-    bufs: Mutex<HashMap<(usize, usize), (ShardBuf, TruthBuf)>>,
+    bufs: Mutex<HashMap<(usize, usize), (ShardBuf, TruthBuf, FeatBuf)>>,
     next_shard: AtomicUsize,
     next_game: AtomicUsize,
     games: AtomicUsize,
@@ -193,12 +207,15 @@ struct Shared {
     shards: Mutex<Vec<(PathBuf, usize)>>,
 }
 
-fn write_shard(sh: &Shared, dir: &Path, buf: ShardBuf, truth_buf: Option<&TruthBuf>) {
+fn write_shard(sh: &Shared, dir: &Path, buf: ShardBuf, truth_buf: Option<&TruthBuf>, feat_buf: Option<&FeatBuf>) {
     let n = sh.next_shard.fetch_add(1, Ordering::SeqCst);
     let path = dir.join(format!("shard-{n:05}-{}x{}.npz", buf.h, buf.w));
     buf.write(&path).unwrap_or_else(|e| panic!("writing {}: {e}", path.display()));
     if let Some(t) = truth_buf {
         t.append_to(&path).unwrap_or_else(|e| panic!("writing truth into {}: {e}", path.display()));
+    }
+    if let Some(f) = feat_buf {
+        f.append_to(&path).unwrap_or_else(|e| panic!("writing features into {}: {e}", path.display()));
     }
     sh.shards.lock().unwrap().push((path, buf.len()));
 }
@@ -252,25 +269,28 @@ fn main() {
                     if let Some(d) = args.difficulty {
                         setup = setup.with_difficulty(d);
                     }
-                    let p = play_one(&setup, args.keep, args.truth);
+                    let p = play_one(&setup, args.keep, args.truth, args.features);
                     write_record(&mut rec_out, &p.record).expect("write record");
                     let (h, w) = (p.h, p.w);
                     let mut full = None;
                     {
                         let mut bufs = sh.bufs.lock().unwrap();
-                        let (buf, tb) = bufs.entry((h, w)).or_insert_with(|| (ShardBuf::new(h, w), TruthBuf::new(h, w)));
+                        let (buf, tb, fb) = bufs.entry((h, w)).or_insert_with(|| (ShardBuf::new(h, w), TruthBuf::new(h, w), FeatBuf::new(h, w)));
                         for (r, l) in p.rows.iter().zip(&p.labels) {
                             buf.push(seed, r, l);
                         }
                         for t in &p.truths {
                             tb.push(t);
                         }
+                        for f in &p.feats {
+                            fb.push(f);
+                        }
                         if buf.len() >= args.shard_size {
                             full = bufs.remove(&(h, w));
                         }
                     }
-                    if let Some((buf, tb)) = full {
-                        write_shard(sh, &args.out, buf, args.truth.then_some(&tb));
+                    if let Some((buf, tb, fb)) = full {
+                        write_shard(sh, &args.out, buf, args.truth.then_some(&tb), args.features.then_some(&fb));
                     }
                     sh.positions.fetch_add(p.rows.len() as u64, Ordering::Relaxed);
                     sh.commands.fetch_add(p.record.commands.len() as u64, Ordering::Relaxed);
@@ -290,9 +310,9 @@ fn main() {
             println!("{g}/{} games, {p} positions, {:.1} games/s, {:.0} positions/s", args.games, g as f64 / t, p as f64 / t);
         }
     });
-    for (_, (buf, tb)) in std::mem::take(&mut *sh.bufs.lock().unwrap()) {
+    for (_, (buf, tb, fb)) in std::mem::take(&mut *sh.bufs.lock().unwrap()) {
         if buf.len() > 0 {
-            write_shard(&sh, &args.out, buf, args.truth.then_some(&tb));
+            write_shard(&sh, &args.out, buf, args.truth.then_some(&tb), args.features.then_some(&fb));
         }
     }
     let t = started.elapsed().as_secs_f64();
