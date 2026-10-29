@@ -4,7 +4,9 @@
 
 Loss = CE(chosen action) + kl_weight * KL(softmax(candidate scores / T) || model, restricted to the candidates)
      + winner CE, on positions of games that ended with an elimination winner (capped games, `winner = -1`, train the
-policy only; there are no score-margin targets).
+policy only; there are no score-margin targets)
+     + belief_weight * belief CE: auxiliary heads for what lies under the fog, on shards made with
+`polyai-gen --truth` (0 = no heads, the old behaviour; docs/belief.md). `--init CKPT` fine-tunes from a checkpoint.
 `chosen` (the move the AI played, with its noise) is the label; the candidate scores are the AI's noise-free view of
 its best moves and only shape the distribution among them. Run directory:
 <runs-dir>/<name>/{config.json, metrics.jsonl, ckpt_last.pt, ckpt_final.pt}. `--resume` continues from ckpt_last.pt.
@@ -18,15 +20,16 @@ import math
 import os
 import sys
 import time
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 
 import torch
 import torch.nn.functional as F
 
 from . import schema as S
+from .belief import BeliefMeter, belief_loss
 from .data import BatchLoader
-from .model import CONFIGS, ModelOutput, PolyNet, build_model, win_probability
+from .model import CONFIGS, ModelConfig, ModelOutput, PolyNet, build_model, win_probability
 
 DEFAULT_RUNS_DIR = "/kvm/polytopia-ai-data/runs"
 BRIER_TURN_BUCKET = 10
@@ -60,6 +63,9 @@ class TrainConfig:
     runs_dir: str = DEFAULT_RUNS_DIR
     device: str = "cuda"
     resume: bool = False
+    init: str | None = None  # start from this checkpoint's weights (fine-tuning); belief heads are added fresh if missing
+    belief_weight: float = 0.0
+    belief_hidden: int = 32  # width of each belief head, used when belief_weight > 0
 
 
 # ---------------------------------------------------------------------------------------------------------------
@@ -98,7 +104,14 @@ def compute_losses(out: ModelOutput, batch: dict[str, torch.Tensor], cfg: TrainC
         winner_ce = out.winner_logits.new_zeros(())
 
     total = ce + cfg.kl_weight * kl + cfg.winner_weight * winner_ce
-    return {"loss": total, "policy_ce": ce, "policy_kl": kl, "winner_ce": winner_ce}
+    losses = {"policy_ce": ce, "policy_kl": kl, "winner_ce": winner_ce}
+    belief = getattr(out, "belief", None)
+    if belief is not None and "truth" in batch:
+        bl, per = belief_loss(belief, batch["truth"], batch["truth_mask"])
+        losses["belief"] = bl
+        losses.update({f"belief_{k}": v for k, v in per.items()})
+        total = total + cfg.belief_weight * bl
+    return {"loss": total, **losses}
 
 
 class Meter:
@@ -111,6 +124,7 @@ class Meter:
         self.sums: dict[str, float] = {}
         self.brier: dict[int, list[float]] = {}  # bucket -> [sum of squared error, count]
         self.acc_winner = [0.0, 0]
+        self.belief = BeliefMeter()
 
     @torch.no_grad()
     def add(self, out: ModelOutput, batch: dict[str, torch.Tensor], losses: dict[str, torch.Tensor]) -> None:
@@ -123,6 +137,9 @@ class Meter:
         self.n += b
         for name, v in losses.items():
             self.sums[name] = self.sums.get(name, 0.0) + v.item() * b
+        belief = getattr(out, "belief", None)
+        if belief is not None and "truth" in batch:
+            self.belief.add(belief, batch["truth"], batch["truth_mask"])
         p = win_probability(out).float()
         known = batch["winner"] >= 0
         y = (batch["winner"] == 0).float()
@@ -138,8 +155,10 @@ class Meter:
         n = max(self.n, 1)
         tot = sum(c[0] for c in self.brier.values())
         cnt = sum(c[1] for c in self.brier.values())
+        belief = self.belief.result() if self.belief.tiles else None
         return {
             "positions": self.n,
+            **({"belief": belief} if belief else {}),
             "top1": self.top1 / n,
             "top3": self.top3 / n,
             **{f"val_{k}": v / n for k, v in self.sums.items()},
@@ -160,7 +179,8 @@ def evaluate(model: PolyNet, loader: BatchLoader, cfg: TrainConfig, device: torc
         if i >= cfg.eval_batches:
             break
         with torch.autocast(device.type, dtype=torch.bfloat16, enabled=cfg.bf16 and device.type == "cuda"):
-            out = model(batch["tiles"], batch["globals"], batch["actions"], batch["action_mask"])
+            out = model(batch["tiles"], batch["globals"], batch["actions"], batch["action_mask"],
+                        belief=model.belief_heads is not None)
         meter.add(out, batch, compute_losses(out, batch, cfg))
     model.train(was_training)
     return meter.result()
@@ -185,6 +205,13 @@ def check_gpu_memory(need_gb: float, device: torch.device) -> int:
         )
     torch.cuda.set_per_process_memory_fraction(min(1.0, need / total), device)
     return need
+
+
+def _has_truth(path: Path) -> bool:
+    import zipfile
+
+    with zipfile.ZipFile(path) as z:
+        return "truth.npy" in z.namelist()
 
 
 def lr_at(step: int, cfg: TrainConfig) -> float:
@@ -234,15 +261,43 @@ def _check_heads(state: dict, path: str | Path) -> None:
         )
 
 
-def load_checkpoint(path: str | Path, map_location: str = "cpu") -> PolyNet:
-    """The model alone, for evaluation or play. `resume_state` loads the optimiser state as well."""
-    from .model import ModelConfig
+def load_checkpoint(path: str | Path, map_location: str = "cpu", belief: bool = False) -> PolyNet:
+    """The model alone, for evaluation or play. `resume_state` loads the optimiser state as well.
 
+    A checkpoint trained with belief heads loads everywhere: the heads are dropped unless `belief` is set (play and
+    self-play never use them), so the result is the same plain network as one trained without them."""
     state = torch.load(path, map_location=map_location, weights_only=False)
     _check_heads(state, path)
-    model = build_model(ModelConfig(**state["model_config"]))
-    model.load_state_dict(state["model"])
+    cfg = ModelConfig(**state["model_config"])
+    weights = state["model"]
+    if cfg.belief_hidden and not belief:
+        cfg.belief_hidden = 0
+        weights = {k: v for k, v in weights.items() if not k.startswith(BELIEF_PREFIX)}
+    model = build_model(cfg)
+    model.load_state_dict(weights)
     return model
+
+
+BELIEF_PREFIX = "belief_heads."
+
+
+def load_init(model: PolyNet, path: str | Path) -> None:
+    """Fine-tuning start: copy the weights of checkpoint `path` into `model`. The trunk and heads of the policy and
+    value must match; belief heads are taken from the checkpoint when both have them, and stay as initialised when
+    the checkpoint has none (or are left out of the model when it has none)."""
+    state = torch.load(path, map_location="cpu", weights_only=False)
+    _check_heads(state, path)
+    ckpt_cfg = {k: v for k, v in state["model_config"].items() if k != "belief_hidden"}
+    model_cfg = {k: v for k, v in model.cfg.to_dict().items() if k != "belief_hidden"}
+    if ckpt_cfg != model_cfg:
+        raise SystemExit(f"--init {path} was written by a different model configuration ({ckpt_cfg} against {model_cfg})")
+    weights = state["model"]
+    if model.belief_heads is not None and state["model_config"].get("belief_hidden", 0) != model.cfg.belief_hidden:
+        weights = {k: v for k, v in weights.items() if not k.startswith(BELIEF_PREFIX)}
+    missing, unexpected = model.load_state_dict(weights, strict=False)
+    bad = [k for k in missing if not k.startswith(BELIEF_PREFIX)] + [k for k in unexpected if not k.startswith(BELIEF_PREFIX)]
+    if bad:
+        raise SystemExit(f"--init {path}: weights do not fit the model: {bad[:5]}")
 
 
 def resume_state(path: Path, model: PolyNet, opt: torch.optim.Optimizer, device: torch.device) -> int:
@@ -277,7 +332,17 @@ def train(cfg: TrainConfig) -> dict:
 
     run_dir = Path(cfg.runs_dir) / cfg.name
     run_dir.mkdir(parents=True, exist_ok=True)
-    model = build_model(cfg.model).to(device).to(memory_format=torch.channels_last)
+    model_cfg = CONFIGS[cfg.model]
+    if cfg.belief_weight > 0:
+        model_cfg = replace(model_cfg, belief_hidden=cfg.belief_hidden)
+        stale = [str(p) for p in expand_shards(cfg.train) if not _has_truth(p)]
+        if stale:
+            raise SystemExit(f"--belief-weight needs shards made with polyai-gen --truth; no truth keys in {stale[:3]}")
+    model = build_model(model_cfg)
+    if cfg.init:
+        load_init(model, cfg.init)
+        print(f"initialised from {cfg.init}", flush=True)
+    model = model.to(device).to(memory_format=torch.channels_last)
     opt = make_optimizer(model, cfg)
     step = 0
     if cfg.resume:
@@ -316,7 +381,8 @@ def train(cfg: TrainConfig) -> dict:
         for g in opt.param_groups:
             g["lr"] = lr_at(step, cfg)
         with torch.autocast(device.type, dtype=torch.bfloat16, enabled=cfg.bf16 and device.type == "cuda"):
-            out = model(batch["tiles"], batch["globals"], batch["actions"], batch["action_mask"])
+            out = model(batch["tiles"], batch["globals"], batch["actions"], batch["action_mask"],
+                        belief=cfg.belief_weight > 0)
         losses = compute_losses(out, batch, cfg)
         opt.zero_grad(set_to_none=True)
         losses["loss"].backward()
@@ -340,8 +406,8 @@ def train(cfg: TrainConfig) -> dict:
                 rec["max_mem_mb"] = torch.cuda.max_memory_allocated(device) / 1024**2
             log(rec)
             print(f"step {step} loss {rec['loss']:.4f} ce {rec['policy_ce']:.4f} win {rec['winner_ce']:.4f} "
-                  f"{sps:.2f} steps/s" + (f" peak {rec['max_mem_mb']:.0f} MiB" if "max_mem_mb" in rec else ""),
-                  flush=True)
+                  + (f"belief {rec['belief']:.4f} " if "belief" in rec else "") + f"{sps:.2f} steps/s"
+                  + (f" peak {rec['max_mem_mb']:.0f} MiB" if "max_mem_mb" in rec else ""), flush=True)
             sums, count = {}, 0
             last = rec
 
@@ -370,11 +436,13 @@ def parse_args(argv: list[str] | None = None) -> TrainConfig:
     ap.add_argument("--model", default=d.model, choices=sorted(CONFIGS))
     ap.add_argument("--train", nargs="+", required=True, help="shard files or directories of .npz shards")
     ap.add_argument("--val", nargs="+", default=None)
-    for f in ("batch_size", "steps", "warmup_steps", "eval_every", "ckpt_every", "eval_batches", "log_every", "seed", "threads"):
+    for f in ("batch_size", "steps", "warmup_steps", "eval_every", "ckpt_every", "eval_batches", "log_every", "seed", "threads",
+              "belief_hidden"):
         ap.add_argument(f"--{f.replace('_', '-')}", type=int, default=getattr(d, f))
     for f in ("lr", "weight_decay", "min_lr_frac", "grad_clip", "kl_weight", "kl_temperature", "winner_weight",
-              "need_gb"):
+              "need_gb", "belief_weight"):
         ap.add_argument(f"--{f.replace('_', '-')}", type=float, default=getattr(d, f))
+    ap.add_argument("--init", default=None, help="checkpoint to start from (fine-tuning)")
     ap.add_argument("--resume", action="store_true", help="continue the run NAME from its ckpt_last.pt")
     ap.add_argument("--no-augment", action="store_true")
     ap.add_argument("--no-bf16", action="store_true")

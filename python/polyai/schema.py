@@ -172,3 +172,22 @@ OPTIONAL_FIELDS: dict[str, ShardField] = {
     "policy_ids": ShardField("str", "[P]", "policy_id strings of this shard (default empty)"),
     "game_key": ShardField("str", "[N]", "game identity for train/validation splits (default gen:<seed>)"),
 }
+
+# Truth keys written by `polyai-gen --truth` (docs/belief.md): what lies under the fog, from the mover's point of view.
+# They are optional and per tile, so they are handled apart from OPTIONAL_FIELDS (which are per position).
+# `truth` int16[N, H, W, TRUTH_K] holds a class id per channel, 0 on explored tiles; `truth_mask` uint8[N, H, W] is 1 on
+# the tiles the mover has not explored (exactly the tiles with `unexplored = 1` in `tiles`).
+TRUTH_FIELDS: dict[str, ShardField] = {
+    "truth": ShardField("int16", "[N, H, W, TRUTH_K]", "belief label per channel on hidden tiles, 0 elsewhere"),
+    "truth_mask": ShardField("uint8", "[N, H, W]", "1 on tiles the mover has not explored"),
+}
+# (name, number of classes). terrain: engine terrain idx; resource: engine resource idx (raw, 0 none); site: 0 none,
+# 1 village, 2 ruin; enemy_city: 0/1; enemy_capital: 0 or the slot (1..7) of the player the tile is the capital of;
+# unit: 0 none, 1 another player's unit, 2 a Nature unit.
+TRUTH_CHANNELS: list[tuple[str, int]] = [
+    ("terrain", 10), ("resource", 11), ("site", 3), ("enemy_city", 2), ("enemy_capital", 8), ("unit", 3),
+]
+TRUTH_NAMES = [n for n, _ in TRUTH_CHANNELS]
+TRUTH_VOCABS = [v for _, v in TRUTH_CHANNELS]
+TRUTH_K = len(TRUTH_CHANNELS)
+WATER_TERRAIN = (1, 2)  # engine terrain idx of water and ocean; every other terrain value is land

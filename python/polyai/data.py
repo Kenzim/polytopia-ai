@@ -93,6 +93,9 @@ def save_shard(path: str | Path, arrays: dict[str, np.ndarray]) -> None:
     for k, spec in S.OPTIONAL_FIELDS.items():
         if k in arrays:
             out[k] = np.asarray(arrays[k], dtype=str if spec.dtype == "str" else spec.dtype)
+    for k, spec in S.TRUTH_FIELDS.items():
+        if k in arrays:
+            out[k] = np.asarray(arrays[k], dtype=spec.dtype)
     np.savez(path, **out)
 
 
@@ -139,6 +142,7 @@ class Shard:
             raise ValueError("a capped game has a winner")
         self.n, self.h, self.w = n, h, w
         self._fill_optional()
+        self._check_truth()
 
     def _fill_optional(self) -> None:
         """The optional provenance keys, as stored or defaulted (a shard without them is a retail-generator shard)."""
@@ -159,6 +163,20 @@ class Shard:
         if n and (a["policy"].min() < -1 or a["policy"].max() >= len(ids)):
             raise ValueError("policy refers to a policy_id the shard does not hold")
 
+    def _check_truth(self) -> None:
+        a = self.a
+        if ("truth" in a) != ("truth_mask" in a):
+            raise ValueError("a shard holds both truth and truth_mask or neither")
+        if "truth" in a:
+            if a["truth"].shape != (self.n, self.h, self.w, S.TRUTH_K):
+                raise ValueError(f"truth has shape {a['truth'].shape}, expected {(self.n, self.h, self.w, S.TRUTH_K)}")
+            if a["truth_mask"].shape != (self.n, self.h, self.w):
+                raise ValueError(f"truth_mask has shape {a['truth_mask'].shape}, expected {(self.n, self.h, self.w)}")
+
+    @property
+    def has_truth(self) -> bool:
+        return "truth" in self.a
+
     @property
     def game_key(self) -> np.ndarray:
         """str[N]: the stored keys, or `gen:<seed>` for a shard written before keys existed."""
@@ -178,7 +196,7 @@ class Shard:
             if "version" not in z.files:
                 raise ValueError(f"{path} has no version field")
             wanted = S.V1_REQUIRED_FIELDS if int(z["version"].reshape(-1)[0]) == 1 else S.REQUIRED_FIELDS
-            return cls({k: z[k] for k in (*wanted, *S.OPTIONAL_FIELDS) if k in z.files})
+            return cls({k: z[k] for k in (*wanted, *S.OPTIONAL_FIELDS, *S.TRUTH_FIELDS) if k in z.files})
 
     def __len__(self) -> int:
         return self.n
@@ -199,6 +217,8 @@ class Shard:
         actions[~mask] = (S.KIND_PAD, 0, -1, -1)
 
         tiles = a["tiles"][idx]
+        truth = a["truth"][idx] if self.has_truth else None
+        truth_mask = a["truth_mask"][idx] if self.has_truth else None
         if augment:
             if rng is None:
                 rng = np.random.default_rng()
@@ -210,8 +230,11 @@ class Shard:
                 sel = np.nonzero(syms == s)[0]
                 tiles[sel] = transform_tiles(tiles[sel], int(s))  # odd turns only occur on square boards
                 actions[sel] = transform_actions(actions[sel], self.h, self.w, int(s))
+                if truth is not None:
+                    truth[sel] = transform_tiles(truth[sel], int(s))
+                    truth_mask[sel] = transform_tiles(truth_mask[sel][..., None], int(s))[..., 0]
 
-        return {
+        out = {
             "tiles": tiles,
             "globals": a["globals"][idx],
             "actions": actions,
@@ -225,6 +248,9 @@ class Shard:
             "ours": a["ours"][idx].astype(np.int64),
             "behaviour_logp": a["behaviour_logp"][idx],  # NaN where no policy chose the move
         }
+        if truth is not None:
+            out["truth"], out["truth_mask"] = truth, truth_mask
+        return out
 
 
 def to_torch(batch: dict, device: torch.device | str = "cpu") -> dict[str, torch.Tensor]:
@@ -321,12 +347,15 @@ class BatchLoader:
 
 
 def make_synthetic_shard(
-    n: int, size: int = 16, seed: int = 0, n_cand: int = S.N_CANDIDATES, max_actions: int = 40
+    n: int, size: int = 16, seed: int = 0, n_cand: int = S.N_CANDIDATES, max_actions: int = 40,
+    with_truth: bool = False,
 ) -> dict:
     """Random positions with a learnable structure: the chosen action is the legal one with the highest hidden score
     that depends on its kind, argument and the terrain of its source tile; the winner is a function of the globals (-1 for the few capped games).
     Like the real data, the candidate list holds only some of the positions' top actions, `chosen` is sometimes not
-    its first entry, some scores are +inf and padding scores are 0."""
+    its first entry, some scores are +inf and padding scores are 0. With `with_truth` the shard also holds the optional
+    `truth` keys: about a third of the tiles are hidden (their `unexplored` column set) and every label channel is a
+    function of the tile's climate, so a belief head can learn it."""
     rng = np.random.default_rng(seed)
     h = w = size
     tiles = np.zeros((n, h, w, S.F_TILE), np.int16)
@@ -375,7 +404,15 @@ def make_synthetic_shard(
     turn = rng.integers(1, 50, size=n).astype(np.int16)
     final_scores = np.zeros((n, 8), np.float32)
     final_scores[:, 0] = np.abs(globals_[:, 2]) * 3000
+    extra = {}
+    if with_truth:
+        hidden = rng.random((n, h, w)) < 0.33
+        tiles[..., S.COLUMN["unexplored"]] = hidden
+        climate = tiles[..., S.COLUMN["climate"]].astype(np.int64)
+        truth = np.stack([climate % v for v in S.TRUTH_VOCABS], axis=-1) * hidden[..., None]
+        extra = {"truth": truth.astype(np.int16), "truth_mask": hidden.astype(np.uint8)}
     return {
+        **extra,
         "tiles": tiles, "globals": globals_, "act_off": off, "actions": actions, "chosen": chosen,
         "cand_idx": cand_idx, "cand_score": cand_score, "winner": winner, "final_scores": final_scores,
         "capped": capped, "turn": turn,

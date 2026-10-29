@@ -23,9 +23,15 @@ class ModelConfig:
     value_hidden: int = 128
     g_dim: int = S.G_DIM
     name: str = ""
+    # Width of the auxiliary belief heads (one small conv head per truth channel, docs/belief.md); 0 = no heads. The key
+    # is left out of `to_dict` when 0, so a config without heads is exactly what it was before the heads existed.
+    belief_hidden: int = 0
 
     def to_dict(self) -> dict:
-        return asdict(self)
+        d = asdict(self)
+        if not d["belief_hidden"]:
+            del d["belief_hidden"]
+        return d
 
 
 CONFIGS: dict[str, ModelConfig] = {
@@ -46,6 +52,15 @@ def eval_pawns(p: torch.Tensor | float) -> torch.Tensor:
 class ModelOutput(NamedTuple):
     policy_logits: torch.Tensor  # [B, A] float32, padded entries at MASK_FILL
     winner_logits: torch.Tensor  # [B, 9] who wins by elimination, relative slots; softmax gives win probabilities
+
+
+class BeliefOutput(NamedTuple):
+    """A ModelOutput plus the belief logits; returned only by `forward(..., belief=True)` on a model with the heads, so
+    the two-field ModelOutput that everything else unpacks stays what it was."""
+
+    policy_logits: torch.Tensor
+    winner_logits: torch.Tensor
+    belief: tuple[torch.Tensor, ...]  # per truth channel [B, V, H, W] logits
 
 
 def masked_mean_max(x: torch.Tensor, mask: torch.Tensor | None) -> torch.Tensor:
@@ -118,6 +133,13 @@ class PolyNet(nn.Module):
         # Value head: the winner distribution only (win 1 / loss 0; points are not the objective).
         vh = cfg.value_hidden
         self.value_mlp = nn.Sequential(nn.Linear(c, vh), nn.ReLU(), nn.Linear(vh, S.N_SLOTS))
+        # Auxiliary belief heads: what lies under the fog (training only; play never asks for them).
+        self.belief_heads = None
+        if cfg.belief_hidden > 0:
+            bh = cfg.belief_hidden
+            self.belief_heads = nn.ModuleList(
+                [nn.Sequential(nn.Conv2d(c, bh, 3, padding=1), nn.ReLU(), nn.Conv2d(bh, v, 1)) for v in S.TRUTH_VOCABS]
+            )
         self._init()
 
     def _init(self) -> None:
@@ -164,9 +186,11 @@ class PolyNet(nn.Module):
         actions: torch.Tensor,
         action_mask: torch.Tensor,
         board_mask: torch.Tensor | None = None,
-    ) -> ModelOutput:
+        belief: bool = False,
+    ) -> ModelOutput | BeliefOutput:
         """tiles int [B, H, W, F]; globals [B, G]; actions int [B, A, 4] = (kind, arg, src, dst) with -1 for no
-        tile; action_mask bool [B, A] (True = real legal action); board_mask optional bool [B, H, W]."""
+        tile; action_mask bool [B, A] (True = real legal action); board_mask optional bool [B, H, W]. With `belief`
+        (and a model that has the heads) the output also carries the belief logits."""
         b, h, w, _ = tiles.shape
         feat, mask = self.encode(tiles, globals_, board_mask)
         pooled = masked_mean_max(feat, mask)
@@ -203,7 +227,10 @@ class PolyNet(nn.Module):
         logits = torch.full(action_mask.shape, MASK_FILL, dtype=torch.float32, device=tiles.device)
         logits = logits.index_put((bi, ai), flat)
 
-        return ModelOutput(logits, self.value_mlp(F.relu(g)).float())
+        value = self.value_mlp(F.relu(g)).float()
+        if belief and self.belief_heads is not None:
+            return BeliefOutput(logits, value, tuple(head(feat).float() for head in self.belief_heads))
+        return ModelOutput(logits, value)
 
 
 def build_model(name_or_cfg: str | ModelConfig) -> PolyNet:
