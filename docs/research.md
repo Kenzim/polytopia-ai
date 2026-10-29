@@ -26,7 +26,7 @@ How the evidence is graded:
    KL anchor, larger batches), medium ones (belief heads, per-action features, exploiters) and expensive ones
    (search-improved targets under fog). The expensive ones depend on a value head that can rank candidate turns, and
    neither our search (no gain on rl3) nor the comparable project's (30%) shows one yet. A cheap test of that is the
-   first thing to build before any search work (recommendation 4).
+   first thing to build before any search work (recommendation 1).
 4. BPolait: see 2.9. Status of the search is stated there.
 
 ## 1. Methods from similar games and general game AI
@@ -48,7 +48,7 @@ arXiv 1705.08439](https://arxiv.org/abs/1705.08439) (both recalled).
   nothing on rl3 (`docs/search.md`). My estimate for now: 0 to +100 Elo, wide uncertainty, because the limiting factor
   (value quality, and a search that sees only our own turn) is not touched by the method itself.
 - Cost: high (new search, new data path, GPU batching).
-- Plan item: 4 (search-improved targets), gated by recommendation 4 below.
+- Plan item: 4 (search-improved targets), gated by recommendation 1 below.
 
 **MuZero.** [arXiv 1911.08265](https://arxiv.org/abs/1911.08265) (recalled). A learned dynamics model so search needs
 no simulator. We have an exact, fast simulator, so this adds nothing for known states. The one place a learned model
@@ -66,9 +66,9 @@ below is from memory, not re-read).
   candidates with more than one rollout each, completed Q for unvisited candidates (the value of the position or the
   mixed value), and writing the improved policy out as a *training target*.
 - Gain: it fixes how the budget is spent and gives a principled target, but it does not fix a value head that
-  mis-ranks. The comparable project uses Gumbel search and found that deeper search (64 to 256 simulations) helped
-  only a capture-speed metric and cost 2.3 times the wall-clock (their EXP 3, 2026-07-10, read). My estimate: small
-  until the value head test in recommendation 4 passes.
+  mis-ranks. Polyfish (2.3) uses Gumbel search and, in its research log (EXP 3, read), found that going from 64 to 256
+  simulations fixed only a "never captures" tail and cost 2.3 times the wall-clock. My estimate: small until the
+  value head test in recommendation 1 passes.
 - Cost: medium on top of what exists.
 - Plan item: 4.
 
@@ -133,7 +133,7 @@ which is a light version of prioritised sampling. No new item.
 - Gain: it removes a restart cost and makes A/B tests of features cheaper; no direct strength effect.
 - Cost: low.
 - Plan item: supports 1B and 2. Also note their batch size is far larger than ours (16k learner decisions, about 25
-  games, per update); see recommendation 5.
+  games, per update); see recommendation 3.
 
 **Phasic Policy Gradient** ([arXiv 2009.04416](https://arxiv.org/abs/2009.04416), title checked) and **UNREAL**
 ([arXiv 1611.05397](https://arxiv.org/abs/1611.05397), title checked). Both are about auxiliary losses on a shared
@@ -162,10 +162,9 @@ the case for dense signal (shaping or aux) and shows what raw speed buys.
 read). Fully convolutional ResNet with squeeze-excitation (about 20M parameters), IMPALA plus UPGO and TD(lambda),
 shaped reward for the first 20M steps and then sparse win/loss, **a frozen teacher with a KL term, with each larger
 network trained against the smaller one as teacher**, per-unit policy heads on a dense grid, log-probability of a turn
-as the sum over units, and a rotate-by-180-degrees average at test time. They say the RL agent overtook their rules
-agent within a month. Takeaways for us: (a) the teacher-chain (a smaller or earlier net as KL anchor for the next) is
+as the sum over units, and a rotate-by-180-degrees average at test time. Takeaways for us: (a) the teacher-chain (a smaller or earlier net as KL anchor for the next) is
 the same device as our KL to BC, and they credit it with stopping strategic cycles; (b) a cheap test-time
-augmentation: average the policy over the 8 board symmetries (we already train with them). Estimate for (b): +0 to
+augmentation: average the policy over the 8 board symmetries (`docs/design.md` lists them as valid augmentations; I did not check whether training uses them). Estimate for (b): +0 to
 +20 Elo for 8 times the inference cost, so only for live play; not for training.
 
 ### 1.3 Imperfect information
@@ -278,9 +277,9 @@ add the labels that are nearly free (opponent tech set, income and city count a 
   arXiv 2104.06272](https://arxiv.org/abs/2104.06272) (titles checked). Central batched inference with actors
   stepping environments is exactly the Rust collector plan (gameplan 5). The main lesson is to keep inference in one
   place with large batches and to make the environment step asynchronous.
-- Reference point for throughput: the 2026 Generals.io simulator is JAX-native and reports tens of millions of frames
-  a second on one GPU (abstract read). Ours is a CPU engine at about 3,500 retail commands per second per thread;
-  we will not match that, but the number shows the sort of headroom that changes what experiments are possible.
+- Reference point: the Generals.io projects (1.2) get their speed from a purpose-built fast environment and a single
+  GPU; Artificial Generals Intelligence reports 36 hours on one H100. Ours is a CPU engine at about 3,500 retail
+  commands per second per thread (`docs/design.md`), which is why the retail share of CPU is the first target.
 
 ### 1.8 Curriculum, scenario starts and human data
 
@@ -302,7 +301,7 @@ treatment won **45.6%**; the falsifier fired and they dropped it. A larger set (
 queued; I found no result for it in the log. Their combined S3b/S3c change, which included human starts, coincided with
 instability (entropy rising, games turning into grinds), but four changes went in together so no cause was
 attributed. Take-away: **human-position starts did not help on this evidence** (one project, one format, evaluation
-from turn 0 only). Our scenario curriculum item should be scheduled behind diagnostics (recommendation 2), and if
+from turn 0 only). Our scenario curriculum item should be scheduled behind diagnostics (recommendation 5), and if
 tried, as a pre-registered A/B with the same falsifier shape.
 
 **Imitation of human play.** [VPT, arXiv 2206.11795](https://arxiv.org/abs/2206.11795) (title checked): behaviour
@@ -441,11 +440,84 @@ information) and that "handicap" and a "stupidity" parameter set difficulty, obs
 
 ### 2.9 BPolait
 
-Not found on GitHub (searches for the name, the friend code LLWKL-KOAPO and related terms returned 0 results; no user
-account by that name). See the update at the end of this section if a web search found more.
+**I could not find who runs BPolait or how it works.** What I tried: GitHub repository and user searches for the name,
+for "polait" and for the friend code LLWKL-KOAPO (0 results each); a search of our own tree and ledger (only our docs
+mention it); one general web search (nothing relevant; results were the repositories in 2.1 to 2.7 and the Discord
+ELO bot); DuckDuckGo and Bing page fetches (empty or unrelated). Reddit (403) and the Fandom wiki (Cloudflare) were not
+readable, and I did not try Discord or YouTube.
 
-*(Status at first draft: not yet searched outside GitHub. To be updated.)*
+What can be said from the outside, as inference and not as fact:
+
+- **It is probably not bengreff's bot.** Their site and README show replays only; neither mentions a friend code,
+  online play or a hosted opponent, and the repository was created on 2026-10-23.
+- **It is probably built the same way as the PolyMod bots** (2.6): the only ways to play through the real multiplayer
+  stack are a client automated through PolyMod or a re-implemented headless client with the game's protocol. Play in
+  Might on Tiny and Small maps, and the name, suggest a small hobby project. Its strength is unknown; treat "BPolait
+  plays like a good human" as untested.
+- **What to do about it:** the benchmark plan in gameplan 6 stands (private games, opponent tagged). Because nothing is
+  known about it, the first 20 games should be used to *characterise* it (win rate, game length, opening, units built)
+  rather than to rate us. Ask Kenzi where he found the friend code; the source may name the author.
 
 ## 3. Recommendations
 
-To be completed in the next edit.
+Ranked by (expected gain x confidence) over cost. "Elo" figures are my estimates, not measurements.
+
+1. **Test whether the value head can rank turns, before building any search or search-target work (new, cost: 1 to 2
+   days).** Take positions at the start of our turns from rl3 self-play, generate several candidate turns per
+   position (policy samples and the top-k plans), play each out to the end of the game a few times, and measure the
+   rank correlation between the end-of-turn value and the realised outcome. If correlation is near zero within a
+   position, search and search-improved targets (gameplan 4) will not help whatever the budget; if it is clearly
+   positive, search is worth fixing. Reason: our search gave nothing on rl3 and the comparable project's value-head
+   planning lost (30%, 2.1); this makes the dependency explicit and cheap to test. Gain: avoids a possibly wasted
+   multi-week item; uncertainty is about the test itself.
+2. **Add a human-data track as the lead strategic item, and find a corpus (new, cost: medium to high, mostly
+   acquisition).** The only strong result I found in the field (94% against Crazy, 2.1) came from fine-tuning on
+   human championship games after cloning the built-in AI, the same starting point as ours. This is the largest
+   documented jump and it is not on our plan (gameplan 3 mentions "later human replays" only as scenario seeds).
+   First step: find out how the game exposes finished games (the live-play interface likely already speaks the
+   protocol) and whether replays can be fetched by id; do not copy their scraping scale without checking the terms.
+   Expected gain: potentially the largest of any item (tens of points of Crazy win rate for them); for us unknown
+   because rl3 starts from a higher point (79% against Crazy) and our formats differ.
+3. **Do the cheap recipe changes now, each as a short A/B on the rl3 line (cost: hours of GPU each).** (a) EMA of the
+   weights as the exported checkpoint (Generals.io result, 1.2); (b) entropy coefficient to zero or a schedule if
+   entropy rises (bengreff's divergence, 2.1); (c) a moving KL anchor in the R-NaD style (1.3); (d) larger PPO batches
+   (OpenAI Five, 1.2). Gain: +10 to +60 Elo combined, plausible but low confidence; cost: very low; they also
+   make later feature work easier to read.
+4. **Keep belief heads (1A) and per-action features (2) at the top of the plan, in that order of cost, and add the free
+   labels (opponent techs, income and city count ahead, final ownership) to 1A (gameplan 1, 2).** Both are cheap, and
+   both can be added to rl3 with zero-initialised new inputs (surgery, 1.2), so each A/B is a short run, not a restart.
+   Expect +20 to +80 Elo from features and 0 to +40 from heads; read them with paired tests on identical seeds
+   (bengreff's method) at 400 games.
+5. **Add a first exploiter run to league training and make it a diagnostic (gameplan 4, cost: one short run).** Train a
+   fresh copy from rl3 for about 100 updates with no BC anchor, only against rl3. A win rate above 55% against rl3
+   says what rl3 is weak to and gives the scenario curriculum its data; a win rate near 50% says rl3 is more robust
+   than the retail suite suggests. Gain: information first, robustness second.
+6. **Demote the scenario curriculum and opening book until diagnostics exist (gameplan 3).** The only direct
+   test found (human midgame starts, 2.1) lost to its control (45.6%, 800 games), and our own might1 result (45.1%
+   against its parent) shows how easily training gains do not transfer. Keep the book (cheap, checkable in the arena);
+   keep the curriculum only for positions the exploiter or live games show we lose.
+7. **Keep Rust collector and batching (gameplan 5) early.** Every item above that needs many games (exploiters,
+   A/Bs at 400 games, any search targets) is gated by games per hour, and retail seats are 93% of CPU. This is the one
+   item that makes the others cheaper, and nothing in the literature argues against it.
+8. **Move honest-under-fog search (1C) and search-improved targets (gameplan 4) behind recommendation 1.** PolyEnv's
+   belief-world API is the best reference for the design (hypothesis checked against what the player has seen,
+   synthetic seed for hidden randomness). Do not start before the value test passes.
+9. **Drop or defer:** MuZero-style learned dynamics (we have an exact simulator), ReBeL and Student of Games (no
+   tractable public state), dense per-cell policy heads (speed is not the limit), hand-written macro actions (already
+   not planned), opponent-style encoders (until we know we lose to a style), 8-way test-time augmentation for
+   training (use only in live play, 1.2).
+10. **Measure and report per cell, as bengreff does.** A pooled 79% hides weak matchups; the Might suite should publish
+    a tribe-pair by seat table, so the exploiter and the human-data track have targets. Cost: an arena report change.
+
+### Things I would not rely on
+
+- The size of any Elo estimate above. None has been measured here; they are ranges from reading and judgement.
+- The claim that human fine-tuning will transfer to us: one project, one format, one engine build.
+- Anything about BPolait beyond "not found".
+
+### Source count
+
+About 45 distinct sources touched: 8 Polytopia repositories read in some depth (bengreff, Polyfish, PolyEnv, Tribes,
+PolyVision, polytopia-claude, andytam101, Lux AI write-up) plus 7 more repositories seen only by name or README head;
+about 28 papers (arXiv ids resolved for their titles and abstracts where marked "title checked"; most method
+descriptions are from memory and are marked "recalled"); 4 searches that returned nothing useful for BPolait.
