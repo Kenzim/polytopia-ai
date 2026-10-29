@@ -53,7 +53,7 @@ The same numbers appear as `belief` in the `val` records of `metrics.jsonl`.
 ## Results (2026-10-29)
 
 Data: `bc-might-truth`, 20,000 Might games from seeds 50001..70000 (default 1v1-weighted mix), written with `--truth`;
-135 shards to train and 10 held out (every 15th). Both arms fine-tune `might1_b6c96/ckpt_final.pt` (b6c96) by behaviour
+139 shards to train and 10 held out (7.4M positions in 149 shards). Both arms fine-tune `might1_b6c96/ckpt_final.pt` (b6c96) by behaviour
 cloning: 12,000 steps, batch 256, lr 2e-4, warm-up 100, seed 0. Arm A (`truthab_b0`) has belief weight 0; arm B
 (`truthab_b1`) has weight 0.5 and 32-wide heads (1.59M params; the heads are dropped at play time).
 
