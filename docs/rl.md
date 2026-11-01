@@ -118,6 +118,20 @@ Rollouts: `games` 128 in flight, `rollout_steps` 16384 learner decisions per upd
 torch threads), `torch_threads`, `bf16` (autocast in the update on CUDA; inference is bf16 on CUDA as in
 `ModelPolicy`), `max_batch`, `need_gb`, `device`, `seed`, `resume`.
 
+## Faster rollouts (opt-in, defaults unchanged)
+
+- `--infer-graphs` / `--infer-compile`: rollout inference on a few fixed padded shapes, captured in CUDA graphs and/or
+  `torch.compile`d (`polyai/infer_fast.py`; one shared runner per architecture, so a pool snapshot costs no capture).
+  Same logits as the eager path up to bf16 rounding (`tests/test_infer_fast.py`). `tools/bench_infer.py CKPT` times
+  `NetPolicy.choose` per call on realistic positions. On the shared RTX 3060 at 100% load (b6c96, median ms per call,
+  speed-up of `--infer-graphs --infer-compile` over eager): 4 rows x1.22, 8 x1.00, 16 x1.03, 32 x1.04, 64 x1.14,
+  128 x1.63; graphs alone were not faster there (0.7 to 1.1x). Needs about 0.3 GB more GPU memory. Worth trying on a
+  free GPU; measure before relying on it.
+- `--collector rust`: the arm scheduling, inference batching, learner rows and GAE in the engine module
+  (`docs/collector.md`). Same rollout content, same `ppo_update`; 2 to 6% more decisions per second with the retail AI in
+  the pool, 4 times in a collector-bound self-play profile, no difference when a loaded GPU dominates.
+  `tools/profile_collector.py [--collector rust] [--ckpt CKPT]` measures it.
+
 ## Recipe options
 
 Four options for the self-play recipe, each behind a flag whose default reproduces the update as it was (a test and a
