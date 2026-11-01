@@ -72,6 +72,18 @@ takes an `AllowedGame`, which only our own or matchmaking games can become (`cli
 (`py/cm_replays.py` is a public reference for the GraphQL walk; I have not run it and would need the key), or lists of
 share links from the community. The weekly leaderboard alone gives only solo-versus-AI games.
 
+**Getting a Challengermode refresh key** (checked 2026-11-01 on challengermode.com/developers):
+1. Create a free Challengermode account (`/account/register`).
+2. In the developer dashboard (`/developers/applications`) choose Create application.
+3. In the application's credentials tab, generate a refresh key. It is shown once.
+4. Store it in `~/.config/polytopia/challengermode_refresh_key` on the dev host (mode 0600, never in git).
+
+The key is exchanged at `POST https://publicapi.challengermode.com/mk1/v1/auth/access_keys` for a bot token that
+lasts 20 minutes; bot tokens can read public tournament data. The developer pricing page says a free account and
+application work but are rate-limited, and applications must be approved by Challengermode before launch; it does not
+say whether read-only public-data use needs approval. The paid plans (from EUR 149 a month) are for game integrations
+and are not needed here.
+
 ## 4. Replay and shards (built, tested)
 
 `crates/polyai-human` (binary `polyai-human`, its own crate; `shard.rs` and `npz.rs` of `polyai-gen` are included by
