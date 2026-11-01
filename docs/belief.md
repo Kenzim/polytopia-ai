@@ -87,3 +87,34 @@ behaviour cloning on this dataset wrecks play whatever the belief weight. The re
 teacher than the self-play policy it starts from. The A/B therefore says little about whether belief heads help a
 strong policy; a fair test needs the belief loss added to RL (or BC on stronger-play data) and a policy that starts
 and stays strong.
+
+## Belief loss in RL (2026-11-01)
+
+PPO takes `--belief-weight W` (default 0, bit-for-bit the old loss) and `--belief-warmup N`. Truth labels come from the
+engine at rollout time (`VecEnv(truth=True)`, `Game.truth`), are masked to hidden tiles as in BC, and never enter the
+model inputs; two scalar labels are added (opponent city count, opponent tech count). Fresh heads read the trunk with a
+stop-gradient for the first N updates: without that (first attempt, `beliefrl_b6c96_nowarm_aborted`) the random heads
+pushed large gradients into the trunk (clip fraction 0.39, KL to the BC reference doubled in the first update) and the
+run was stopped after 19 updates.
+
+Arm: `beliefrl_b6c96`, weight 0.5, warm-up 5, from `rl3_b6c96/ckpt_u00480.pt`, otherwise exactly the `might1_b6c96`
+config (Might, 300 updates, 384 games, 32,768 decisions per update). Control: `might1_b6c96/ckpt_u00300.pt` (same
+init, same recipe, no belief loss). Might 1v1 suite, 200 seeds, both seats, 400 games, CPU, greedy, 95% Wilson CI:
+
+| match | W-L-D | score (95% CI) |
+|---|---|---|
+| belief vs control (head to head) | 230-165-5 | 58.1% (53.2 to 62.9) |
+| belief vs retail:hard | 369-31-0 | 92.2% (89.2 to 94.5) |
+| control vs retail:hard | 354-45-1 | 88.6% (85.1 to 91.4) |
+| belief vs retail:crazy | 320-80-0 | 80.0% (75.8 to 83.6) |
+| control vs retail:crazy | 298-102-0 | 74.5% (70.0 to 78.5) |
+
+Belief accuracy at u300 on the BC held-out shards (hidden tiles, 25.0M), against the same baselines as above:
+terrain acc 0.477 (baseline 0.332, skill 0.180), resource skill 0.076, site 0.186, enemy city 0.336, enemy capital 0.298,
+unit 0.141. Enemy capital is the top-1 hidden land tile in 32.6% of positions (uniform 3.6%), top 3 in 56.1% (10.6%).
+These beat the BC-trained heads (`truthab_b1`: terrain 0.150, city 0.300, capital top-1 29.2%) although the heads
+were trained on RL positions only.
+
+Reading: with the belief loss PPO is stronger than the control by 3 to 6 points against every opponent and by 58.1%
+head to head, a gap whose CI excludes 50%. It is one run per arm, so seed-to-seed variation of RL is not measured; a
+second seed of each arm would be needed before calling the effect settled.
