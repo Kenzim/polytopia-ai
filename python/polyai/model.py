@@ -225,13 +225,15 @@ class PolyNet(nn.Module):
         action_mask: torch.Tensor,
         board_mask: torch.Tensor | None = None,
         belief: bool = False,
+        belief_detach: bool = False,
         f_tiles: torch.Tensor | None = None,
         f_globals: torch.Tensor | None = None,
         f_actions: torch.Tensor | None = None,
     ) -> ModelOutput | BeliefOutput:
         """tiles int [B, H, W, F]; globals [B, G]; actions int [B, A, 4] = (kind, arg, src, dst) with -1 for no
         tile; action_mask bool [B, A] (True = real legal action); board_mask optional bool [B, H, W]. With `belief`
-        (and a model that has the heads) the output also carries the belief logits. `f_tiles`, `f_globals` and `f_actions`
+        (and a model that has the heads) the output also carries the belief logits; with `belief_detach` the heads read the
+        trunk through a stop-gradient, so the belief loss trains only the heads. `f_tiles`, `f_globals` and `f_actions`
         (float [B, A, FEAT_A], padded like `actions`) are the optional engine features, used only by a model built
         with `ModelConfig.features`."""
         b, h, w, _ = tiles.shape
@@ -274,10 +276,11 @@ class PolyNet(nn.Module):
 
         value = self.value_mlp(F.relu(g)).float()
         if belief and self.belief_heads is not None:
+            bfeat, bg = (feat.detach(), g.detach()) if belief_detach else (feat, g)
             scalars = None
             if self.belief_scalar_head is not None:
-                scalars = self.belief_scalar_head(F.relu(g)).float()
-            return BeliefOutput(logits, value, tuple(head(feat).float() for head in self.belief_heads), scalars)
+                scalars = self.belief_scalar_head(F.relu(bg)).float()
+            return BeliefOutput(logits, value, tuple(head(bfeat).float() for head in self.belief_heads), scalars)
         return ModelOutput(logits, value)
 
 

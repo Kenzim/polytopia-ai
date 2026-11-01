@@ -139,6 +139,9 @@ class RLConfig:
     belief_weight: float = 0.0
     belief_hidden: int = 32  # width of each belief head
     belief_lr_mult: float = 1.0  # learning-rate factor of the (fresh) belief heads
+    # The first updates train only the fresh heads (they read the trunk through a stop-gradient): random heads would
+    # otherwise push large gradients into the trunk and drag the policy away from where it starts.
+    belief_warmup: int = 0
 
 
 # ---------------------------------------------------------------------------------------------------------------
@@ -378,7 +381,8 @@ def ppo_update(model: PolyNet, ref: PolyNet | None, opt: torch.optim.Optimizer, 
             if use_belief:
                 mb.update(truth=tens(d["truth"]), truth_mask=tens(d["truth_mask"]), truth_g=tens(d["truth_g"]))
             with torch.autocast(device.type, dtype=torch.bfloat16, enabled=cfg.bf16 and device.type == "cuda"):
-                out = model(tiles, globals_, actions, mask, **feats, **({"belief": True} if use_belief else {}))
+                out = model(tiles, globals_, actions, mask, **feats,
+                            **({"belief": True, "belief_detach": update < cfg.belief_warmup} if use_belief else {}))
                 ref_logits = None
                 if ref is not None:
                     with torch.no_grad():

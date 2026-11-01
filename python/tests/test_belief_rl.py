@@ -122,6 +122,18 @@ def test_belief_gradient_reaches_the_trunk_and_the_heads_only():
                    for n, g in grads.items())  # the policy and value heads are untouched
 
 
+def test_belief_detach_trains_only_the_heads_and_leaves_the_outputs_alone():
+    model = add_belief(tiny_model(), hidden=8)
+    model.eval()
+    _, inputs, mb = belief_batch(model)
+    a, b = model(*inputs, belief=True), model(*inputs, belief=True, belief_detach=True)
+    assert all(torch.equal(x, y) for x, y in zip(a.belief, b.belief)) and torch.equal(a.policy_logits, b.policy_logits)
+    cfg = RLConfig(device="cpu", belief_weight=1.0, vf_coef=0.0, ent_coef=0.0)
+    ppo_loss(b, None, mb, cfg, kl_coef=0.0, policy_scale=0.0)["loss"].backward()
+    grads = {n for n, p in model.named_parameters() if p.grad is not None and p.grad.abs().sum() > 0}
+    assert grads and all(n.startswith(BELIEF_PREFIXES) for n in grads)
+
+
 def test_scalar_loss_is_a_scaled_mean_squared_error():
     pred = torch.tensor([[0.5, 1.0], [0.0, 0.0]])
     truth_g = torch.tensor([[5.0, 20.0], [0.0, 10.0]])
@@ -174,7 +186,7 @@ def test_checkpoints_with_heads_load_plain_everywhere_and_with_heads_on_request(
 
 def test_belief_flags_parse_and_default_to_off():
     cfg = parse_args(["--init", "x"])
-    assert cfg.belief_weight == 0.0 and cfg.belief_lr_mult == 1.0
+    assert cfg.belief_weight == 0.0 and cfg.belief_lr_mult == 1.0 and cfg.belief_warmup == 0
     cfg = parse_args(["--init", "x", "--belief-weight", "0.5", "--belief-hidden", "16", "--belief-lr-mult", "10"])
     assert (cfg.belief_weight, cfg.belief_hidden, cfg.belief_lr_mult) == (0.5, 16, 10.0)
 
