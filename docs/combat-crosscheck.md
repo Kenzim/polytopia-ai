@@ -21,10 +21,10 @@ All nine agree. Points where calculators may differ from the engine, none confir
 
 - Poison: the engine halves the bonus with a shift (version ≥115: 1.5 → 0.7, not 0.75; ≤114 flat 0.7) and keeps the
   unhalved defence for retaliation. A calculator using 0.75, or halved defence in retaliation, can differ by 1 HP in
-  edge cases. Whether retail uses 0.7 or 0.75 is worth confirming against the decompiled code (`re/`).
+  edge cases. Confirmed by the engine manager against the decompiled game (ledger 750f802b): retail uses 0.7
+  (whole-number halving from version 115 on), as the engine does, so calculators using 0.75 are the ones that differ.
 - Rounding: half up, as JS `Math.round`; a round-half-to-even calculator would give 4 for 4.5.
 - City bonus replaces the terrain bonus and needs the Fortify ability; no fortify bonus outside cities.
 - Splash re-runs the calculation per neighbour, halves and truncates to whole HP; splash plus poison only poisons.
 
-Conclusion: no engine discrepancy found. The poison 0.7 vs 0.75 question goes to the project chat for the engine
-manager to confirm against the decompiled game.
+Conclusion: no engine discrepancy found. The poison value is settled at 0.7.
