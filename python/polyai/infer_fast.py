@@ -11,6 +11,11 @@ logits up to rounding. The forward is `PolyNet.forward_flat`, which takes the le
 finding them with `nonzero` (a data-dependent shape cannot be captured); the legal list is not padded per row, so the
 policy head costs what it does in the eager path.
 
+Sharing: the networks of one run (learner, reference, pool snapshots) have one architecture, so they share one runner: a
+private copy of the network with its compiled function and captured graphs. A call copies the caller's weights into the
+runner's parameters (a single fused copy, microseconds) and replays; a new snapshot therefore costs no capture or
+compilation, and the learner's weights, which change in place at every update, need no tracking.
+
 Memory: all graphs of a device share one memory pool (they replay one at a time on one stream) and one set of input
 buffers per shape, so the cost is the largest graph's activations, not the sum. Shapes above `max_actions` and
 anything that fails to capture fall back to the eager path, counted in `stats`.
@@ -18,31 +23,40 @@ anything that fails to capture fall back to the eager path, counted in `stats`.
 
 from __future__ import annotations
 
+import copy
+
 import torch
 
 from . import schema as S
 from .model import MASK_FILL
 
-MIN_ROWS = 4
-MIN_ACTIONS = 128
 MAX_ACTIONS = 1 << 19  # flat legal actions of one padded call; larger ones run eagerly
 
 _POOLS: dict[torch.device, tuple] = {}
 _BUFFERS: dict[tuple, "_Buffers"] = {}
+_RUNNERS: dict[tuple, "_Runner"] = {}
 
 
-def _pow2(n: int, floor: int) -> int:
-    return max(floor, 1 << (max(n, 1) - 1).bit_length())
+ROW_STEPS = (4, 8, 12, 16, 24, 32, 48, 64, 80, 96, 128, 160, 192, 256)
+ACTION_STEPS = (128, 192, 256, 384, 512, 768, 1024, 1536, 2048, 3072, 4096)
+
+
+def _bucket(n: int, steps: tuple) -> int:
+    """The smallest step holding `n`; beyond the table, the next multiple of its last step."""
+    for s in steps:
+        if n <= s:
+            return s
+    return -(-n // steps[-1]) * steps[-1]
 
 
 def bucket_rows(n: int) -> int:
-    """The padded batch size for `n` rows: the next power of two, at least `MIN_ROWS`."""
-    return _pow2(n, MIN_ROWS)
+    """The padded batch size for `n` rows (steps of at most a third more, so little compute is spent on padding)."""
+    return _bucket(n, ROW_STEPS)
 
 
 def bucket_actions(n: int) -> int:
-    """The padded length of the flat legal-action list for `n` actions: the next power of two, at least `MIN_ACTIONS`."""
-    return _pow2(n, MIN_ACTIONS)
+    """The padded length of the flat legal-action list for `n` actions (steps of at most a half more)."""
+    return _bucket(n, ACTION_STEPS)
 
 
 def _graph_pool(device: torch.device):
@@ -88,49 +102,40 @@ class _Buffers:
         return (self.tiles, self.globals, self.bmask, self.act_b, self.actions), self.feats
 
 
-class FastForward:
-    """`PolyNet.forward_flat` of one network on padded buckets, compiled and/or graph-captured per bucket.
+class _Runner:
+    """A private copy of a network (one per architecture, device and mode) with its compiled function and graphs."""
 
-    `__call__` takes what `ModelPolicy.choose` has collated for a chunk and returns (policy_logits [B, A],
-    winner_logits [B, 9]) as `PolyNet.forward` would, or None when the chunk is not handled (the caller then runs the
-    eager path). Outputs of a graph replay live in the shared pool and are copied out before the next call."""
-
-    def __init__(self, model, device: torch.device, graphs: bool = False, compile: bool = False,
-                 max_actions: int = MAX_ACTIONS):
-        self.model = model
-        self.device = torch.device(device)
-        self.graphs = graphs and self.device.type == "cuda"
-        self.compile = compile
-        self.max_actions = max_actions
-        self.fn = model.forward_flat
+    def __init__(self, model, device: torch.device, graphs: bool, compile: bool):
+        self.model = copy.deepcopy(model).to(device).eval()
+        for p in self.model.parameters():
+            p.requires_grad_(False)
+        self.device = device
+        self.graphs = graphs and device.type == "cuda"
+        self.dst = [t for _, t in self._tensors(self.model)]
+        self.fn = self.model.forward_flat
         if compile:
             import torch._dynamo.config as dyn
 
             dyn.cache_size_limit = max(dyn.cache_size_limit, 512)  # one entry per padded shape
             dyn.accumulated_cache_size_limit = max(dyn.accumulated_cache_size_limit, 4096)
-            self.fn = torch.compile(model.forward_flat, dynamic=False)
+            self.fn = torch.compile(self.model.forward_flat, dynamic=False)
         self.entries: dict[tuple, tuple | None] = {}
         self.last_error = ""
         self.stats = {"graph_replays": 0, "graph_captures": 0, "padded_calls": 0, "eager_calls": 0, "capture_failures": 0}
 
+    @staticmethod
+    def _tensors(model):
+        return [*model.named_parameters(), *model.named_buffers()]
+
+    def load(self, model) -> None:
+        """Copy `model`'s weights and statistics into the runner (in place: the graphs read these tensors)."""
+        src = [t.detach() for _, t in self._tensors(model)]
+        torch._foreach_copy_(self.dst, src)
+
     def _autocast(self):
         return torch.autocast(self.device.type, dtype=torch.bfloat16, enabled=self.device.type == "cuda")
 
-    def __call__(self, tiles, globals_, actions, mask, bmask, feats):
-        b, h, w = tiles.shape[:3]
-        bi, ai = mask.nonzero(as_tuple=True)
-        t = bi.numel()
-        if t > self.max_actions:
-            self.stats["eager_calls"] += 1
-            return None
-        bq, tq = bucket_rows(b), bucket_actions(t)
-        key = (bq, tq, h, w, tiles.dtype, tuple(sorted(feats)), self.device)
-        bufs = _BUFFERS.get(key)
-        if bufs is None:
-            bufs = _BUFFERS[key] = _Buffers(key, tiles, globals_, feats, self.device)
-        flat_feats = {k: (v[bi, ai] if k == "f_actions" else v) for k, v in feats.items()}
-        bufs.fill(tiles, globals_, bmask, bi, actions[bi, ai], flat_feats)
-        pos, kw = bufs.args()
+    def run(self, key, pos, kw):
         out = None
         if self.graphs:
             entry = self.entries.get(key, False)
@@ -144,9 +149,7 @@ class FastForward:
             with self._autocast():
                 out = self.fn(*pos, **kw)
             self.stats["padded_calls"] += 1
-        flat, winner = out
-        logits = torch.full(mask.shape, MASK_FILL, dtype=torch.float32, device=mask.device)
-        return logits.index_put((bi, ai), flat[:t]), winner[:b].clone()
+        return out
 
     def _capture(self, pos, kw):
         try:
@@ -166,3 +169,52 @@ class FastForward:
             return None
         self.stats["graph_captures"] += 1
         return graph, out
+
+
+def _arch(model) -> tuple:
+    return tuple((k, tuple(v.shape), v.dtype) for k, v in model.state_dict().items())
+
+
+class FastForward:
+    """`PolyNet.forward_flat` of one network on padded buckets, compiled and/or graph-captured per bucket (in a runner
+    shared with the other networks of the same architecture).
+
+    `__call__` takes what `ModelPolicy.choose` has collated for a chunk and returns (policy_logits [B, A],
+    winner_logits [B, 9]) as `PolyNet.forward` would, or None when the chunk is not handled (the caller then runs the
+    eager path). Outputs of a graph replay live in the shared pool and are copied out before the next call."""
+
+    def __init__(self, model, device: torch.device, graphs: bool = False, compile: bool = False,
+                 max_actions: int = MAX_ACTIONS):
+        self.model = model
+        self.device = torch.device(device)
+        self.max_actions = max_actions
+        key = (self.device, graphs and self.device.type == "cuda", compile, _arch(model))
+        if key not in _RUNNERS:
+            _RUNNERS[key] = _Runner(model, self.device, graphs, compile)
+        self.runner = _RUNNERS[key]
+        self.graphs = self.runner.graphs
+        self.stats = self.runner.stats
+
+    @property
+    def last_error(self) -> str:
+        return self.runner.last_error
+
+    def __call__(self, tiles, globals_, actions, mask, bmask, feats):
+        b, h, w = tiles.shape[:3]
+        bi, ai = mask.nonzero(as_tuple=True)
+        t = bi.numel()
+        if t > self.max_actions:
+            self.stats["eager_calls"] += 1
+            return None
+        bq, tq = bucket_rows(b), bucket_actions(t)
+        key = (bq, tq, h, w, tiles.dtype, tuple(sorted(feats)), self.device)
+        bufs = _BUFFERS.get(key)
+        if bufs is None:
+            bufs = _BUFFERS[key] = _Buffers(key, tiles, globals_, feats, self.device)
+        flat_feats = {k: (v[bi, ai] if k == "f_actions" else v) for k, v in feats.items()}
+        bufs.fill(tiles, globals_, bmask, bi, actions[bi, ai], flat_feats)
+        pos, kw = bufs.args()
+        self.runner.load(self.model)
+        flat, winner = self.runner.run(key, pos, kw)
+        logits = torch.full(mask.shape, MASK_FILL, dtype=torch.float32, device=mask.device)
+        return logits.index_put((bi, ai), flat[:t]), winner[:b].clone()

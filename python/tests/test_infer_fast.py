@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 import torch
 
-from polyai import schema as S
+from polyai import infer_fast, schema as S
 from polyai.infer_fast import FastForward, bucket_actions, bucket_rows
 from polyai.model import ModelConfig, add_features, build_model
 from polyai.policy import collate, collate_features
@@ -16,6 +16,13 @@ from test_arena import fake_obs
 from test_features import feature_batch, randomise_features, tiny
 
 CPU = torch.device("cpu")
+
+
+@pytest.fixture(autouse=True)
+def fresh_runners():
+    infer_fast._RUNNERS.clear()
+    infer_fast._BUFFERS.clear()
+    yield
 
 
 def tiny_model(seed: int = 0):
@@ -39,8 +46,8 @@ def assert_same_choices(a, b, atol=1e-4):
 
 
 def test_buckets():
-    assert [bucket_rows(n) for n in (1, 4, 5, 8, 9, 100, 256)] == [4, 4, 8, 8, 16, 128, 256]
-    assert [bucket_actions(n) for n in (1, 128, 129, 1000)] == [128, 128, 256, 1024]
+    assert [bucket_rows(n) for n in (1, 4, 5, 13, 100, 256, 257, 600)] == [4, 4, 8, 16, 128, 256, 512, 768]
+    assert [bucket_actions(n) for n in (1, 128, 129, 1000, 5000)] == [128, 128, 192, 1024, 8192]
 
 
 def test_forward_flat_equals_forward_on_the_listed_actions():
@@ -57,7 +64,7 @@ def test_forward_flat_equals_forward_on_the_listed_actions():
 
 def test_fast_policy_matches_eager_choices_sampled_and_greedy():
     model = tiny_model()
-    eager, fast = pair(model, infer_graphs=True)  # no CUDA here: the padded dense path
+    eager, fast = pair(model, infer_graphs=True)  # no CUDA here: the padded flat path
     assert fast.fast is not None and not fast.fast.graphs
     obs = fake_obs(lens=(4, 9, 1, 6, 3), size=11, seed=1)
     assert_same_choices(eager.choose(obs, temperature=1.0), fast.choose(obs, temperature=1.0))
@@ -97,6 +104,21 @@ def test_oversized_calls_fall_back_to_eager():
     obs = fake_obs(lens=(40, 3), size=11, seed=4)
     tiles, glob, actions, mask = collate(obs, np.arange(2), CPU)
     assert ff(tiles, glob, actions, mask, None, {}) is None and ff.stats["eager_calls"] == 1
+
+
+def test_networks_of_one_architecture_share_a_runner_and_keep_their_own_weights():
+    m1, m2 = tiny_model(1), tiny_model(2)
+    e1, e2 = NetPolicy(m1, "e1", CPU, seed=5), NetPolicy(m2, "e2", CPU, seed=5)
+    f1, f2 = (NetPolicy(m, "f", CPU, seed=5, infer_graphs=True) for m in (m1, m2))
+    assert f1.fast.runner is f2.fast.runner and len(infer_fast._RUNNERS) == 1
+    obs = fake_obs(lens=(4, 9, 1, 6), size=11, seed=1)
+    for _ in range(2):  # alternating calls: each sees its own weights
+        assert_same_choices(e1.choose(obs, temperature=1.0), f1.choose(obs, temperature=1.0))
+        assert_same_choices(e2.choose(obs, temperature=1.0), f2.choose(obs, temperature=1.0))
+    with torch.no_grad():  # in-place weight updates (the learner after a PPO step) are picked up
+        for p in m1.parameters():
+            p.mul_(1.1)
+    assert_same_choices(e1.choose(obs, temperature=1.0), f1.choose(obs, temperature=1.0))
 
 
 def test_off_by_default():
