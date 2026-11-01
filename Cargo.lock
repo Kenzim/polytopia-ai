@@ -271,6 +271,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "polyai-human"
+version = "0.1.0"
+dependencies = [
+ "polyai-core",
+ "polytopia-sim",
+ "zip",
+]
+
+[[package]]
 name = "polyai-py"
 version = "0.1.0"
 dependencies = [

@@ -1,0 +1,12 @@
+[package]
+name = "polyai-human"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "Replay finished human games (server blobs) through the engine and write source=3 training shards"
+
+[dependencies]
+polyai-core = { path = "../polyai-core" }
+polytopia-sim.workspace = true
+zip = { version = "2", default-features = false, features = ["deflate"] }
