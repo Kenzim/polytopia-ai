@@ -26,6 +26,9 @@ class ModelConfig:
     # Width of the auxiliary belief heads (one small conv head per truth channel, docs/belief.md); 0 = no heads. The key
     # is left out of `to_dict` when 0, so a config without heads is exactly what it was before the heads existed.
     belief_hidden: int = 0
+    # With belief heads, one more small head on the pooled vector for the scalar truth of `schema.TRUTH_G_NAMES` (RL
+    # only: the shards carry no scalar labels). Left out of `to_dict` when False.
+    belief_scalars: bool = False
     # Engine features (encoding.md section 12) as extra inputs, all zero-initialised so the model starts as the same
     # function without them: tiles through a 3x3 conv into the trunk input, globals through a linear layer into the
     # global vector, actions through a linear layer into the policy MLP's first layer. Left out of `to_dict` when False.
@@ -35,6 +38,8 @@ class ModelConfig:
         d = asdict(self)
         if not d["belief_hidden"]:
             del d["belief_hidden"]
+        if not d["belief_scalars"]:
+            del d["belief_scalars"]
         if not d["features"]:
             del d["features"]
         return d
@@ -67,6 +72,7 @@ class BeliefOutput(NamedTuple):
     policy_logits: torch.Tensor
     winner_logits: torch.Tensor
     belief: tuple[torch.Tensor, ...]  # per truth channel [B, V, H, W] logits
+    scalars: torch.Tensor | None = None  # [B, TRUTH_G] predictions of the scalar truth, when the model has that head
 
 
 def masked_mean_max(x: torch.Tensor, mask: torch.Tensor | None) -> torch.Tensor:
@@ -146,6 +152,12 @@ class PolyNet(nn.Module):
             self.belief_heads = nn.ModuleList(
                 [nn.Sequential(nn.Conv2d(c, bh, 3, padding=1), nn.ReLU(), nn.Conv2d(bh, v, 1)) for v in S.TRUTH_VOCABS]
             )
+        self.belief_scalar_head = None
+        if cfg.belief_scalars:
+            if cfg.belief_hidden <= 0:
+                raise ValueError("belief_scalars needs belief_hidden > 0")
+            self.belief_scalar_head = nn.Sequential(nn.Linear(c, cfg.belief_hidden), nn.ReLU(),
+                                                    nn.Linear(cfg.belief_hidden, S.TRUTH_G))
         # Engine features, zero-initialised additions (see ModelConfig.features).
         self.feat_tile_conv = self.feat_global_proj = self.feat_action_proj = None
         if cfg.features:
@@ -262,7 +274,10 @@ class PolyNet(nn.Module):
 
         value = self.value_mlp(F.relu(g)).float()
         if belief and self.belief_heads is not None:
-            return BeliefOutput(logits, value, tuple(head(feat).float() for head in self.belief_heads))
+            scalars = None
+            if self.belief_scalar_head is not None:
+                scalars = self.belief_scalar_head(F.relu(g)).float()
+            return BeliefOutput(logits, value, tuple(head(feat).float() for head in self.belief_heads), scalars)
         return ModelOutput(logits, value)
 
 
@@ -271,6 +286,7 @@ def build_model(name_or_cfg: str | ModelConfig) -> PolyNet:
     return PolyNet(cfg)
 
 
+BELIEF_PREFIXES = ("belief_heads.", "belief_scalar_head.")  # parameter names of the belief heads
 FEAT_PREFIX = "feat_"  # parameter names of the engine-feature inputs
 FEAT_KEYS = ("f_tiles", "f_globals", "f_actions")
 
@@ -299,6 +315,18 @@ def add_features(model: PolyNet) -> PolyNet:
     return new.to(next(model.parameters()).device).train(model.training)
 
 
+def add_belief(model: PolyNet, hidden: int = 32, scalars: bool = True) -> PolyNet:
+    """A copy of a model with fresh belief heads added (for RL from a plain checkpoint). The policy and value are
+    unchanged: the heads only read the trunk."""
+    if model.cfg.belief_hidden:
+        return model
+    new = build_model(replace(model.cfg, belief_hidden=hidden, belief_scalars=scalars))
+    missing, unexpected = new.load_state_dict(model.state_dict(), strict=False)
+    if unexpected or any(not k.startswith(BELIEF_PREFIXES) for k in missing):
+        raise ValueError(f"cannot add belief heads: missing {missing}, unexpected {unexpected}")
+    return new.to(next(model.parameters()).device).train(model.training)
+
+
 def win_probability(out: ModelOutput) -> torch.Tensor:
     """My win probability (slot 0 of the winner softmax)."""
     return F.softmax(out.winner_logits, dim=-1)[:, 0]
@@ -306,5 +334,5 @@ def win_probability(out: ModelOutput) -> torch.Tensor:
 
 __all__ = [
     "CONFIGS", "ModelConfig", "ModelOutput", "PolyNet", "build_model", "eval_pawns", "masked_mean_max",
-    "win_probability", "MASK_FILL", "add_features", "feature_inputs", "FEAT_PREFIX", "FEAT_KEYS",
+    "win_probability", "MASK_FILL", "add_features", "add_belief", "BELIEF_PREFIXES", "feature_inputs", "FEAT_PREFIX", "FEAT_KEYS",
 ]

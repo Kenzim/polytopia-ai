@@ -36,6 +36,27 @@ def belief_loss(logits: tuple[torch.Tensor, ...], truth: torch.Tensor, mask: tor
     return torch.stack(list(per.values())).mean(), per
 
 
+def scalar_loss(pred: torch.Tensor, truth_g: torch.Tensor) -> tuple[torch.Tensor, dict]:
+    """pred, truth_g [B, TRUTH_G]: mean squared error on the labels divided by `schema.TRUTH_G_SCALE`.
+    Returns (sum over the scalars of their loss, {name: its loss})."""
+    scale = torch.tensor(S.TRUTH_G_SCALE, dtype=torch.float32, device=pred.device)
+    err = ((pred.float() - truth_g.float() / scale) ** 2).mean(dim=0)
+    per = {name: err[i] for i, name in enumerate(S.TRUTH_G_NAMES)}
+    return err.sum(), per
+
+
+def full_belief_loss(out, truth: torch.Tensor, mask: torch.Tensor, truth_g: torch.Tensor | None = None
+                     ) -> tuple[torch.Tensor, dict]:
+    """The loss of a belief output (`BeliefOutput`): the per-tile cross entropies of `belief_loss` and, when the model
+    has the scalar head and `truth_g` is given, the scalar errors, all averaged with equal weight per term."""
+    map_loss, per = belief_loss(out.belief, truth, mask)
+    if out.scalars is None or truth_g is None:
+        return map_loss, per
+    s_sum, s_per = scalar_loss(out.scalars, truth_g)
+    total = (map_loss * len(per) + s_sum) / (len(per) + len(s_per))
+    return total, {**per, **s_per}
+
+
 def _top_hit_baseline(n: np.ndarray, k: np.ndarray, top: int) -> np.ndarray:
     """P(at least one of `top` tiles drawn uniformly from n candidates, k of them targets, is a target)."""
     miss = np.ones(len(n))

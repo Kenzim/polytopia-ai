@@ -190,6 +190,11 @@ TRUTH_CHANNELS: list[tuple[str, int]] = [
 TRUTH_NAMES = [n for n, _ in TRUTH_CHANNELS]
 TRUTH_VOCABS = [v for _, v in TRUTH_CHANNELS]
 TRUTH_K = len(TRUTH_CHANNELS)
+# Scalar truth per position (`VecEnv(truth=True)` key `truth_g` float32[B, TRUTH_G], RL only, not in shards): the other
+# players' cities in total and their techs per player, as the engine has them. Regression targets, divided by TRUTH_G_SCALE.
+TRUTH_G_NAMES = ["opp_cities", "opp_techs"]
+TRUTH_G = len(TRUTH_G_NAMES)
+TRUTH_G_SCALE = [10.0, 10.0]
 WATER_TERRAIN = (1, 2)  # engine terrain idx of water and ocean; every other terrain value is land
 
 # Engine feature keys written by `polyai-gen --features` and returned by `VecEnv(features=True)` (encoding.md section 12):

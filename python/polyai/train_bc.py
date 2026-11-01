@@ -29,7 +29,7 @@ import torch.nn.functional as F
 from . import schema as S
 from .belief import BeliefMeter, belief_loss
 from .data import BatchLoader
-from .model import (CONFIGS, FEAT_PREFIX, ModelConfig, ModelOutput, PolyNet, build_model, feature_inputs,
+from .model import (BELIEF_PREFIXES, CONFIGS, FEAT_PREFIX, ModelConfig, ModelOutput, PolyNet, build_model, feature_inputs,
                     win_probability)
 
 DEFAULT_RUNS_DIR = "/kvm/polytopia-ai-data/runs"
@@ -280,14 +280,12 @@ def load_checkpoint(path: str | Path, map_location: str = "cpu", belief: bool = 
     cfg = ModelConfig(**state["model_config"])
     weights = state["model"]
     if cfg.belief_hidden and not belief:
-        cfg.belief_hidden = 0
-        weights = {k: v for k, v in weights.items() if not k.startswith(BELIEF_PREFIX)}
+        cfg.belief_hidden, cfg.belief_scalars = 0, False
+        weights = {k: v for k, v in weights.items() if not k.startswith(BELIEF_PREFIXES)}
     model = build_model(cfg)
     model.load_state_dict(weights)
     return model
 
-
-BELIEF_PREFIX = "belief_heads."
 
 
 def load_init(model: PolyNet, path: str | Path) -> None:
@@ -296,17 +294,19 @@ def load_init(model: PolyNet, path: str | Path) -> None:
     the checkpoint has none (or are left out of the model when it has none)."""
     state = torch.load(path, map_location="cpu", weights_only=False)
     _check_heads(state, path)
-    ckpt_cfg = {k: v for k, v in state["model_config"].items() if k not in ("belief_hidden", "features")}
-    model_cfg = {k: v for k, v in model.cfg.to_dict().items() if k not in ("belief_hidden", "features")}
+    ckpt_cfg = {k: v for k, v in state["model_config"].items() if k not in ("belief_hidden", "belief_scalars", "features")}
+    model_cfg = {k: v for k, v in model.cfg.to_dict().items() if k not in ("belief_hidden", "belief_scalars", "features")}
     if ckpt_cfg != model_cfg:
         raise SystemExit(f"--init {path} was written by a different model configuration ({ckpt_cfg} against {model_cfg})")
     weights = state["model"]
-    if model.belief_heads is not None and state["model_config"].get("belief_hidden", 0) != model.cfg.belief_hidden:
-        weights = {k: v for k, v in weights.items() if not k.startswith(BELIEF_PREFIX)}
+    ck = state["model_config"]
+    if model.belief_heads is not None and (ck.get("belief_hidden", 0) != model.cfg.belief_hidden
+                                           or ck.get("belief_scalars", False) != model.cfg.belief_scalars):
+        weights = {k: v for k, v in weights.items() if not k.startswith(BELIEF_PREFIXES)}
     missing, unexpected = model.load_state_dict(weights, strict=False)
     # engine-feature inputs may be missing (a plain checkpoint starts a model with features: they stay zero) but not extra
-    bad = [k for k in missing if not k.startswith((BELIEF_PREFIX, FEAT_PREFIX))] + \
-        [k for k in unexpected if not k.startswith(BELIEF_PREFIX)]
+    bad = [k for k in missing if not k.startswith((*BELIEF_PREFIXES, FEAT_PREFIX))] + \
+        [k for k in unexpected if not k.startswith(BELIEF_PREFIXES)]
     if bad:
         raise SystemExit(f"--init {path}: weights do not fit the model: {bad[:5]}")
 

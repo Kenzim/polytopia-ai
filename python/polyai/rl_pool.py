@@ -29,6 +29,8 @@ OBS_ROW_KEYS = ("game", "seat", "n_players", "turn", "seed", "tiles", "globals")
 # Optional engine features (encoding.md section 12): f_tiles and f_globals have a row per position, f_actions one per
 # legal action like `actions`.
 FEAT_ROW_KEYS = ("f_tiles", "f_globals")
+# Optional truth labels (`VecEnv(truth=True)`, docs/belief.md): a row per position. Training targets only, never inputs.
+TRUTH_ROW_KEYS = ("truth", "truth_mask", "truth_g")
 
 
 def obs_len(g: dict) -> int:
@@ -43,7 +45,7 @@ def take(g: dict, sel: np.ndarray) -> dict:
         rows = np.concatenate([np.arange(act_off[i], act_off[i + 1]) for i in sel])
     else:
         rows = np.zeros(0, np.int64)
-    out = {k: np.asarray(g[k])[sel] for k in (*OBS_ROW_KEYS, *FEAT_ROW_KEYS) if k in g}
+    out = {k: np.asarray(g[k])[sel] for k in (*OBS_ROW_KEYS, *FEAT_ROW_KEYS, *TRUTH_ROW_KEYS) if k in g}
     out["act_off"] = np.concatenate([[0], np.cumsum(lens)]).astype(np.int32)
     out["actions"] = np.asarray(g["actions"])[rows]
     if "f_actions" in g:
@@ -56,7 +58,7 @@ def merge(groups: list[dict]) -> dict:
     if len(groups) == 1:
         return groups[0]
     lens = np.concatenate([np.diff(np.asarray(g["act_off"], dtype=np.int64)) for g in groups])
-    out = {k: np.concatenate([np.asarray(g[k]) for g in groups]) for k in (*OBS_ROW_KEYS, *FEAT_ROW_KEYS) if k in groups[0]}
+    out = {k: np.concatenate([np.asarray(g[k]) for g in groups]) for k in (*OBS_ROW_KEYS, *FEAT_ROW_KEYS, *TRUTH_ROW_KEYS) if k in groups[0]}
     out["act_off"] = np.concatenate([[0], np.cumsum(lens)]).astype(np.int32)
     out["actions"] = np.concatenate([np.asarray(g["actions"]) for g in groups])
     if "f_actions" in groups[0]:
@@ -127,6 +129,7 @@ class NetPolicy(ModelPolicy):
 
     def __init__(self, model: PolyNet, policy_id: str, device: torch.device, max_batch: int = 256, seed: int = 0):
         self.path = None
+        self.tta = False  # ModelPolicy.choose reads it (47a45be); self-play samples the plain policy
         self.device = torch.device(device)
         self.max_batch = max_batch
         self.model = model.to(self.device).to(memory_format=torch.channels_last).eval()

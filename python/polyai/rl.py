@@ -41,13 +41,15 @@ import torch
 import torch.nn.functional as F
 
 from . import schema as S
-from .model import ModelOutput, PolyNet, add_features, feature_inputs
+from .belief import full_belief_loss
+from .model import BELIEF_PREFIXES, ModelOutput, PolyNet, add_belief, add_features, feature_inputs
 from .policy import collate, collate_features, resolve_checkpoint
 from .rl_pool import (
     DEFAULT_POOL_WEIGHTS,
     LEARNER_DIFFICULTY,
     MAX_SEATS,
     RETAIL_NAMES,
+    TRUTH_ROW_KEYS,
     EntryInfo,
     NetPolicy,
     OppStats,
@@ -132,6 +134,11 @@ class RLConfig:
     device: str = "cuda"
     resume: bool = False
     features: bool = False  # the learner reads the engine features (encoding.md section 12); zero-initialised on top of init
+    # Auxiliary belief loss (docs/belief.md): belief heads on the learner's trunk predict what lies under the fog, trained
+    # on the engine's truth labels of the learner's own decisions, masked to hidden tiles. 0 = off (the old behaviour).
+    belief_weight: float = 0.0
+    belief_hidden: int = 32  # width of each belief head
+    belief_lr_mult: float = 1.0  # learning-rate factor of the (fresh) belief heads
 
 
 # ---------------------------------------------------------------------------------------------------------------
@@ -183,6 +190,7 @@ class SizeStore:
         self.lens: list[np.ndarray] = []
         self.actions: list[np.ndarray] = []
         self.feats: dict[str, list[np.ndarray]] = {}  # the engine features, when the observations have them
+        self.truth: dict[str, list[np.ndarray]] = {}  # the truth labels (targets of the belief loss), when present
         self.n = 0
         self._cap = 1024
         self._chosen = np.zeros(self._cap, np.int32)
@@ -215,6 +223,9 @@ class SizeStore:
         for k in ("f_tiles", "f_globals", "f_actions"):
             if k in obs:
                 self.feats.setdefault(k, []).append(np.asarray(obs[k]))
+        for k in TRUTH_ROW_KEYS:
+            if k in obs:
+                self.truth.setdefault(k, []).append(np.asarray(obs[k]))
         ids = np.arange(self.n, self.n + b)
         self.n += b
         return ids
@@ -235,6 +246,7 @@ class SizeStore:
             "act_off": np.concatenate([[0], np.cumsum(lens)]).astype(np.int64),
             "actions": np.concatenate(self.actions),
             **{k: np.concatenate(v) for k, v in self.feats.items()},
+            **{k: np.concatenate(v) for k, v in self.truth.items()},
             "chosen": self._chosen[:n], "logp": self._logp[:n], "value": self._value[:n],
             "adv": self._adv[:n], "ret": self._ret[:n], "train": np.nonzero(self._train[:n])[0],
         }
@@ -251,7 +263,11 @@ def ppo_loss(out: ModelOutput, ref_logits: torch.Tensor | None, mb: dict[str, to
 
     `mb` holds `mask` (legal action mask [B, A]), `chosen`, `old_logp`, `adv` (already normalised) and `ret`
     (return target in [0, 1]). `ref_logits` are the frozen BC policy's logits on the same positions (None: no KL).
-    `policy_scale` 0 trains the value head only (critic warm-up). The policy is softmax(logits / cfg.temperature)."""
+    `policy_scale` 0 trains the value head only (critic warm-up). The policy is softmax(logits / cfg.temperature).
+
+    With `cfg.belief_weight` > 0 and a belief output (`out` from `model(..., belief=True)`), `mb` also holds `truth`,
+    `truth_mask` and `truth_g` and the loss adds `belief_weight` times the belief loss (hidden tiles only). With weight 0
+    nothing here changes."""
     mask = mb["mask"]
     logits = out.policy_logits.float() / cfg.temperature
     logp_all = F.log_softmax(logits, dim=1)
@@ -278,12 +294,31 @@ def ppo_loss(out: ModelOutput, ref_logits: torch.Tensor | None, mb: dict[str, to
     value_loss = -(ret * log_win + (1 - ret) * log_not).mean()
 
     loss = policy_scale * (pg_loss - cfg.ent_coef * entropy + kl_coef * kl) + cfg.vf_coef * value_loss
+    belief_metrics: dict[str, torch.Tensor] = {}
+    if cfg.belief_weight > 0 and "truth" in mb and getattr(out, "belief", None) is not None:
+        bl, per = full_belief_loss(out, mb["truth"], mb["truth_mask"], mb.get("truth_g"))
+        loss = loss + cfg.belief_weight * bl
+        belief_metrics = {"belief": bl.detach(), **{f"belief_{k}": v.detach() for k, v in per.items()}}
     with torch.no_grad():
         approx_kl = ((ratio - 1) - log_ratio).mean()
         clip_frac = ((ratio - 1).abs() > cfg.clip).float().mean()
         value_mse = ((log_win.exp() - ret) ** 2).mean()
     return {"loss": loss, "policy_loss": pg_loss, "value_loss": value_loss, "entropy": entropy, "kl_bc": kl,
-            "approx_kl": approx_kl, "clip_frac": clip_frac, "value_mse": value_mse}
+            "approx_kl": approx_kl, "clip_frac": clip_frac, "value_mse": value_mse, **belief_metrics}
+
+
+def make_rl_optimizer(model: PolyNet, cfg: RLConfig) -> torch.optim.Optimizer:
+    """The AdamW of `train_bc.make_optimizer`; with belief heads and `belief_lr_mult` != 1 the heads' parameters form
+    their own groups at that multiple of the learning rate (the heads start fresh, the trunk is already trained)."""
+    if model.belief_heads is None or cfg.belief_lr_mult == 1.0:
+        return make_optimizer(model, cfg)
+    groups = []
+    for is_belief in (False, True):
+        ps = [(n, p) for n, p in model.named_parameters() if p.requires_grad and n.startswith(BELIEF_PREFIXES) == is_belief]
+        lr = cfg.lr * (cfg.belief_lr_mult if is_belief else 1.0)
+        groups += [{"params": [p for _, p in ps if p.ndim >= 2], "weight_decay": cfg.weight_decay, "lr": lr},
+                   {"params": [p for _, p in ps if p.ndim < 2], "weight_decay": 0.0, "lr": lr}]
+    return torch.optim.AdamW(groups, lr=cfg.lr, betas=(0.9, 0.95))
 
 
 def kl_coef_at(update: int, cfg: RLConfig) -> float:
@@ -339,8 +374,11 @@ def ppo_update(model: PolyNet, ref: PolyNet | None, opt: torch.optim.Optimizer, 
 
             mb = {"mask": mask, "chosen": tens(d["chosen"], torch.long), "old_logp": tens(d["logp"]),
                   "adv": tens(d["adv_n"]), "ret": tens(d["ret_c"])}
+            use_belief = cfg.belief_weight > 0 and model.belief_heads is not None and "truth" in d
+            if use_belief:
+                mb.update(truth=tens(d["truth"]), truth_mask=tens(d["truth_mask"]), truth_g=tens(d["truth_g"]))
             with torch.autocast(device.type, dtype=torch.bfloat16, enabled=cfg.bf16 and device.type == "cuda"):
-                out = model(tiles, globals_, actions, mask, **feats)
+                out = model(tiles, globals_, actions, mask, **feats, **({"belief": True} if use_belief else {}))
                 ref_logits = None
                 if ref is not None:
                     with torch.no_grad():
@@ -473,7 +511,8 @@ class Collector:
         cap = arm_capacity(key, self.cfg.games, self.seat_p, self.shards)
         seed_start = int(self.rng.integers(1, TRAIN_SEED_MAX + 1))
         kw = dict(split="train", sizes=self.sizes, presets=self.presets, turn_limit=self.cfg.turn_limit,
-                  threads=1, auto_reset=True, **mode_kw(MODES[self.cfg.mode]), **feature_kw(self.cfg.features))
+                  threads=1, auto_reset=True, **mode_kw(MODES[self.cfg.mode]), **feature_kw(self.cfg.features),
+                  **({"truth": True} if self.cfg.belief_weight > 0 else {}))
         if key[0] == "retail":
             difficulty = RETAIL_NAMES.index(key[1].split(":")[1])
             seat = key[2]
@@ -775,7 +814,9 @@ def train(cfg: RLConfig) -> dict:
         model = add_features(model).to(memory_format=torch.channels_last).eval()
     if {**model.cfg.to_dict(), "features": False} != {**ref.cfg.to_dict(), "features": False}:  # features may differ
         raise SystemExit("the init and ref checkpoints have different model configurations")
-    opt = make_optimizer(model, cfg)
+    if cfg.belief_weight > 0:  # fresh belief heads on the learner's trunk (the reference and the pool stay plain)
+        model = add_belief(model, cfg.belief_hidden).to(memory_format=torch.channels_last).eval()
+    opt = make_rl_optimizer(model, cfg)
     update0 = 0
     rl_state: dict = {}
     if cfg.resume:
