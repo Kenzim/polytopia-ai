@@ -31,6 +31,11 @@ pub const T_ENEMY_CAPITAL: usize = 4;
 /// 0 no unit, 1 a unit of another player, 2 a Nature unit (an animal).
 pub const T_UNIT: usize = 5;
 
+/// Scalar labels per position (belief heads on the pooled vector, RL only): the other players' cities in total and
+/// their techs per player, both as the engine has them now (hidden or not).
+pub const TRUTH_G: usize = 2;
+pub const TRUTH_G_NAMES: [&str; TRUTH_G] = ["opp_cities", "opp_techs"];
+
 /// Labels of one position, `[h, w, TRUTH_K]` row major, and the mask of hidden tiles `[h, w]`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Truth {
@@ -98,6 +103,15 @@ pub fn truth(e: &Engine, me: u8, slots: &SlotMap) -> Truth {
         }
     }
     Truth { h, w, labels, mask }
+}
+
+/// The scalar labels of the position for `me`: `[cities owned by other players, mean number of techs of the other
+/// players]`. Nature is not a player; a mover alone in the game gets 0 techs.
+pub fn truth_globals(e: &Engine, me: u8) -> [f32; TRUTH_G] {
+    let cities = e.s.map.tiles.iter().filter(|t| t.improvement == 1 && t.owner != 0 && t.owner != me && t.owner != NATURE).count();
+    let others: Vec<u8> = e.s.players.iter().map(|p| p.id).filter(|&id| id != me && id != NATURE).collect();
+    let techs = others.iter().map(|&id| e.techs(id).len()).sum::<usize>() as f32 / others.len().max(1) as f32;
+    [cities as f32, techs]
 }
 
 #[cfg(test)]
@@ -228,6 +242,27 @@ mod tests {
             }
         }
         assert!(checked > 0);
+    }
+
+    #[test]
+    fn scalar_labels_match_the_full_state() {
+        let mut positive = 0;
+        for (e, me) in positions() {
+            let g = truth_globals(&e, me);
+            let slots = SlotMap::new(&e, me);
+            let t = truth_all(&e, me, &slots);
+            let cities = (0..t.len() / TRUTH_K).filter(|&k| t[k * TRUTH_K + T_ENEMY_CITY] == 1).count();
+            assert_eq!(g[0], cities as f32);
+            let others: Vec<u8> = e.s.players.iter().map(|p| p.id).filter(|&id| id != me && id != NATURE).collect();
+            let mean = others.iter().map(|&id| e.techs(id).len() as f32).sum::<f32>() / others.len() as f32;
+            assert!((g[1] - mean).abs() < 1e-6);
+            positive += usize::from(g[0] > 0.0 && g[1] > 0.0);
+            let mut other = e.clone();
+            other.s.map.tiles.iter_mut().filter(|t| t.improvement == 1 && t.owner != 0 && t.owner != me && t.owner != NATURE).for_each(|t| t.owner = 0);
+            assert_eq!(truth_globals(&other, me)[0], 0.0);
+            assert_eq!(truth_globals(&other, me)[1], g[1]);
+        }
+        assert!(positive > 0);
     }
 
     /// Fog changes nothing in the observation: rewriting a hidden tile changes the truth and leaves the encoding as

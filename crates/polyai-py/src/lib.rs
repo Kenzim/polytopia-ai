@@ -434,6 +434,20 @@ impl PyGame {
         ))
     }
 
+    /// The truth labels for the player to move (docs/belief.md): `(truth int16[H, W, TRUTH_K], truth_mask uint8[H, W],
+    /// truth_g float32[TRUTH_G])`. Labels are zero on explored tiles; they are never part of `encode()`.
+    fn truth<'py>(&self, py: Python<'py>) -> PyResult<(Bound<'py, PyAny>, Bound<'py, PyAny>, Bound<'py, PyAny>)> {
+        let g = self.0.lock().unwrap();
+        let me = g.me()?;
+        let slots = SlotMap::new(&g.e, me);
+        let t = truth::truth(&g.e, me, &slots);
+        Ok((
+            tiles_array(py, t.labels, &[t.h, t.w, truth::TRUTH_K])?,
+            PyArray1::from_vec(py, t.mask).reshape([t.h, t.w])?.into_any(),
+            PyArray1::from_vec(py, truth::truth_globals(&g.e, me).to_vec()).into_any(),
+        ))
+    }
+
     /// Play the command at `index` of the current legal list.
     fn step(&self, index: usize) -> PyResult<()> {
         let mut g = self.0.lock().unwrap();
@@ -520,6 +534,7 @@ struct Pending {
     obs: Obs,
     actions: Vec<[i16; 4]>,
     feats: Option<Features>,
+    truth: Option<(truth::Truth, [f32; truth::TRUTH_G])>,
     seat: i8,
     turn: i16,
 }
@@ -536,10 +551,12 @@ struct Slot {
     pending: Option<Pending>,
     /// Compute the engine features of every pending decision.
     with_features: bool,
+    /// Compute the truth labels (what lies under the fog, docs/belief.md) of every pending decision.
+    with_truth: bool,
 }
 
 impl Slot {
-    fn new(setup: GameSetup, model: &ModelSeats, with_features: bool) -> Self {
+    fn new(setup: GameSetup, model: &ModelSeats, with_features: bool, with_truth: bool) -> Self {
         let e = setup.build();
         let order = player_order(&e);
         let n = order.len();
@@ -548,7 +565,7 @@ impl Slot {
             ModelSeats::All => vec![true; n],
             ModelSeats::Fixed(v) => (0..n).map(|s| v.contains(&s)).collect(),
         };
-        let mut slot = Slot { setup, e, order, is_model, counter: TurnCounter::default(), commands: 0, decisions: 0, legal: Vec::new(), pending: None, with_features };
+        let mut slot = Slot { setup, e, order, is_model, counter: TurnCounter::default(), commands: 0, decisions: 0, legal: Vec::new(), pending: None, with_features, with_truth };
         slot.advance();
         slot
     }
@@ -575,7 +592,8 @@ impl Slot {
                 let obs = encode(&self.e, me, &slots, &legal);
                 let actions = legal.iter().map(|c| encode_command(&self.e, &slots, c).expect("legal command encodes")).collect();
                 let feats = self.with_features.then(|| features::features(&self.e, me, &slots, &legal));
-                self.pending = Some(Pending { legal_len: legal.len(), obs, actions, feats, seat: seat as i8, turn: self.e.s.current_turn as i16 });
+                let truth = self.with_truth.then(|| (truth::truth(&self.e, me, &slots), truth::truth_globals(&self.e, me)));
+                self.pending = Some(Pending { legal_len: legal.len(), obs, actions, feats, truth, seat: seat as i8, turn: self.e.s.current_turn as i16 });
                 self.legal = legal;
                 return;
             }
@@ -659,6 +677,11 @@ struct Group {
     f_tiles: Vec<i16>,
     f_globals: Vec<f32>,
     f_actions: Vec<f32>,
+    /// Truth labels, only when the env was built with `truth=True`: per tile labels and hidden mask, per position scalars.
+    with_truth: bool,
+    truth: Vec<i16>,
+    truth_mask: Vec<u8>,
+    truth_g: Vec<f32>,
 }
 
 impl Group {
@@ -679,6 +702,11 @@ impl Group {
             d.set_item("f_globals", PyArray1::from_vec(py, self.f_globals.clone()).reshape([b, features::G_F])?)?;
             d.set_item("f_actions", PyArray1::from_vec(py, self.f_actions.clone()).reshape([self.actions.len(), features::A_F])?)?;
         }
+        if self.with_truth {
+            d.set_item("truth", tiles_array(py, self.truth.clone(), &[b, self.h, self.w, truth::TRUTH_K])?)?;
+            d.set_item("truth_mask", PyArray1::from_vec(py, self.truth_mask.clone()).reshape([b, self.h, self.w])?)?;
+            d.set_item("truth_g", PyArray1::from_vec(py, self.truth_g.clone()).reshape([b, truth::TRUTH_G])?)?;
+        }
         Ok(d)
     }
 }
@@ -688,7 +716,7 @@ fn groups_of(slots: &[Slot], which: &[usize]) -> Vec<Group> {
     for &i in which {
         let s = &slots[i];
         let Some(p) = s.pending.as_ref() else { continue };
-        let g = groups.entry((p.obs.h, p.obs.w)).or_insert_with(|| Group { h: p.obs.h, w: p.obs.w, act_off: vec![0], with_features: p.feats.is_some(), ..Default::default() });
+        let g = groups.entry((p.obs.h, p.obs.w)).or_insert_with(|| Group { h: p.obs.h, w: p.obs.w, act_off: vec![0], with_features: p.feats.is_some(), with_truth: p.truth.is_some(), ..Default::default() });
         g.game.push(i as i32);
         g.seat.push(p.seat);
         g.n_players.push(s.order.len() as i8);
@@ -701,6 +729,11 @@ fn groups_of(slots: &[Slot], which: &[usize]) -> Vec<Group> {
             g.f_tiles.extend_from_slice(&f.tiles);
             g.f_globals.extend_from_slice(&f.globals);
             g.f_actions.extend_from_slice(&f.actions);
+        }
+        if let Some((t, tg)) = &p.truth {
+            g.truth.extend_from_slice(&t.labels);
+            g.truth_mask.extend_from_slice(&t.mask);
+            g.truth_g.extend_from_slice(tg);
         }
         g.act_off.push(g.actions.len() as i32);
     }
@@ -723,6 +756,7 @@ struct EnvInner {
     seed_start: i64,
     drawn: i64,
     features: bool,
+    truth: bool,
 }
 
 impl EnvInner {
@@ -745,8 +779,8 @@ impl EnvInner {
     fn fill(&mut self, which: &[usize]) {
         let setups: Vec<GameSetup> = which.iter().map(|_| self.next_setup()).collect();
         let model = self.model.clone();
-        let features = self.features;
-        let built: Vec<Slot> = self.pool.install(|| setups.into_par_iter().map(|s| Slot::new(s, &model, features)).collect());
+        let (features, with_truth) = (self.features, self.truth);
+        let built: Vec<Slot> = self.pool.install(|| setups.into_par_iter().map(|s| Slot::new(s, &model, features, with_truth)).collect());
         for (&i, slot) in which.iter().zip(built) {
             if i < self.slots.len() {
                 self.slots[i] = slot;
@@ -764,7 +798,7 @@ impl PyVecEnv {
     /// `seed_start >= 1000000`. `seat_difficulties` sets each seat's handicap by seat index (applied after
     /// `difficulty`; every value 0..=3, one per seat of the largest player count).
     #[new]
-    #[pyo3(signature = (n_games, seed_start=1, model_seats=None, split="train", n_players=None, sizes=None, presets=None, difficulty=None, turn_limit=DEFAULT_TURN_LIMIT, threads=24, auto_reset=true, seat_difficulties=None, mode=DOMINATION, features=false))]
+    #[pyo3(signature = (n_games, seed_start=1, model_seats=None, split="train", n_players=None, sizes=None, presets=None, difficulty=None, turn_limit=DEFAULT_TURN_LIMIT, threads=24, auto_reset=true, seat_difficulties=None, mode=DOMINATION, features=false, truth=false))]
     #[allow(clippy::too_many_arguments)]
     fn new(
         py: Python<'_>,
@@ -782,6 +816,7 @@ impl PyVecEnv {
         seat_difficulties: Option<Vec<u8>>,
         mode: i32,
         features: bool,
+        truth: bool,
     ) -> PyResult<Self> {
         if let Some(ds) = &seat_difficulties {
             if ds.iter().any(|&d| d > 3) {
@@ -824,6 +859,7 @@ impl PyVecEnv {
             seed_start: i64::from(seed_start),
             drawn: 0,
             features,
+            truth,
         };
         let which: Vec<usize> = (0..n_games).collect();
         py.allow_threads(|| env.fill(&which));
@@ -848,7 +884,9 @@ impl PyVecEnv {
     /// All games awaiting a model decision, one dict per map size (keys: game, seat, n_players, turn, seed, tiles,
     /// globals, act_off, actions; the legal list of the i-th game is `actions[act_off[i]:act_off[i + 1]]`). Built with
     /// `features=True` each dict also holds f_tiles, f_globals and f_actions (docs/encoding.md section 12), aligned
-    /// with tiles, globals and actions.
+    /// with tiles, globals and actions. Built with `truth=True` each dict also holds `truth` int16[B, H, W, TRUTH_K],
+    /// `truth_mask` uint8[B, H, W] and `truth_g` float32[B, TRUTH_G] (docs/belief.md): labels for the training loss,
+    /// never model inputs.
     fn observe<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyList>> {
         let env = self.0.lock().unwrap();
         let all: Vec<usize> = (0..env.slots.len()).collect();
@@ -939,6 +977,11 @@ fn polyai_engine(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add("FEAT_G_NAMES", features::GF_NAMES.to_vec())?;
     m.add("FEAT_A_NAMES", features::A_NAMES.to_vec())?;
     m.add("FEAT_T_DIVISORS", features::TF_DIVISORS.to_vec())?;
+    m.add("TRUTH_K", truth::TRUTH_K)?;
+    m.add("TRUTH_G", truth::TRUTH_G)?;
+    m.add("TRUTH_NAMES", truth::TRUTH_NAMES.to_vec())?;
+    m.add("TRUTH_VOCABS", truth::TRUTH_VOCABS.to_vec())?;
+    m.add("TRUTH_G_NAMES", truth::TRUTH_G_NAMES.to_vec())?;
     m.add("TRIBES", TRIBES.to_vec())?;
     m.add("KIND_NAMES", KIND_NAMES.to_vec())?;
     m.add("CAT_VOCABS", CAT_VOCABS.to_vec())?;
