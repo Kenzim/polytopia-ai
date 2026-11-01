@@ -132,6 +132,7 @@ class RLConfig:
     overlap: bool = False  # play the next rollout (with the weights before this update) while the PPO update runs
     infer_graphs: bool = False  # rollout inference through CUDA graphs on padded fixed shapes (infer_fast.py), CUDA only
     infer_compile: bool = False  # rollout inference through torch.compile on padded fixed shapes (with or without graphs)
+    collector: str = "python"  # "rust": arms, batching, learner rows and GAE in the engine module (docs/collector.md)
     need_gb: float = 2.5
     device: str = "cuda"
     resume: bool = False
@@ -1000,7 +1001,12 @@ def train(cfg: RLConfig) -> dict:
     games_log = (run_dir / "games.jsonl").open("a", buffering=1) if cfg.log_games else None
 
     executor = ThreadPoolExecutor(max_workers=workers)
-    col = Collector(cfg, pe, learner, pool, rng, executor, games_log)
+    if cfg.collector not in ("python", "rust"):
+        raise SystemExit("--collector is python or rust")
+    collector_cls = Collector
+    if cfg.collector == "rust":
+        from .rl_collect import RustCollector as collector_cls
+    col = collector_cls(cfg, pe, learner, pool, rng, executor, games_log)
     print(f"{cfg.name}: {model.cfg.name or 'model'} {model.n_params() / 1e6:.2f}M params, {cfg.games} games in flight, "
           f"{cfg.rollout_steps} learner decisions per update, {workers} env threads + {torch_threads} torch threads, "
           f"device {device}, cap {cap / 1024**3:.2f} GiB", flush=True)

@@ -13,7 +13,9 @@ use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict, PyList};
 use rayon::prelude::*;
 use std::collections::BTreeMap;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
+
+mod collector;
 
 const MAX_THREADS: usize = 24;
 /// Players the encoding has slots for (the mover and 7 others).
@@ -742,7 +744,7 @@ fn groups_of(slots: &[Slot], which: &[usize]) -> Vec<Group> {
 
 /// Many games stepped in parallel. Seats the model does not control are played by the retail AI at their handicap.
 #[pyclass(name = "VecEnv")]
-struct PyVecEnv(Mutex<EnvInner>);
+struct PyVecEnv(Arc<Mutex<EnvInner>>);
 
 struct EnvInner {
     slots: Vec<Slot>,
@@ -774,6 +776,28 @@ impl EnvInner {
             }
         }
         setup
+    }
+
+    /// Play `chosen[i]` (an index into slot i's legal list) in every slot that has one, then auto-play every other seat
+    /// until a model decision or the end. Returns the slots stepped that await a decision again (after the reset of
+    /// finished games, with `auto_reset`) and the finished games.
+    fn step_slots(&mut self, chosen: &[Option<usize>]) -> (Vec<usize>, Vec<Finished>) {
+        let slots = &mut self.slots;
+        self.pool.install(|| {
+            slots.par_iter_mut().zip(chosen.par_iter()).for_each(|(slot, c)| {
+                if let Some(c) = *c {
+                    slot.choose(c);
+                }
+            })
+        });
+        let mut touched: Vec<usize> = chosen.iter().enumerate().filter_map(|(i, c)| c.map(|_| i)).collect();
+        let over: Vec<usize> = touched.iter().copied().filter(|&i| self.slots[i].done()).collect();
+        let finished: Vec<Finished> = over.iter().map(|&i| Finished::of(i, &self.slots[i])).collect();
+        if self.auto_reset {
+            self.fill(&over);
+        }
+        touched.retain(|&i| self.slots[i].pending.is_some());
+        (touched, finished)
     }
 
     fn fill(&mut self, which: &[usize]) {
@@ -863,7 +887,7 @@ impl PyVecEnv {
         };
         let which: Vec<usize> = (0..n_games).collect();
         py.allow_threads(|| env.fill(&which));
-        Ok(PyVecEnv(Mutex::new(env)))
+        Ok(PyVecEnv(Arc::new(Mutex::new(env))))
     }
 
     #[getter]
@@ -916,21 +940,7 @@ impl PyVecEnv {
             chosen[g] = Some(c);
         }
         let (groups, finished) = py.allow_threads(|| {
-            let slots = &mut env.slots;
-            env.pool.install(|| {
-                slots.par_iter_mut().zip(chosen.par_iter()).for_each(|(slot, c)| {
-                    if let Some(c) = *c {
-                        slot.choose(c);
-                    }
-                })
-            });
-            let mut touched: Vec<usize> = chosen.iter().enumerate().filter_map(|(i, c)| c.map(|_| i)).collect();
-            let over: Vec<usize> = touched.iter().copied().filter(|&i| env.slots[i].done()).collect();
-            let finished: Vec<Finished> = over.iter().map(|&i| Finished::of(i, &env.slots[i])).collect();
-            if env.auto_reset {
-                env.fill(&over);
-            }
-            touched.retain(|&i| env.slots[i].pending.is_some());
+            let (touched, finished) = env.step_slots(&chosen);
             (groups_of(&env.slots, &touched), finished)
         });
         let groups = PyList::new(py, groups.iter().map(|g| g.to_py(py)).collect::<PyResult<Vec<_>>>()?)?;
@@ -964,6 +974,8 @@ fn encode_game<'py>(py: Python<'py>, game: &PyGame) -> PyResult<(Bound<'py, PyAn
 fn polyai_engine(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyGame>()?;
     m.add_class::<PyVecEnv>()?;
+    m.add_class::<collector::PyCore>()?;
+    m.add_function(wrap_pyfunction!(collector::compute_gae_rust, m)?)?;
     m.add_function(wrap_pyfunction!(sample_setup, m)?)?;
     m.add_function(wrap_pyfunction!(encode_game, m)?)?;
     m.add("ENCODING_VERSION", ENCODING_VERSION)?;
