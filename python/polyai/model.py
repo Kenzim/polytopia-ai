@@ -283,6 +283,51 @@ class PolyNet(nn.Module):
             return BeliefOutput(logits, value, tuple(head(bfeat).float() for head in self.belief_heads), scalars)
         return ModelOutput(logits, value)
 
+    def forward_flat(
+        self,
+        tiles: torch.Tensor,
+        globals_: torch.Tensor,
+        board_mask: torch.Tensor,
+        act_b: torch.Tensor,
+        actions: torch.Tensor,
+        f_tiles: torch.Tensor | None = None,
+        f_globals: torch.Tensor | None = None,
+        f_actions: torch.Tensor | None = None,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """The inference path of `forward` for fixed shapes: the legal actions arrive as one flat list (`act_b` [T] is
+        the position of each in the batch, `actions` [T, 4], `f_actions` [T, FEAT_A]) instead of being found with
+        `nonzero`, so the call can be compiled or captured in a CUDA graph for a few padded (B, T) shapes. Returns
+        (one logit per listed action [T], winner_logits [B, 9]); equal to `forward` on those actions up to rounding.
+        `board_mask` is required (all True for unpadded boards)."""
+        b, h, w, _ = tiles.shape
+        feat, mask = self.encode(tiles, globals_, board_mask, f_tiles, f_globals)
+        g = self.pool_fc(masked_mean_max(feat, mask))
+        tok = feat.permute(0, 2, 3, 1).reshape(b, h * w, -1)
+        tok = torch.cat([tok, g[:, None, :].to(tok.dtype)], dim=1)
+        src_f = self.src_proj(tok)
+        dst_f = self.dst_proj(tok)
+        act = actions.long()
+        kind = act[:, 0].clamp(0, S.N_KINDS - 1)
+        arg = act[:, 1].clamp(0, S.ARG_MAX - 1)
+        src, dst = act[:, 2], act[:, 3]
+        none_tile = h * w
+        src_i = torch.where(src < 0, torch.full_like(src, none_tile), src)
+        dst_i = torch.where(dst < 0, torch.full_like(dst, none_tile), dst)
+        r = S.OFFSET_RADIUS
+        dy = (dst // w - src // w).clamp(-r, r) + r
+        dx = (dst % w - src % w).clamp(-r, r) + r
+        off = torch.where((src < 0) | (dst < 0), torch.full_like(src, self.n_off), dy * (2 * r + 1) + dx)
+        z = (
+            src_f[act_b, src_i]
+            + dst_f[act_b, dst_i]
+            + self.kind_embed(kind).to(src_f.dtype)
+            + self.arg_embed(kind * S.ARG_MAX + arg).to(src_f.dtype)
+            + self.off_embed(off).to(src_f.dtype)
+        )
+        if self.feat_action_proj is not None and f_actions is not None:
+            z = z + self.feat_action_proj(f_actions.to(src_f.dtype)).to(src_f.dtype)
+        return self.policy_mlp(z).squeeze(-1).float(), self.value_mlp(F.relu(g)).float()
+
 
 def build_model(name_or_cfg: str | ModelConfig) -> PolyNet:
     cfg = CONFIGS[name_or_cfg] if isinstance(name_or_cfg, str) else name_or_cfg

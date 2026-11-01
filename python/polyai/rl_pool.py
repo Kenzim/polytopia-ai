@@ -127,7 +127,8 @@ class NetPolicy(ModelPolicy):
     change after every update, and the frozen pool networks. Same `choose` (sampling, `logp`, `value`, `top`); the
     network is kept in eval mode, so BatchNorm uses its running statistics."""
 
-    def __init__(self, model: PolyNet, policy_id: str, device: torch.device, max_batch: int = 256, seed: int = 0):
+    def __init__(self, model: PolyNet, policy_id: str, device: torch.device, max_batch: int = 256, seed: int = 0,
+                 infer_graphs: bool = False, infer_compile: bool = False):
         self.path = None
         self.tta = False  # ModelPolicy.choose reads it (47a45be); self-play samples the plain policy
         self.device = torch.device(device)
@@ -139,6 +140,10 @@ class NetPolicy(ModelPolicy):
         self.generator.manual_seed(seed)
         self.infer_seconds = 0.0
         self.decisions = 0
+        if infer_graphs or infer_compile:  # padded fixed-shape inference (infer_fast.py); off by default
+            from .infer_fast import FastForward
+
+            self.fast = FastForward(self.model, self.device, graphs=infer_graphs, compile=infer_compile)
 
 
 # ---------------------------------------------------------------------------------------------------------------

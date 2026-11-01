@@ -4,7 +4,8 @@ Builds the same Collector as `polyai.rl.train` (learner, BC reference, retail ar
 rollout, timing every `choose` call and every `VecEnv.step` per arm.
 Usage (from ai/python):
     python ../tools/profile_rollout.py CKPT [--device cuda|cpu] [--games 128] [--steps 8192] [--threads 16]
-        [--n-players 2:55,3:25,4:20] [--sizes ...] [--presets ...] [--snapshots 0]
+        [--n-players 2:55,3:25,4:20] [--mode might] [--sizes ...] [--presets ...] [--snapshots 0]
+        [--infer-graphs] [--infer-compile] [--gpu-gb 1.5]
 """
 import argparse
 import time
@@ -36,23 +37,34 @@ ap.add_argument("--max-lead", type=int, default=RLConfig.max_lead, help="0 gives
 ap.add_argument("--arm-games", type=int, default=0)
 ap.add_argument("--min-infer", type=int, default=0)
 ap.add_argument("--gather-ms", type=float, default=20.0)
+ap.add_argument("--mode", default="domination", help="domination or might")
+ap.add_argument("--infer-graphs", action="store_true", help="CUDA-graph inference on padded shapes (infer_fast.py)")
+ap.add_argument("--infer-compile", action="store_true", help="torch.compile inference on padded shapes")
+ap.add_argument("--gpu-gb", type=float, default=0.0, help="cap this process's GPU memory (0: no cap)")
+ap.add_argument("--seed", type=int, default=0)
 ap.add_argument("--warmup", type=int, default=0, help="rollouts played before the profiled one (games mature)")
 a = ap.parse_args()
 
 torch.set_num_threads(4)
 dev = torch.device(a.device)
-cfg = RLConfig(games=a.games, rollout_steps=a.steps, threads=a.threads, n_players=a.n_players, sizes=a.sizes,
+if dev.type == "cuda" and dev.index is None:
+    dev = torch.device("cuda", torch.cuda.current_device())
+if dev.type == "cuda" and a.gpu_gb > 0:
+    torch.cuda.set_per_process_memory_fraction(a.gpu_gb * 1024**3 / torch.cuda.get_device_properties(dev).total_memory, dev)
+    torch.cuda.reset_peak_memory_stats(dev)
+fast = dict(infer_graphs=a.infer_graphs, infer_compile=a.infer_compile)
+cfg = RLConfig(mode=a.mode, games=a.games, rollout_steps=a.steps, threads=a.threads, n_players=a.n_players, sizes=a.sizes,
                presets=a.presets, max_batch=a.max_batch, device=a.device, pad_sizes=a.pad_sizes,
                max_lead=a.max_lead, arm_games=a.arm_games, min_infer=a.min_infer, gather_ms=a.gather_ms)
 net = load_checkpoint(Path(a.ckpt)).to(dev).eval()
-learner = NetPolicy(net, "learner", dev, max_batch=a.max_batch, seed=1)
-pool = Pool(cfg, NetPolicy(load_checkpoint(Path(a.ckpt)).to(dev).eval(), "bc", dev, max_batch=a.max_batch, seed=2),
+learner = NetPolicy(net, "learner", dev, max_batch=a.max_batch, seed=1, **fast)
+pool = Pool(cfg, NetPolicy(load_checkpoint(Path(a.ckpt)).to(dev).eval(), "bc", dev, max_batch=a.max_batch, seed=2, **fast),
             EntryInfo("bc", "bc"))
 for k in range(a.snapshots):
     pool.add_snapshot(f"self:u{k:05d}", NetPolicy(load_checkpoint(Path(a.ckpt)).to(dev).eval(), f"s{k}", dev,
-                                                  max_batch=a.max_batch, seed=3 + k), EntryInfo(f"self:u{k:05d}", f"s{k}"))
+                                                  max_batch=a.max_batch, seed=3 + k, **fast), EntryInfo(f"self:u{k:05d}", f"s{k}"))
 ex = ThreadPoolExecutor(max_workers=a.threads)
-col = Collector(cfg, pe, learner, pool, np.random.default_rng(0), ex)
+col = Collector(cfg, pe, learner, pool, np.random.default_rng(a.seed), ex)
 col.set_quotas(plan_quotas(pool.weights(), cfg.games, col.seat_p, col.shards))
 for w in range(a.warmup):
     t0 = time.perf_counter()
@@ -136,3 +148,8 @@ print(f"  slowest single steps (s): {sorted(step_max_per_tick)[-5:]}")
 print("  engine step by arm: active games, steps, total s, mean ms")
 for k in sorted(step_t, key=lambda k: -step_t[k]):
     print(f"    {str(k):38s} {col.arms[k].n_active:4d} {step_n[k]:6d} {step_t[k]:7.1f} {1e3 * step_t[k] / step_n[k]:7.2f}")
+if dev.type == "cuda":
+    print(f"  peak GPU memory allocated {torch.cuda.max_memory_allocated(dev) / 1024**2:.0f} MiB")
+for k, p in [("learner", learner), *pool.nets.items()]:
+    if p.fast is not None:
+        print(f"  fast inference {k}: {p.fast.stats} {p.fast.last_error}")

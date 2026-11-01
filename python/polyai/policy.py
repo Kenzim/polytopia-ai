@@ -189,6 +189,18 @@ class ModelPolicy:
         """Whether the network reads the engine features (the observations then need `VecEnv(features=True)`)."""
         return bool(self.model.cfg.features)
 
+    fast = None  # an `infer_fast.FastForward` when padded / compiled / graph inference is on (NetPolicy, --infer-graphs)
+
+    def _forward(self, tiles, globals_, actions, mask, bmask, feats) -> tuple[torch.Tensor, torch.Tensor]:
+        """The network on one collated chunk -> (policy logits [B, A], winner logits [B, 9])."""
+        if self.fast is not None:
+            out = self.fast(tiles, globals_, actions, mask, bmask, feats)
+            if out is not None:
+                return out
+        with torch.autocast(self.device.type, dtype=torch.bfloat16, enabled=self.device.type == "cuda"):
+            out = self.model(tiles, globals_, actions, mask, bmask, **feats)
+        return out.policy_logits, out.winner_logits
+
     @torch.inference_mode()
     def choose(self, obs: dict, *, temperature: float | None = None) -> Choices:
         if temperature is not None and not temperature > 0:
@@ -217,10 +229,9 @@ class ModelPolicy:
                 bmask = None
                 if board is not None:
                     bmask = torch.from_numpy(np.ascontiguousarray(np.asarray(board)[sel])).to(self.device, non_blocking=True)
-                with torch.autocast(self.device.type, dtype=torch.bfloat16, enabled=self.device.type == "cuda"):
-                    out = self.model(tiles, globals_, actions, mask, bmask, **feats)
-                lp = torch.log_softmax(out.policy_logits.float(), dim=1)
-                wp = torch.softmax(out.winner_logits.float(), dim=-1)
+                policy_logits, winner_logits = self._forward(tiles, globals_, actions, mask, bmask, feats)
+                lp = torch.log_softmax(policy_logits.float(), dim=1)
+                wp = torch.softmax(winner_logits.float(), dim=-1)
                 logits_sum = lp if logits_sum is None else logits_sum + lp
                 win_sum = wp if win_sum is None else win_sum + wp
             # with one view these are the model's own logits up to a per-row constant, so argmax and softmax agree

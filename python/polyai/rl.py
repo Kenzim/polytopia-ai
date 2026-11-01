@@ -130,6 +130,8 @@ class RLConfig:
     min_infer: int = 0  # positions to gather for one inference round before running it (0: run what is ready)
     gather_ms: float = 20.0  # longest wait for min_infer positions
     overlap: bool = False  # play the next rollout (with the weights before this update) while the PPO update runs
+    infer_graphs: bool = False  # rollout inference through CUDA graphs on padded fixed shapes (infer_fast.py), CUDA only
+    infer_compile: bool = False  # rollout inference through torch.compile on padded fixed shapes (with or without graphs)
     need_gb: float = 2.5
     device: str = "cuda"
     resume: bool = False
@@ -957,9 +959,10 @@ def train(cfg: RLConfig) -> dict:
         for p in actor.parameters():
             p.requires_grad_(False)
     ppo_rng = np.random.default_rng(cfg.seed + 7919 * update0 + 1) if cfg.overlap else rng
-    learner = NetPolicy(actor, f"{cfg.name}@{update0}", device, max_batch=cfg.max_batch, seed=cfg.seed + update0)
+    fast = dict(infer_graphs=cfg.infer_graphs, infer_compile=cfg.infer_compile)
+    learner = NetPolicy(actor, f"{cfg.name}@{update0}", device, max_batch=cfg.max_batch, seed=cfg.seed + update0, **fast)
     ref_id = policy_id_of(ref_path, checkpoint_step(ref_path))
-    pool = Pool(cfg, NetPolicy(ref, ref_id, device, max_batch=cfg.max_batch, seed=cfg.seed + 1),
+    pool = Pool(cfg, NetPolicy(ref, ref_id, device, max_batch=cfg.max_batch, seed=cfg.seed + 1, **fast),
                 EntryInfo("bc", ref_id, str(ref_path)))
 
     def add_snapshot(update: int, from_file: Path | None = None) -> None:
@@ -971,7 +974,7 @@ def train(cfg: RLConfig) -> dict:
         pid = f"{cfg.name}@{update}" if from_file is None or update > 0 or init_path == ref_path else \
             policy_id_of(init_path, checkpoint_step(init_path))
         pool.add_snapshot(entry, NetPolicy(net, pid, device, max_batch=cfg.max_batch,
-                                           seed=cfg.seed + update + 2), EntryInfo(entry, pid, str(path)))
+                                           seed=cfg.seed + update + 2, **fast), EntryInfo(entry, pid, str(path)))
 
     if cfg.resume:
         if "stats" in rl_state:
@@ -987,7 +990,7 @@ def train(cfg: RLConfig) -> dict:
         net = load_checkpoint(p0)
         pid = policy_id_of(init_path, checkpoint_step(init_path))
         pool.add_snapshot("self:u00000", NetPolicy(net, pid, device, max_batch=cfg.max_batch,
-                                                   seed=cfg.seed + 2), EntryInfo("self:u00000", pid, str(p0)))
+                                                   seed=cfg.seed + 2, **fast), EntryInfo("self:u00000", pid, str(p0)))
 
     (run_dir / "config.json").write_text(json.dumps(
         {"train": asdict(cfg), "model": model.cfg.to_dict(), "params": model.n_params(),
