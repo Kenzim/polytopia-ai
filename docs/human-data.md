@@ -68,9 +68,50 @@ takes an `AllowedGame`, which only our own or matchmaking games can become (`cli
 5. Output goes to `/kvm/polytopia-ai-data/human/raw/` and the layout is exactly what `re/tools/share_grab.sh` writes
    (`<id>_init.bin`, `<id>_cur.bin`), so section 4 runs unchanged.
 
-**Ids still need a source** (Kenzi's call): a Challengermode API application's refresh key
-(`py/cm_replays.py` is a public reference for the GraphQL walk; I have not run it and would need the key), or lists of
-share links from the community. The weekly leaderboard alone gives only solo-versus-AI games.
+**Ids source: Challengermode** (done, 2026-11-01; see "Collecting ids" below). `tools/cm_ids.py` walks the public
+tournament API and has produced 1,893 game ids; fetching them is the client change above. The weekly leaderboard alone
+gives only solo-versus-AI games.
+
+### Collecting ids (`tools/cm_ids.py`)
+
+```
+cd /kvm/polytopia/ai
+nice /kvm/polytopia/.venv/bin/python tools/cm_ids.py            # [--limit N] [--list-only] [--min-interval S]
+/kvm/polytopia/.venv/bin/python tools/cm_ids.py --summary       # counts from the files, no network
+/kvm/polytopia/.venv/bin/python -m pytest -q tools/test_cm_ids.py   # no network
+```
+
+Needs the refresh key in `~/.config/polytopia/challengermode_refresh_key` (read from the file only, never printed or
+logged). One request at a time, at least 3.5 s apart (the app's limit is 20 a minute); 429 and 5xx back off 60 s then
+double, four tries, then that tournament goes to `cm_errors.tsv` and is retried next run; 401 and 403 stop the run.
+A full first walk of 176 tournaments took 12 minutes (182 requests); a rerun with nothing new takes 6 requests.
+
+Files in `/kvm/polytopia-ai-data/human/`:
+
+- `cm_ids.tsv`: one row per game, columns `game_id tournament_id match_id mode size teams turns tribes started
+  tournament_name`. `mode` is the name (`Might`), `size` the side in tiles (11 Tiny, 14 Small, 16 Normal), `teams` the
+  number of teams, `tribes` the competitors' tribe types, comma separated (empty for 58 games without competitor
+  statistics), `started` the tournament's start date.
+- `cm_walked.tsv`: one row per walked tournament with its settings (GameMode, MapType, MapSize, the raw settings JSON);
+  a tournament listed here is not walked again, so reruns are incremental. `cm_spaces.tsv` holds the organiser spaces
+  seen; `cm_errors.tsv` failures; `cm_tournaments.txt` is an optional input, one tournament id per line.
+
+How far back the API goes: the lists are not paged and have no date window, each returns only the 50 most recent
+completed tournaments. The tool lists the game's 50 most recent and then the 50 most recent of every organiser space
+it meets (4 spaces were found: Grid Haven, PolyChampions, Duelists, Polytopia Real Tournaments), which reached 176
+tournaments back to July 2025. Anything older, or from an organiser not yet seen, has to come in through
+`cm_tournaments.txt`. Rerun at least every ten days: October 2026 alone holds 635 games, so the 50-most-recent window
+moves quickly. Match series inside a tournament are paged fully (no cap).
+
+Counts (2026-11-01): 176 tournaments walked (174 with games), 1,893 games, none failed.
+
+- Mode: Might 1,893 (every game; the tournaments are all Might).
+- Teams: 2 for every game, so all are 1v1.
+- Map size: 14 (Small) 1,619; 11 (Tiny) 209; 16 (Normal) 65.
+- Year: 2025 157, 2026 1,736 (rising: 2026-08 238, 2026-09 329, 2026-10 635 games).
+- 1v1 Might on Tiny or Small: 1,828 games in 169 tournaments (2025 105, 2026 1,723). Tournament map settings are mostly
+  Lakes Small (68 tournaments), Drylands Small (52), Drylands Tiny (14).
+- Tribes recorded for 1,835 games.
 
 **Getting a Challengermode refresh key** (checked 2026-11-01 on challengermode.com/developers):
 1. Create a free Challengermode account (`/account/register`).
