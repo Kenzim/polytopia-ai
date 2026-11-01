@@ -31,13 +31,28 @@ pub struct Npz<W: Write + Seek> {
 
 impl<W: Write + Seek> Npz<W> {
     pub fn new(w: W) -> Self {
-        let opts = SimpleFileOptions::default().compression_method(CompressionMethod::Deflated).compression_level(Some(3)).large_file(true);
-        Self { zip: ZipWriter::new(w), opts }
+        let opts = SimpleFileOptions::default()
+            .compression_method(CompressionMethod::Deflated)
+            .compression_level(Some(3))
+            .large_file(true);
+        Self {
+            zip: ZipWriter::new(w),
+            opts,
+        }
     }
 
     /// Add array `name` (stored as `name.npy`) with the given shape.
-    pub fn add<T: NpyType>(&mut self, name: &str, shape: &[usize], data: &[T]) -> std::io::Result<()> {
-        assert_eq!(shape.iter().product::<usize>(), data.len(), "shape of {name}");
+    pub fn add<T: NpyType>(
+        &mut self,
+        name: &str,
+        shape: &[usize],
+        data: &[T],
+    ) -> std::io::Result<()> {
+        assert_eq!(
+            shape.iter().product::<usize>(),
+            data.len(),
+            "shape of {name}"
+        );
         let mut body = Vec::with_capacity(data.len() * std::mem::size_of::<T>());
         for &x in data {
             x.put(&mut body);
@@ -47,7 +62,12 @@ impl<W: Write + Seek> Npz<W> {
 
     /// Add a 1-D array of strings as numpy `<U{L}` (UCS-4, `L` the longest string in characters, at least 1).
     pub fn add_strs<S: AsRef<str>>(&mut self, name: &str, data: &[S]) -> std::io::Result<()> {
-        let width = data.iter().map(|s| s.as_ref().chars().count()).max().unwrap_or(0).max(1);
+        let width = data
+            .iter()
+            .map(|s| s.as_ref().chars().count())
+            .max()
+            .unwrap_or(0)
+            .max(1);
         let mut body = Vec::with_capacity(data.len() * width * 4);
         for s in data {
             let mut chars = 0;
@@ -60,12 +80,27 @@ impl<W: Write + Seek> Npz<W> {
         self.add_bytes(name, &format!("<U{width}"), &[data.len()], &body)
     }
 
-    fn add_bytes(&mut self, name: &str, descr: &str, shape: &[usize], body: &[u8]) -> std::io::Result<()> {
+    fn add_bytes(
+        &mut self,
+        name: &str,
+        descr: &str,
+        shape: &[usize],
+        body: &[u8],
+    ) -> std::io::Result<()> {
         let dims = match shape {
             [n] => format!("({n},)"),
-            _ => format!("({})", shape.iter().map(|d| d.to_string()).collect::<Vec<_>>().join(", ")),
+            _ => format!(
+                "({})",
+                shape
+                    .iter()
+                    .map(|d| d.to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ),
         };
-        let mut header = format!("{{'descr': '{descr}', 'fortran_order': False, 'shape': {dims}, }}").into_bytes();
+        let mut header =
+            format!("{{'descr': '{descr}', 'fortran_order': False, 'shape': {dims}, }}")
+                .into_bytes();
         // Magic (6) + version (2) + header length (2) + header + newline is padded to a multiple of 64.
         let total = 10 + header.len() + 1;
         header.extend(std::iter::repeat(b' ').take((64 - total % 64) % 64));
@@ -75,7 +110,9 @@ impl<W: Write + Seek> Npz<W> {
         bytes.extend_from_slice(&(header.len() as u16).to_le_bytes());
         bytes.extend_from_slice(&header);
         bytes.extend_from_slice(body);
-        self.zip.start_file(format!("{name}.npy"), self.opts).map_err(std::io::Error::other)?;
+        self.zip
+            .start_file(format!("{name}.npy"), self.opts)
+            .map_err(std::io::Error::other)?;
         self.zip.write_all(&bytes)
     }
 
