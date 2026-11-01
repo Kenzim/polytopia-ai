@@ -109,3 +109,34 @@ the cost, so `k=4` is the default. Still below retail Hard.
   network call, not an engine change; a batched `clone` plus `step` in `polyai-py` would only trim the Python loop.
 - Not tuned: `w`, `skip` and `turns` are the first values tried. A sweep of `w` and `skip` at `k=4` is the cheapest next
   experiment.
+
+## Value-rank test (gate for further search work, 2026-10-29)
+
+Question: does the value head's end-of-turn estimate rank the candidate turns of one position by how they actually
+turn out? If not, no amount of value-guided search (per-turn, belief sampling, search-improved targets) can help.
+
+Method (`python -m polyai.value_rank`, `python/polyai/value_rank.py`): rl3 u480 in Might 1v1 against retail Crazy, 48
+diagnostic seeds (outside the train and eval ranges). At sampled roots, up to 4 candidate turns from the top first moves
+plus 4 sampled whole turns; each candidate turn is played out 8 times to the end of the game with the policy, giving a
+realised score R. Within each root we compare the ranking by end-of-turn value V, by policy prior, and by R.
+
+Result (289 roots, 1641 candidate turns, 5,492 s on 16 CPU workers, log and JSONL in
+`/kvm/polytopia-ai-data/diag/value_rank_rl3u480.*`):
+
+| measure | value |
+|---|---|
+| Spearman(V, R) within roots | +0.022 ± 0.070 (n=183) |
+| Spearman(prior, R) within roots | -0.032 ± 0.069 |
+| split-half Spearman of R (reliability of the target) | +0.148 ± 0.079, ceiling 0.258 |
+| Spearman(V, R), turns 2-7 / 11-16 / 22+ | -0.007 / +0.022 / +0.265 ± 0.23 (n=14) |
+| realised R of the turn picked by value / prior / search / greedy | 0.749 / 0.747 / 0.749 / 0.750 |
+| oracle best (inflated by picking the luckiest of noisy estimates) | 0.820 |
+
+Reading: the candidate turns barely differ in how they turn out (the target itself is only 0.15 reliable at 8
+playouts), and the value head ranks them at chance. Picking by value gives exactly the greedy policy's result. This
+explains why search added nothing on rl3 while it helped bc3: a weak policy leaves big differences between its top
+turns; a strong one does not, and the value head cannot see the small ones.
+
+Decision: no-go for value-guided search as it stands. `belief-search` and `search-targets` wait until a better value
+head (belief loss in RL, engine features) passes this same test with Spearman(V, R) clearly above zero. Late-game
+roots (turns 22+) hint at some signal and are the place to look first when re-testing.
