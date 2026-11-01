@@ -485,6 +485,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--batch-ms", type=float, default=3.0, help="how long the first request waits for others to batch with")
     ap.add_argument("--max-batch", type=int, default=32, help="most requests in one batch")
     ap.add_argument("--seed", type=int, default=0, help="seed of the sampling generator")
+    ap.add_argument("--tta", action="store_true", help="average the policy over the board symmetries (8x the inference)")
     ap.add_argument("-v", "--verbose", action="store_true", help="log every request")
     a = ap.parse_args(argv)
 
@@ -498,7 +499,7 @@ def main(argv: list[str] | None = None) -> int:
         if device.index is None:
             device = torch.device("cuda", torch.cuda.current_device())
         check_gpu_memory(a.gpu_gb, device)
-    policy = ModelPolicy(a.model, device, seed=a.seed)
+    policy = ModelPolicy(a.model, device, seed=a.seed, tta=a.tta)
     server = PolicyServer(policy, a.socket, window_ms=a.batch_ms, max_jobs=a.max_batch)
     server.bind()
     signal.signal(signal.SIGTERM, lambda *_: server.closing.set())

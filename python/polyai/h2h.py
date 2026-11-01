@@ -19,7 +19,7 @@ import numpy as np
 import torch
 
 from .arena import (DEFAULT_ARENA_DIR, MODEL_SEAT_DIFFICULTY, MODES, PRESET_IDS, SIZE_IDS, EVAL_SEED_MIN, ModelAgent,
-                    Suite, _take, feature_kw, game_record, load_done, mode_kw, parse_model_spec, parse_names,
+                    Suite, _take, feature_kw, game_record, load_done, mode_kw, parse_model_spec, parse_names, split_tta,
                     summarise)
 
 
@@ -130,8 +130,9 @@ def main(argv: list[str] | None = None) -> int:
                   turn_limit=args.turn_limit, mode=MODES[args.mode], batch_games=args.batch_games, threads=threads)
     agents = []
     for i, spec in enumerate((args.a, args.b)):
+        spec, tta = split_tta(spec)
         path, temperature = parse_model_spec(spec)
-        agents.append(ModelAgent(path, temperature, device, args.max_batch, args.seed + i))
+        agents.append(ModelAgent(path, temperature, device, args.max_batch, args.seed + i, tta=tta))
         print(f"{agents[-1].name}: {path} (step {agents[-1].step})", flush=True)
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)

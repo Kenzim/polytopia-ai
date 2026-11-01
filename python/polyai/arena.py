@@ -74,6 +74,14 @@ def parse_model_spec(spec: str) -> tuple[Path, float | None]:
     return path, temperature
 
 
+def split_tta(spec: str) -> tuple[str, bool]:
+    """`SPEC:tta` -> (SPEC, True): average the policy over the board symmetries (`polyai.policy.symmetric_views`)."""
+    parts = spec.split(":")
+    if "tta" in parts:
+        return ":".join(p for p in parts if p != "tta"), True
+    return spec, False
+
+
 def agent_label(path: Path, temperature: float | None) -> str:
     """`model:<run>` for a run's ckpt_final.pt, `model:<run>/<file stem>` for other checkpoints."""
     run = path.parent.name or "ckpt"
@@ -91,11 +99,11 @@ class ModelAgent:
     `polyai.policy.ModelPolicy`'s, so an arena result measures what the policy interface (and the service) plays."""
 
     def __init__(self, path: Path, temperature: float | None, device: torch.device, max_batch: int = 128,
-                 seed: int = 0):
-        self.policy = ModelPolicy(path, device, max_batch, seed)
+                 seed: int = 0, tta: bool = False):
+        self.policy = ModelPolicy(path, device, max_batch, seed, tta=tta)
         self.path, self.temperature, self.max_batch = path, temperature, max_batch
         self.device = device
-        self.name = agent_label(path, temperature)
+        self.name = agent_label(path, temperature) + (":tta" if tta else "")
         self.model = self.policy.model
         self.step = self.policy.step
         self.features = self.policy.features  # the suite's VecEnv must be built with features=True
@@ -370,6 +378,7 @@ def main(argv: list[str] | None = None) -> int:
         from .search import run_arena_spec, split_search_spec
 
         spec, search_cfg = split_search_spec(spec)
+        spec, tta = split_tta(spec)
         path, temperature = parse_model_spec(spec)
         if search_cfg is not None:  # PATH:search=K: per-turn search, played with single games (polyai.search)
             if device.type != "cpu":
@@ -379,7 +388,7 @@ def main(argv: list[str] | None = None) -> int:
                                         log=lambda m: print(m, flush=True), workers=threads, seed=a.seed,
                                         max_batch=a.max_batch)
             continue
-        agent = ModelAgent(path, temperature, device, a.max_batch, a.seed)
+        agent = ModelAgent(path, temperature, device, a.max_batch, a.seed, tta=tta)
         print(f"{agent.name}: {path} (step {agent.step}), {agent.model.n_params() / 1e6:.2f}M params", flush=True)
         for opp in opponents:
             records = play_pairing(agent, opp, suite, done, log=lambda m: print(m, flush=True))

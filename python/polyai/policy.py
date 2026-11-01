@@ -118,6 +118,26 @@ def observe_games(games: list) -> dict:
     }
 
 
+def symmetric_views(obs: dict) -> list[dict]:
+    """`obs` under every board symmetry that keeps its shape (test-time augmentation): tiles, engine tile features
+    and the actions' src/dst tile indices are transformed together; the legal list keeps its order."""
+    from .data import transform_actions, transform_tiles, valid_symmetries
+
+    tiles = np.asarray(obs["tiles"])
+    h, w = tiles.shape[-3], tiles.shape[-2]
+    views = []
+    for sym in valid_symmetries(h, w):
+        if sym % 2 and h != w:
+            continue
+        view = dict(obs)
+        view["tiles"] = transform_tiles(tiles, sym)
+        view["actions"] = transform_actions(np.asarray(obs["actions"]), h, w, sym)
+        if "f_tiles" in obs:
+            view["f_tiles"] = transform_tiles(np.asarray(obs["f_tiles"]), sym)
+        views.append(view)
+    return views
+
+
 # ---------------------------------------------------------------------------------------------------------------
 # Checkpoints
 # ---------------------------------------------------------------------------------------------------------------
@@ -144,8 +164,11 @@ class ModelPolicy:
     `infer_seconds` and `decisions` count the time spent inside `choose` and the positions answered.
     """
 
-    def __init__(self, path: str | Path, device: str | torch.device = "cpu", max_batch: int = MAX_BATCH, seed: int = 0):
+    def __init__(self, path: str | Path, device: str | torch.device = "cpu", max_batch: int = MAX_BATCH, seed: int = 0,
+                 tta: bool = False):
         from .train_bc import load_checkpoint
+
+        self.tta = tta
 
         self.path = resolve_checkpoint(path)
         self.device = torch.device(device)
@@ -181,26 +204,36 @@ class ModelPolicy:
         top: list[list[tuple[int, float]]] = [[] for _ in range(n)]
         t0 = time.perf_counter()
         board = obs.get("board_mask")
+        views = symmetric_views(obs) if self.tta and board is None else [obs]
         for s in range(0, n, self.max_batch):
             sel = np.arange(s, min(n, s + self.max_batch))
-            tiles, globals_, actions, mask = collate(obs, sel, self.device)
-            feats = collate_features(obs, sel, self.device) if self.model.cfg.features else {}
-            if self.model.cfg.features and not feats:
-                raise ValueError(f"{self.policy_id} reads the engine features, but the observation has none "
-                                 "(build the VecEnv with features=True)")
-            bmask = None
-            if board is not None:
-                bmask = torch.from_numpy(np.ascontiguousarray(np.asarray(board)[sel])).to(self.device, non_blocking=True)
-            with torch.autocast(self.device.type, dtype=torch.bfloat16, enabled=self.device.type == "cuda"):
-                out = self.model(tiles, globals_, actions, mask, bmask, **feats)
-            logits = out.policy_logits.float()
+            logits_sum, win_sum = None, None
+            for view in views:
+                tiles, globals_, actions, mask = collate(view, sel, self.device)
+                feats = collate_features(view, sel, self.device) if self.model.cfg.features else {}
+                if self.model.cfg.features and not feats:
+                    raise ValueError(f"{self.policy_id} reads the engine features, but the observation has none "
+                                     "(build the VecEnv with features=True)")
+                bmask = None
+                if board is not None:
+                    bmask = torch.from_numpy(np.ascontiguousarray(np.asarray(board)[sel])).to(self.device, non_blocking=True)
+                with torch.autocast(self.device.type, dtype=torch.bfloat16, enabled=self.device.type == "cuda"):
+                    out = self.model(tiles, globals_, actions, mask, bmask, **feats)
+                lp = torch.log_softmax(out.policy_logits.float(), dim=1)
+                wp = torch.softmax(out.winner_logits.float(), dim=-1)
+                logits_sum = lp if logits_sum is None else logits_sum + lp
+                win_sum = wp if win_sum is None else win_sum + wp
+            # with one view these are the model's own logits up to a per-row constant, so argmax and softmax agree
+            logits = logits_sum / len(views)
+            logits = logits.masked_fill(~mask, float("-inf"))
+            win_probs = win_sum / len(views)
             if temperature is None:
                 pick = logits.argmax(dim=1)
                 log_probs = torch.log_softmax(logits, dim=1)
             else:
                 pick = torch.multinomial(torch.softmax(logits / temperature, dim=1), 1, generator=self.generator)[:, 0]
                 log_probs = torch.log_softmax(logits / temperature, dim=1)
-            win = torch.softmax(out.winner_logits.float(), dim=-1)[:, 0]
+            win = win_probs[:, 0]
             k = min(TOP_K, logits.shape[1])
             top_lp, top_ix = log_probs.topk(k, dim=1)
             # one device-to-host copy for everything (each .cpu() is a synchronisation)

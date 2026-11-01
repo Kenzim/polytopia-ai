@@ -163,3 +163,31 @@ def test_observe_games_matches_the_vecenv_layout(checkpoint):
     assert (c.index < np.diff(obs["act_off"])).all()
     with pytest.raises(ValueError):
         observe_games([games[0], pe.Game.sample(1, n_players=[2], sizes=[2])])
+
+
+def test_tta_views_and_choices(checkpoint):
+    """Symmetric views keep the legal-list order; view 0 is the identity; TTA picks legal moves and its choice is the
+    same whichever symmetric copy of the position it is given."""
+    from polyai.data import transform_actions, transform_tiles
+    from polyai.policy import symmetric_views
+
+    obs = fake_obs(lens=(3, 5, 2, 9))
+    views = symmetric_views(obs)
+    h, w = obs["tiles"].shape[1:3]
+    assert len(views) == (8 if h == w else 4)
+    np.testing.assert_array_equal(views[0]["tiles"], obs["tiles"])
+    np.testing.assert_array_equal(views[0]["actions"], obs["actions"])
+    p = ModelPolicy(checkpoint, tta=True)
+    c = p.choose(obs)
+    lens = np.diff(obs["act_off"])
+    assert all(0 <= c.index[i] < lens[i] for i in range(len(lens)))
+    assert np.all((c.value >= 0) & (c.value <= 1))
+    rot = dict(obs)
+    rot["tiles"] = transform_tiles(np.asarray(obs["tiles"]), 2)
+    rot["actions"] = transform_actions(np.asarray(obs["actions"]), h, w, 2)
+    c2 = p.choose(rot)
+    np.testing.assert_array_equal(c.index, c2.index)
+    np.testing.assert_allclose(c.value, c2.value, atol=1e-4)
+    plain = ModelPolicy(checkpoint).choose(obs)
+    single = ModelPolicy(checkpoint, tta=False).choose(obs)
+    np.testing.assert_array_equal(plain.index, single.index)
