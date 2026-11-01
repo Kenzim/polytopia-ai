@@ -34,6 +34,7 @@ Run directory `/kvm/polytopia-ai-data/runs/<name>/`:
 | `games.jsonl` | one line per finished game: seed, players, learner seat, opponent entry, `opponent_policy_id`, outcome, capped, turns, length weight |
 | `ckpt_last.pt` | model, optimiser, pool statistics and snapshot list (what `--resume` loads) |
 | `ckpt_u<N>.pt`, `ckpt_final.pt` | plain checkpoints (`train_bc` format; `polyai.policy.ModelPolicy` and the arena load them) |
+| `ckpt_ema_u<N>.pt`, `ckpt_ema_final.pt` | with `--ema`: the averaged weights as plain checkpoints (same loaders) |
 | `pool/snap_u<N>.pt` | frozen copies of the learner that serve as opponents |
 
 The policy id of the learner after update N is `<name>@N`; every pool entry has one too (`pool_policy_ids` in the
@@ -112,9 +113,41 @@ Rollouts: `games` 128 in flight, `rollout_steps` 16384 learner decisions per upd
 `turn_limit` 150, `temperature`, `opp_temperature`, `drop_capped`. Pool: `pool_weights`, `beat_target`,
 `weight_floor`, `weight_cap`, `stats_decay`, `snapshot_every` 10, `max_snapshots` 6. PPO: `epochs` 2, `minibatch` 256,
 `lr` 3e-5, `grad_clip` 0.5, `clip`, `gamma`, `lam`, `vf_coef`, `ent_coef` 0.005, `target_kl` 0.05, `critic_warmup` 2,
-`kl_coef` 0.1 to `kl_coef_end` 0.01 over `kl_decay_updates` 200. Run: `ckpt_every` 10, `threads` (default 8; VecEnv workers plus
+`kl_coef` 0.1 to `kl_coef_end` 0.01 over `kl_decay_updates` 200. Recipe options (see above): `ema`, `ent_schedule`,
+`ent_max`, `ent_coef_end`, `ent_decay_updates`, `anchor_every`, `adv_filter`. Run: `ckpt_every` 10, `threads` (default 8; VecEnv workers plus
 torch threads), `torch_threads`, `bf16` (autocast in the update on CUDA; inference is bf16 on CUDA as in
 `ModelPolicy`), `max_batch`, `need_gb`, `device`, `seed`, `resume`.
+
+## Recipe options
+
+Four options for the self-play recipe, each behind a flag whose default reproduces the update as it was (a test and a
+one-off comparison with the commit before check that losses and parameters after an update are bit-for-bit equal).
+Larger batches need no option: `--rollout-steps` (learner decisions per update, default 16384) and `--minibatch`
+(default 256) are already flags; `--epochs` sets the passes over a rollout.
+
+- **`--ema DECAY`** (for example 0.999; 0 = off). An exponential moving average of all weights *and buffers*
+  (`avg = DECAY * avg + (1 - DECAY) * live` after every optimiser step; integer buffers are copied). The average is saved
+  as the `ema` entry (a state dict) of `ckpt_last.pt`, `ckpt_u<N>.pt` and `ckpt_final.pt`, and as plain loadable checkpoints
+  `ckpt_ema_u<N>.pt` and `ckpt_ema_final.pt` next to them. Rollouts, opponents' snapshots and the KL term use the live
+  weights, so the option changes nothing about training; it only gives a smoother model to evaluate. Note that with
+  BatchNorm in eval mode the running statistics never change in this trainer, so the buffers stay equal to the live ones.
+  `--resume` restores the average (a run first started without `--ema` starts it from the live weights).
+- **`--ent-schedule`** with `--ent-coef-end`, `--ent-decay-updates` (default 200) and `--ent-max`. The coefficient of the
+  entropy bonus moves linearly from `--ent-coef` to `--ent-coef-end` over `--ent-decay-updates` updates (the default
+  `--ent-coef-end -1` means "stay at `--ent-coef`", so the decay is off unless an end is given). If `--ent-max` is set
+  (> 0) and the mean policy entropy of the *previous* update was above it, the coefficient is 0 for this update; it
+  returns when the entropy is back under the threshold. The coefficient in effect is logged as `ent_coef` every update.
+  Without `--ent-schedule` the coefficient is `--ent-coef` throughout and `--ent-max`, `--ent-coef-end` are ignored.
+- **`--anchor-every N`** (R-NaD style moving anchor; 0 = off). The KL reference starts as `--ref`; after every N-th update
+  it is replaced by a frozen copy of the learner, so updates 1 to N use `--ref`, updates N+1 to 2N use the learner as it
+  was after update N, and so on. The `bc` pool entry stays the original `--ref`. The
+  metric `kl_bc` is then the KL to the anchor in use, and `anchor` (`ref` or `self:u<N>`) names it. The anchor is saved in
+  `ckpt_last.pt` (`rl.anchor`) and restored by `--resume`. The KL coefficient schedule is unchanged, so with a moving
+  anchor it is worth a larger `--kl-coef-end`.
+- **`--adv-filter FRAC`** (default 1.0 = all). After the advantages are normalised over the whole rollout, only the FRAC
+  of the trained positions with the largest absolute advantage (at least two) are kept for the epochs of that update.
+  The value loss, entropy and KL terms also see only the kept positions, which makes the update cheaper and the policy
+  gradient less noisy but biased towards decisive moves. `positions_kept` in the metrics counts them.
 
 ## Measurements and sizing
 

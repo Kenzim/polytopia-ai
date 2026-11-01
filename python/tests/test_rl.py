@@ -16,7 +16,11 @@ from polyai.rl import (
     Collector,
     Pool,
     RLConfig,
+    WeightEMA,
+    anchor_due,
     compute_gae,
+    ent_coef_at,
+    filter_by_advantage,
     kl_coef_at,
     parse_args,
     ppo_loss,
@@ -41,6 +45,7 @@ from polyai.rl_pool import (
     take,
 )
 from polyai.train_bc import save_checkpoint
+from rl_synth import synthetic_stores
 from test_arena import fake_obs
 
 HAVE_ENGINE = importlib.util.find_spec("polyai_engine") is not None
@@ -463,6 +468,174 @@ def test_overlapped_run_trains_on_rollouts_of_the_previous_weights(tmp_path, ini
 def test_resume_without_a_checkpoint_fails(tmp_path, init_run):
     with pytest.raises(SystemExit):
         train(small_cfg(tmp_path, init_run, name="nothing", resume=True))
+
+
+# ---------------------------------------------------------------------------------------------------------------
+# Recipe options: --ema, --ent-schedule, --anchor-every, --adv-filter (defaults leave the update untouched)
+# ---------------------------------------------------------------------------------------------------------------
+
+
+def synth_update(cfg, seed=0, **kw):
+    """One ppo_update on synthetic positions with a fixed model, reference and rng; returns (model, metrics)."""
+    from polyai.rl import make_rl_optimizer
+
+    torch.manual_seed(0)
+    model, ref = tiny_model(0), tiny_model(5)
+    stores = synthetic_stores(model, groups=6, seed=1)
+    res = ppo_update(model, ref, make_rl_optimizer(model, cfg), stores, cfg, 3, CPU, np.random.default_rng(seed), **kw)
+    return model, res
+
+
+def test_recipe_defaults_keep_the_update_as_it_was():
+    d = RLConfig()
+    assert (d.ema, d.ent_schedule, d.ent_max, d.anchor_every, d.adv_filter) == (0.0, False, 0.0, 0, 1.0)
+    cfg = RLConfig(device="cpu", minibatch=8, bf16=False, lr=1e-3)
+    m0, r0 = synth_update(cfg)
+    m1, r1 = synth_update(cfg, ema=None, ent_coef=cfg.ent_coef)
+    for a, b in zip(m0.state_dict().values(), m1.state_dict().values()):
+        assert torch.equal(a, b)
+    assert r0 == r1 and r0["positions_kept"] == r0["positions"] == 24 and r0["ent_coef"] == cfg.ent_coef
+    assert ent_coef_at(7, cfg, last_entropy=99.0) == cfg.ent_coef  # no schedule: never touched
+
+
+def test_ema_with_decay_zero_equals_the_live_weights_and_decay_averages():
+    cfg = RLConfig(device="cpu", minibatch=8, bf16=False, lr=1e-3)
+    torch.manual_seed(0)
+    start = tiny_model(0)
+    ema0 = WeightEMA(start, 0.0)
+    assert all(torch.equal(v, start.state_dict()[k]) for k, v in ema0.state.items())
+    model, _ = synth_update(cfg, ema=ema0)
+    live = model.state_dict()
+    assert set(ema0.state) == set(live)  # parameters and buffers
+    for k, v in ema0.state.items():
+        assert torch.equal(v, live[k]), k
+    assert not torch.equal(live["value_mlp.2.weight"], start.state_dict()["value_mlp.2.weight"])
+    # decay 0.5 by hand on a changed parameter, a changed running statistic and an integer buffer
+    m = tiny_model(0)
+    e = WeightEMA(m, 0.5)
+    sd = m.state_dict()
+    bufs = [k for k, v in sd.items() if k.endswith("running_mean")]
+    ints = [k for k, v in sd.items() if not v.is_floating_point()]
+    assert bufs and ints
+    before = {k: v.clone() for k, v in sd.items()}
+    with torch.no_grad():
+        for k in ("value_mlp.2.weight", bufs[0]):
+            sd[k].add_(2.0)
+        sd[ints[0]].add_(3)
+    e.update(m)
+    for k in ("value_mlp.2.weight", bufs[0]):
+        torch.testing.assert_close(e.state[k], before[k] + 1.0)
+    assert torch.equal(e.state[ints[0]], sd[ints[0]])
+    # the average does not alias the live tensors
+    assert all(e.state[k].data_ptr() != sd[k].data_ptr() for k in sd)
+
+
+def test_entropy_schedule_decays_linearly_and_drops_to_zero_above_the_threshold():
+    cfg = RLConfig(ent_coef=0.01, ent_schedule=True, ent_coef_end=0.0, ent_decay_updates=10)
+    assert ent_coef_at(0, cfg) == pytest.approx(0.01)
+    assert ent_coef_at(5, cfg) == pytest.approx(0.005)
+    assert ent_coef_at(50, cfg) == 0.0
+    flat = RLConfig(ent_coef=0.01, ent_schedule=True, ent_max=2.0)  # threshold only: ent_coef_end stays unset
+    assert ent_coef_at(100, flat) == pytest.approx(0.01)
+    assert ent_coef_at(3, flat, last_entropy=1.9) == pytest.approx(0.01)
+    assert ent_coef_at(3, flat, last_entropy=2.1) == 0.0
+    assert ent_coef_at(4, flat, last_entropy=1.0) == pytest.approx(0.01)  # back below: the bonus returns
+    both = RLConfig(ent_coef=0.01, ent_schedule=True, ent_max=2.0, ent_coef_end=0.0, ent_decay_updates=10)
+    assert ent_coef_at(5, both, last_entropy=1.0) == pytest.approx(0.005) and ent_coef_at(5, both, 3.0) == 0.0
+
+
+def test_entropy_coefficient_reaches_the_loss():
+    cfg = RLConfig(device="cpu", minibatch=8, bf16=False)
+    _, a = synth_update(cfg, ent_coef=0.0)
+    _, b = synth_update(cfg, ent_coef=1.0)
+    assert a["ent_coef"] == 0.0 and b["ent_coef"] == 1.0
+    assert b["loss"] < a["loss"]  # a large bonus lowers the loss by about its coefficient times the entropy
+    inputs, mb = loss_batch(tiny_model())
+    out = tiny_model()(*inputs)
+    base = ppo_loss(out, None, mb, RLConfig(ent_coef=0.0, vf_coef=0.0), 0.0)
+    withent = ppo_loss(out, None, mb, RLConfig(ent_coef=0.0, vf_coef=0.0), 0.0, ent_coef=0.3)
+    assert float(base["loss"] - withent["loss"]) == pytest.approx(0.3 * float(base["entropy"]), rel=1e-4)
+
+
+def test_advantage_filter_keeps_the_largest_magnitudes_across_sizes():
+    rng = np.random.default_rng(0)
+    data = {}
+    for key, n in (("a", 10), ("b", 6)):
+        adv = rng.normal(size=n + 3).astype(np.float32)
+        data[key] = {"adv_n": adv, "train": np.sort(rng.choice(n + 3, n, replace=False))}
+    mags = np.concatenate([np.abs(d["adv_n"][d["train"]]) for d in data.values()])
+    top = set(np.sort(mags)[-8:].round(6).tolist())
+    kept = filter_by_advantage(data, 0.5)
+    got = np.concatenate([np.abs(d["adv_n"][d["train"]]) for d in data.values()])
+    assert kept == 8 == len(got) and set(got.round(6).tolist()) == top
+    for d in data.values():
+        assert (np.diff(d["train"]) > 0).all()  # still sorted indices
+    assert filter_by_advantage({"a": {"adv_n": np.arange(5, dtype=np.float32), "train": np.arange(5)}}, 0.01) == 2
+
+
+def test_advantage_filter_in_the_update():
+    cfg = RLConfig(device="cpu", minibatch=8, bf16=False, adv_filter=0.5)
+    _, res = synth_update(cfg)
+    assert res["positions"] == 24 and res["positions_kept"] == 12
+    assert res["minibatches"] == 2 * 2 and res["ret_mean"] == synth_update(RLConfig(device="cpu", minibatch=8, bf16=False))[1]["ret_mean"]
+    _, full = synth_update(RLConfig(device="cpu", minibatch=8, bf16=False))
+    assert full["minibatches"] == 6 and full["positions_kept"] == 24
+
+
+def test_anchor_schedule():
+    cfg = RLConfig(anchor_every=3)
+    assert [n for n in range(1, 10) if anchor_due(n, cfg)] == [3, 6, 9]
+    assert not any(anchor_due(n, RLConfig()) for n in range(1, 10))
+
+
+def test_parse_args_recipe_flags():
+    cfg = parse_args(["--init", "x", "--ema", "0.999", "--ent-schedule", "--ent-max", "3.5", "--ent-coef-end", "0",
+                      "--ent-decay-updates", "50", "--anchor-every", "20", "--adv-filter", "0.5"])
+    assert (cfg.ema, cfg.ent_schedule, cfg.ent_max, cfg.ent_coef_end, cfg.ent_decay_updates, cfg.anchor_every,
+            cfg.adv_filter) == (0.999, True, 3.5, 0.0, 50, 20, 0.5)
+
+
+@needs_engine
+def test_anchor_swaps_at_the_right_update_and_ema_checkpoints_load(tmp_path, init_run):
+    from polyai.train_bc import load_checkpoint
+
+    cfg = small_cfg(tmp_path, init_run, updates=4, anchor_every=2, ema=0.5, lr=1e-3, critic_warmup=0)
+    train(cfg)
+    run = tmp_path / "t"
+    recs = [r for r in read_metrics(run / "metrics.jsonl") if r["kind"] == "update"]
+    # updates 1 and 2 use the BC reference; the copy taken after update 2 is the reference of updates 3 and 4
+    assert [r["anchor"] for r in recs] == ["ref", "ref", "self:u00002", "self:u00002"]
+    assert recs[2]["kl_bc"] >= 0 and all(np.isfinite(r["loss"]) for r in recs)
+    last = torch.load(run / "ckpt_last.pt", map_location="cpu", weights_only=False)
+    assert last["rl"]["anchor"]["update"] == 4 and "ema" in last  # swapped again after the last update
+    final = torch.load(run / "ckpt_final.pt", map_location="cpu", weights_only=False)
+    ema_final = torch.load(run / "ckpt_ema_final.pt", map_location="cpu", weights_only=False)
+    assert "ema" in final and "ema" not in ema_final
+    for k, v in final["ema"].items():
+        assert torch.equal(v, ema_final["model"][k])
+    assert (run / "ckpt_ema_u00002.pt").exists() and (run / "ckpt_u00002.pt").exists()
+    live, avg = load_checkpoint(run / "ckpt_final.pt"), load_checkpoint(run / "ckpt_ema_final.pt")  # plain loaders
+    assert live.cfg.to_dict() == avg.cfg.to_dict()
+    assert any(not torch.equal(a, b) for a, b in zip(live.parameters(), avg.parameters()))  # decay 0.5 lags the live net
+    # resume keeps the anchor and the average
+    train(small_cfg(tmp_path, init_run, updates=5, anchor_every=2, ema=0.5, lr=1e-3, critic_warmup=0, resume=True))
+    recs = [r for r in read_metrics(run / "metrics.jsonl") if r["kind"] == "update"]
+    assert recs[-1]["update"] == 5 and recs[-1]["anchor"] == "self:u00004"
+
+
+@needs_engine
+def test_two_update_smoke_with_all_recipe_options(tmp_path, init_run):
+    cfg = small_cfg(tmp_path, init_run, name="all", updates=2, ema=0.9, ent_schedule=True, ent_max=1e-6, ent_coef_end=0.0,
+                    ent_decay_updates=4, anchor_every=1, adv_filter=0.5, critic_warmup=0)
+    assert train(cfg)["updates"] == 2
+    run = tmp_path / "all"
+    recs = [r for r in read_metrics(run / "metrics.jsonl") if r["kind"] == "update"]
+    assert [r["anchor"] for r in recs] == ["ref", "self:u00001"]
+    assert recs[0]["ent_coef"] == pytest.approx(cfg.ent_coef)  # no earlier entropy yet, update 0 of the decay
+    assert recs[1]["ent_coef"] == 0.0  # the first update's entropy is above the (tiny) threshold
+    for r in recs:
+        assert r["positions_kept"] == -(-r["positions"] // 2) and r["minibatches"] > 0 and np.isfinite(r["loss"])
+    assert (run / "ckpt_ema_final.pt").exists()
 
 
 def test_parse_args_defaults_and_flags(tmp_path):

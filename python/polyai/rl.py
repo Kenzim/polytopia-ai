@@ -142,6 +142,14 @@ class RLConfig:
     # The first updates train only the fresh heads (they read the trunk through a stop-gradient): random heads would
     # otherwise push large gradients into the trunk and drag the policy away from where it starts.
     belief_warmup: int = 0
+    # Self-play recipe options (docs/rl.md "Recipe options"). Every default keeps the behaviour above exactly.
+    ema: float = 0.0  # decay of an exponential moving average of the weights, buffers included (0 = off), saved as `ema`
+    ent_schedule: bool = False  # entropy coefficient from ent_coef to ent_coef_end, and 0 while the entropy is above ent_max
+    ent_max: float = 0.0  # with --ent-schedule: coefficient 0 in an update if the previous update's entropy exceeded it (0 = off)
+    ent_coef_end: float = -1.0  # end of the linear decay of the entropy coefficient (negative: stay at ent_coef)
+    ent_decay_updates: int = 200
+    anchor_every: int = 0  # every N updates the KL reference becomes a frozen copy of the current policy (0 = stay at ref)
+    adv_filter: float = 1.0  # fraction of the samples kept in the update, those with the largest |advantage| (1 = all)
 
 
 # ---------------------------------------------------------------------------------------------------------------
@@ -261,12 +269,13 @@ class SizeStore:
 
 
 def ppo_loss(out: ModelOutput, ref_logits: torch.Tensor | None, mb: dict[str, torch.Tensor], cfg: RLConfig,
-             kl_coef: float, policy_scale: float = 1.0) -> dict[str, torch.Tensor]:
+             kl_coef: float, policy_scale: float = 1.0, ent_coef: float | None = None) -> dict[str, torch.Tensor]:
     """The PPO objective on one minibatch.
 
     `mb` holds `mask` (legal action mask [B, A]), `chosen`, `old_logp`, `adv` (already normalised) and `ret`
     (return target in [0, 1]). `ref_logits` are the frozen BC policy's logits on the same positions (None: no KL).
     `policy_scale` 0 trains the value head only (critic warm-up). The policy is softmax(logits / cfg.temperature).
+    `ent_coef` is the entropy coefficient of this update (None: `cfg.ent_coef`, see `ent_coef_at`).
 
     With `cfg.belief_weight` > 0 and a belief output (`out` from `model(..., belief=True)`), `mb` also holds `truth`,
     `truth_mask` and `truth_g` and the loss adds `belief_weight` times the belief loss (hidden tiles only). With weight 0
@@ -296,7 +305,8 @@ def ppo_loss(out: ModelOutput, ref_logits: torch.Tensor | None, mb: dict[str, to
     ret = mb["ret"]
     value_loss = -(ret * log_win + (1 - ret) * log_not).mean()
 
-    loss = policy_scale * (pg_loss - cfg.ent_coef * entropy + kl_coef * kl) + cfg.vf_coef * value_loss
+    ent_coef = cfg.ent_coef if ent_coef is None else ent_coef
+    loss = policy_scale * (pg_loss - ent_coef * entropy + kl_coef * kl) + cfg.vf_coef * value_loss
     belief_metrics: dict[str, torch.Tensor] = {}
     if cfg.belief_weight > 0 and "truth" in mb and getattr(out, "belief", None) is not None:
         bl, per = full_belief_loss(out, mb["truth"], mb["truth_mask"], mb.get("truth_g"))
@@ -330,10 +340,63 @@ def kl_coef_at(update: int, cfg: RLConfig) -> float:
     return cfg.kl_coef + (cfg.kl_coef_end - cfg.kl_coef) * frac
 
 
+def ent_coef_at(update: int, cfg: RLConfig, last_entropy: float | None = None) -> float:
+    """The entropy coefficient of an update. Without `--ent-schedule` it is `ent_coef`. With it: a linear move from
+    `ent_coef` to `ent_coef_end` over `ent_decay_updates` updates (a negative `ent_coef_end` keeps `ent_coef`), and 0
+    for any update that follows one whose mean policy entropy (`last_entropy`) was above `ent_max` (0 = never)."""
+    if not cfg.ent_schedule:
+        return cfg.ent_coef
+    if cfg.ent_max > 0 and last_entropy is not None and last_entropy > cfg.ent_max:
+        return 0.0
+    end = cfg.ent_coef if cfg.ent_coef_end < 0 else cfg.ent_coef_end
+    frac = min(1.0, update / max(cfg.ent_decay_updates, 1))
+    return cfg.ent_coef + (end - cfg.ent_coef) * frac
+
+
+class WeightEMA:
+    """Exponential moving average of a network's state (parameters and buffers, so BatchNorm statistics too):
+    `state = decay * state + (1 - decay) * live` after every optimiser step. Integer buffers are copied. Decay 0 tracks
+    the live weights exactly."""
+
+    def __init__(self, model: PolyNet, decay: float, state: dict[str, torch.Tensor] | None = None):
+        self.decay = decay
+        src = state if state is not None else model.state_dict()
+        self.state = {k: v.detach().clone() for k, v in src.items()}
+
+    @torch.no_grad()
+    def update(self, model: PolyNet) -> None:
+        for k, v in model.state_dict().items():
+            e = self.state[k]
+            if e.is_floating_point():
+                e.mul_(self.decay).add_(v.detach(), alpha=1.0 - self.decay)
+            else:
+                e.copy_(v)
+
+
+def filter_by_advantage(data: dict[tuple, dict], frac: float) -> int:
+    """Keep the `frac` of the trained positions with the largest |normalised advantage| (at least 2; ties broken by
+    order): replaces each `d["train"]` and returns the number kept."""
+    keys = list(data)
+    mags = np.concatenate([np.abs(data[k]["adv_n"][data[k]["train"]]) for k in keys])
+    keep = min(len(mags), max(2, math.ceil(frac * len(mags))))
+    chosen = np.zeros(len(mags), bool)
+    chosen[np.argsort(-mags, kind="stable")[:keep]] = True
+    pos = 0
+    for k in keys:
+        n = len(data[k]["train"])
+        data[k]["train"] = data[k]["train"][chosen[pos:pos + n]]
+        pos += n
+    return keep
+
+
 def ppo_update(model: PolyNet, ref: PolyNet | None, opt: torch.optim.Optimizer, stores: dict[tuple, SizeStore],
                cfg: RLConfig, update: int, device: torch.device, rng: np.random.Generator,
-               extra: list[dict] | None = None) -> dict:
+               extra: list[dict] | None = None, ema: WeightEMA | None = None, ent_coef: float | None = None) -> dict:
     """Several epochs of minibatch PPO over everything the rollout stored. Returns the mean metrics.
+
+    `ref` is the network of the KL penalty (the BC policy, or the moving anchor with `--anchor-every`). `ema` is updated
+    after every optimiser step. `ent_coef` is the entropy coefficient (None: `cfg.ent_coef`). With `cfg.adv_filter` < 1
+    only that fraction of the positions, those with the largest |advantage|, is trained on.
 
     `extra` is the hook for another source of positions (interfaces.md section 3: live games joining as an off-policy
     stream). Each item has the layout of `SizeStore.finalize()` (one board size: `tiles`, `globals`, `act_off`,
@@ -350,6 +413,9 @@ def ppo_update(model: PolyNet, ref: PolyNet | None, opt: torch.optim.Optimizer, 
     for d in data.values():
         d["adv_n"] = ((d["adv"] - mean) / std).astype(np.float32)
         d["ret_c"] = np.clip(d["ret"], 0.0, 1.0)
+    ret_mean = float(np.concatenate([d["ret_c"][d["train"]] for d in data.values()]).mean())
+    n_kept = filter_by_advantage(data, cfg.adv_filter) if cfg.adv_filter < 1.0 else n_train
+    ent_coef = cfg.ent_coef if ent_coef is None else ent_coef
     kl_coef = kl_coef_at(update, cfg)
     policy_scale = 0.0 if update < cfg.critic_warmup else 1.0
     sums: dict[str, float] = defaultdict(float)
@@ -387,11 +453,13 @@ def ppo_update(model: PolyNet, ref: PolyNet | None, opt: torch.optim.Optimizer, 
                 if ref is not None:
                     with torch.no_grad():
                         ref_logits = ref(tiles, globals_, actions, mask, **feature_inputs(feats, ref)).policy_logits
-            losses = ppo_loss(out, ref_logits, mb, cfg, kl_coef, policy_scale)
+            losses = ppo_loss(out, ref_logits, mb, cfg, kl_coef, policy_scale, ent_coef)
             opt.zero_grad(set_to_none=True)
             losses["loss"].backward()
             gn = torch.nn.utils.clip_grad_norm_(model.parameters(), cfg.grad_clip)
             opt.step()
+            if ema is not None:
+                ema.update(model)
             for k, v in losses.items():
                 sums[k] += float(v.detach())
             sums["grad_norm"] += float(gn)
@@ -402,10 +470,9 @@ def ppo_update(model: PolyNet, ref: PolyNet | None, opt: torch.optim.Optimizer, 
         if cfg.target_kl > 0 and ep_n and ep_kl / ep_n > cfg.target_kl:
             break
     res = {k: v / max(count, 1) for k, v in sums.items()}
-    res.update(positions=n_train, minibatches=count, epochs_done=epochs_done, kl_coef=kl_coef,
-               policy_scale=policy_scale, adv_mean=mean, adv_std=std,
-               early_stop=bool(epochs_done < cfg.epochs), ret_mean=float(np.concatenate(
-                   [d["ret_c"][d["train"]] for d in data.values()]).mean()))
+    res.update(positions=n_train, positions_kept=n_kept, minibatches=count, epochs_done=epochs_done, kl_coef=kl_coef,
+               ent_coef=ent_coef, policy_scale=policy_scale, adv_mean=mean, adv_std=std,
+               early_stop=bool(epochs_done < cfg.epochs), ret_mean=ret_mean)
     return res
 
 
@@ -758,12 +825,48 @@ class Collector:
 # ---------------------------------------------------------------------------------------------------------------
 
 
-def save_rl_checkpoint(path: Path, model: PolyNet, update: int, opt: torch.optim.Optimizer, rl_state: dict) -> None:
+def save_rl_checkpoint(path: Path, model: PolyNet, update: int, opt: torch.optim.Optimizer, rl_state: dict,
+                       ema: WeightEMA | None = None) -> None:
     state = {"model": model.state_dict(), "model_config": model.cfg.to_dict(), "step": update,
              "encoding_version": S.ENCODING_VERSION, "optimizer": opt.state_dict(), "rl": rl_state}
+    if ema is not None:
+        state["ema"] = ema.state
     tmp = path.with_suffix(".tmp")
     torch.save(state, tmp)
     os.replace(tmp, path)
+
+
+def save_plain_checkpoint(path: Path, model: PolyNet, update: int, ema: WeightEMA | None = None) -> None:
+    """`train_bc.save_checkpoint`, plus the averaged weights under `ema` when there are any (loaders ignore the key)."""
+    if ema is None:
+        save_checkpoint(path, model, update)
+        return
+    state = {"model": model.state_dict(), "model_config": model.cfg.to_dict(), "step": update,
+             "encoding_version": S.ENCODING_VERSION, "ema": ema.state}
+    tmp = path.with_suffix(".tmp")
+    torch.save(state, tmp)
+    os.replace(tmp, path)
+
+
+def save_ema_checkpoint(path: Path, model: PolyNet, update: int, ema: WeightEMA) -> None:
+    """The averaged weights as a plain checkpoint of the same model configuration (arena, h2h and serve load it as is)."""
+    state = {"model": ema.state, "model_config": model.cfg.to_dict(), "step": update,
+             "encoding_version": S.ENCODING_VERSION}
+    tmp = path.with_suffix(".tmp")
+    torch.save(state, tmp)
+    os.replace(tmp, path)
+
+
+def frozen_copy(model: PolyNet) -> PolyNet:
+    net = copy.deepcopy(model).eval()
+    for p in net.parameters():
+        p.requires_grad_(False)
+    return net
+
+
+def anchor_due(done: int, cfg: RLConfig) -> bool:
+    """True after the update that brings the count of finished updates to a multiple of `--anchor-every`."""
+    return cfg.anchor_every > 0 and done % cfg.anchor_every == 0
 
 
 def checkpoint_step(path: Path) -> int:
@@ -836,6 +939,15 @@ def train(cfg: RLConfig) -> dict:
         rl_state = state.get("rl", {})
         print(f"resumed {cfg.name} from update {update0}", flush=True)
 
+    ema = WeightEMA(model, cfg.ema, state.get("ema") if cfg.resume else None) if cfg.ema > 0 else None
+    # the KL reference: `ref` (the BC policy) until --anchor-every replaces it by a frozen copy of the learner
+    anchor = {"net": ref, "update": 0}
+    if cfg.resume and cfg.anchor_every > 0 and "anchor" in rl_state:
+        anchor["net"] = frozen_copy(model)
+        anchor["net"].load_state_dict(rl_state["anchor"]["model"])
+        anchor["update"] = int(rl_state["anchor"]["update"])
+    last_entropy: float | None = rl_state.get("last_entropy") if cfg.resume else None
+
     rng = np.random.default_rng(cfg.seed + 7919 * update0)
     torch.manual_seed(cfg.seed + update0)
     # with overlap the rollouts are played by a copy of the learner (the weights before the update running alongside),
@@ -893,8 +1005,13 @@ def train(cfg: RLConfig) -> dict:
     seat_p = col.seat_p
 
     def snapshot_state(update: int) -> dict:
-        return {"stats": pool.stats.state_dict(),
-                "snapshots": [{"update": int(e.split("u")[-1]), "path": pool.info[e].path} for e in pool.snapshots]}
+        st = {"stats": pool.stats.state_dict(),
+              "snapshots": [{"update": int(e.split("u")[-1]), "path": pool.info[e].path} for e in pool.snapshots]}
+        if anchor["update"] > 0:
+            st["anchor"] = {"update": anchor["update"], "model": anchor["net"].state_dict()}
+        if cfg.ent_schedule and last_entropy is not None:
+            st["last_entropy"] = last_entropy
+        return st
 
     def begin_rollout(update: int, played_by: int) -> dict:
         """Plan the rollout of `update` (the collector must be idle) and return the pool weights it uses."""
@@ -926,11 +1043,18 @@ def train(cfg: RLConfig) -> dict:
             next_weights = begin_rollout(update + 1, update)
             nxt = roll_ex.submit(run_rollout)
         t1 = time.perf_counter()
-        res = ppo_update(model, ref, opt, stores, cfg, update, device, ppo_rng)
+        res = ppo_update(model, anchor["net"], opt, stores, cfg, update, device, ppo_rng, ema=ema,
+                         ent_coef=ent_coef_at(update, cfg, last_entropy))
         t2 = time.perf_counter()
+        if cfg.anchor_every > 0:
+            res["anchor"] = "ref" if anchor["update"] == 0 else f"self:u{anchor['update']:05d}"
+        if "entropy" in res:
+            last_entropy = res["entropy"]
         next_roll_secs = nxt.result() if nxt is not None else 0.0
         res["overlap_wait_secs"] = time.perf_counter() - t2  # PPO waiting for the next rollout (overlap only)
         done = update + 1
+        if anchor_due(done, cfg):  # the next update's KL reference is the learner as it is now
+            anchor["net"], anchor["update"] = frozen_copy(model), done
         if done % cfg.snapshot_every == 0:
             add_snapshot(done)
             pool.drop_oldest(cfg.max_snapshots, col.in_use())
@@ -960,8 +1084,10 @@ def train(cfg: RLConfig) -> dict:
               f"ent {res.get('entropy', float('nan')):.3f} clip {res.get('clip_frac', float('nan')):.3f} "
               f"vloss {res.get('value_loss', float('nan')):.3f} | {wr}", flush=True)
         if done % cfg.ckpt_every == 0 and done < cfg.updates:
-            save_rl_checkpoint(run_dir / "ckpt_last.pt", model, done, opt, snapshot_state(done))
-            save_checkpoint(run_dir / f"ckpt_u{done:05d}.pt", model, done)
+            save_rl_checkpoint(run_dir / "ckpt_last.pt", model, done, opt, snapshot_state(done), ema)
+            save_plain_checkpoint(run_dir / f"ckpt_u{done:05d}.pt", model, done, ema)
+            if ema is not None:
+                save_ema_checkpoint(run_dir / f"ckpt_ema_u{done:05d}.pt", model, done, ema)
         if nxt is not None:
             weights, roll_secs = next_weights, next_roll_secs
         elif done < cfg.updates:
@@ -971,8 +1097,10 @@ def train(cfg: RLConfig) -> dict:
     if roll_ex is not None:
         roll_ex.shutdown()
     done = max(update0, cfg.updates)
-    save_rl_checkpoint(run_dir / "ckpt_last.pt", model, done, opt, snapshot_state(done))
-    save_checkpoint(run_dir / "ckpt_final.pt", model, done)
+    save_rl_checkpoint(run_dir / "ckpt_last.pt", model, done, opt, snapshot_state(done), ema)
+    save_plain_checkpoint(run_dir / "ckpt_final.pt", model, done, ema)
+    if ema is not None:
+        save_ema_checkpoint(run_dir / "ckpt_ema_final.pt", model, done, ema)
     peak = torch.cuda.max_memory_allocated(device) / 1024**2 if device.type == "cuda" else 0.0
     summary = {"name": cfg.name, "updates": done, "wall_secs": time.perf_counter() - t_start, "peak_mem_mb": peak,
                "last": last_rec}
