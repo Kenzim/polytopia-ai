@@ -225,3 +225,17 @@ below still hold qualitatively but should be re-measured on the new suite before
   interval of a 0-100 pair (0 to 3.7%) is the honest statement there. The engine ranks Domination winners by score,
   whereas retail may rank by city count (ledger to-do 8e4f7017); this no longer matters for results here, since the
   engine's top-score winner is not used.
+
+## Exploiter diagnostic (Might 1v1, 2026-11-01)
+
+`expl1_b6c96`: a copy of rl3 u480 trained for 100 PPO updates only against frozen rl3 u480, no BC anchor (kl_coef 0),
+Might mode, 2 players. In its own training games (both sides sampling at temperature 1) its win rate against frozen
+rl3 rose from 50% (updates 0-19) to about 60% (updates 80-99), with draws rising from 0 to 5%.
+
+| Match (greedy, 200 seeds x 2 seats) | W-L-D | Score |
+|---|---|---|
+| expl1 u100 vs rl3 u480 | 166-221-13 | 43.1% |
+
+Reading: what the exploiter learnt beats rl3's sampled play, not its greedy play, and it cost general strength. 100
+updates of plain PPO find no exploitable hole in greedy rl3 u480; this does not rule out holes a stronger search would
+find. Data in `/kvm/polytopia-ai-data/arena/exploiter/`.
