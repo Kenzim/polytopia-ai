@@ -100,7 +100,7 @@ How far back the API goes: the lists are not paged and have no date window, each
 completed tournaments. The tool lists the game's 50 most recent and then the 50 most recent of every organiser space
 it meets (4 spaces were found: Grid Haven, PolyChampions, Duelists, Polytopia Real Tournaments), which reached 176
 tournaments back to July 2025. Anything older, or from an organiser not yet seen, has to come in through
-`cm_tournaments.txt`. Rerun at least every ten days: October 2026 alone holds 635 games, so the 50-most-recent window
+`cm_tournaments.txt`. Rerun at least every ten days (a weekly timer does this, see below): October 2026 alone holds 635 games, so the 50-most-recent window
 moves quickly. Match series inside a tournament are paged fully (no cap).
 
 Counts (2026-11-01): 176 tournaments walked (174 with games), 1,893 games, none failed.
@@ -112,6 +112,24 @@ Counts (2026-11-01): 176 tournaments walked (174 with games), 1,893 games, none 
 - 1v1 Might on Tiny or Small: 1,828 games in 169 tournaments (2025 105, 2026 1,723). Tournament map settings are mostly
   Lakes Small (68 tournaments), Drylands Small (52), Drylands Tiny (14).
 - Tribes recorded for 1,835 games.
+
+**Scheduled reruns** (since 2026-11-02). A systemd timer on the dev host runs the walk weekly, so the
+50-most-recent window never moves past games we have not listed:
+
+- Units: `polyai-cm-ids.timer` and `polyai-cm-ids.service`, kept in `deploy/systemd/` and installed in
+  `/etc/systemd/system/`. The timer fires on Mondays at 04:30 (up to 30 minutes random delay); `Persistent=true`
+  runs a missed week at the next boot.
+- The service runs `tools/cm_ids_cron.sh` as root under `nice`, which calls `cm_ids.py --dir
+  /kvm/polytopia-ai-data/human`. The key is read only from `/root/.config/polytopia/challengermode_refresh_key`;
+  it is not in the units, the script or any argument.
+- Full output per run: `/kvm/polytopia-ai-data/human/cm_logs/run-<UTC stamp>.log`. One summary line per run is
+  appended to `/kvm/polytopia-ai-data/human/cm_runs.log`: exit code, tournaments walked, new ids, total ids, open
+  errors, whether the API refused access (`stopped`), and `key_in_log`. As a safety net the script greps each log
+  for the key (without printing it) and empties the log and exits 3 if it is found.
+- Check it: `systemctl list-timers polyai-cm-ids.timer`, `tail /kvm/polytopia-ai-data/human/cm_runs.log`,
+  `journalctl -u polyai-cm-ids.service`. Run once by hand: `systemctl start polyai-cm-ids.service`.
+- After changing the units in the repo: copy them to `/etc/systemd/system/` and `systemctl daemon-reload`.
+- First scheduled-style run (2026-11-02 13:40): 1 tournament walked, 4 new ids, 1,897 in total, 0 errors.
 
 **Getting a Challengermode refresh key** (checked 2026-11-01 on challengermode.com/developers):
 1. Create a free Challengermode account (`/account/register`).

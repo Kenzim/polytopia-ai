@@ -1,0 +1,13 @@
+[Unit]
+Description=Collect new Polytopia tournament game ids from Challengermode (ai/tools/cm_ids.py)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+Environment=HOME=/root
+ExecStart=/kvm/polytopia/ai/tools/cm_ids_cron.sh
+Nice=10
+IOSchedulingClass=idle
+TimeoutStartSec=2h

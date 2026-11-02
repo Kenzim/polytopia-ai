@@ -1,0 +1,10 @@
+[Unit]
+Description=Weekly Challengermode tournament id collection (cm_ids.py)
+
+[Timer]
+OnCalendar=Mon *-*-* 04:30:00
+RandomizedDelaySec=30min
+Persistent=true
+
+[Install]
+WantedBy=timers.target
