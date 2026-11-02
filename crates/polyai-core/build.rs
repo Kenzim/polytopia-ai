@@ -11,5 +11,8 @@ fn main() {
     let dirty = git(&["status", "--porcelain", "--untracked-files=no", "--", "src", "data", "Cargo.toml"]).is_some_and(|s| !s.is_empty());
     println!("cargo:rustc-env=ENGINE_COMMIT={}{}", commit, if dirty { "-dirty" } else { "" });
     println!("cargo:rerun-if-changed=build.rs");
-    println!("cargo:rerun-if-changed={}", engine.join(".git/HEAD").display());
+    // .git/HEAD only names the branch, so also watch the reflog (moves on every commit) and the sources (dirty flag).
+    for p in [".git/HEAD", ".git/logs/HEAD", "src", "data", "Cargo.toml"] {
+        println!("cargo:rerun-if-changed={}", engine.join(p).display());
+    }
 }
