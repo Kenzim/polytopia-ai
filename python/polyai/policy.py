@@ -92,8 +92,9 @@ def collate(obs: dict, sel: np.ndarray, device: torch.device) -> tuple[torch.Ten
     return put(np.asarray(obs["tiles"])[sel]), put(np.asarray(obs["globals"])[sel]), put(actions), put(mask)
 
 
-def observe_games(games: list) -> dict:
-    """An observation group from single `polyai_engine.Game`s of one map size, each awaiting a decision."""
+def observe_games(games: list, features: bool = False) -> dict:
+    """An observation group from single `polyai_engine.Game`s of one map size, each awaiting a decision. With
+    `features`, the engine features (encoding.md section 12) are added, as `VecEnv(features=True)` does."""
     if not games:
         raise ValueError("no games")
     shapes = {g.shape for g in games}
@@ -106,7 +107,12 @@ def observe_games(games: list) -> dict:
         glob.append(gl)
         acts.append(g.legal_actions())
     off = np.concatenate([[0], np.cumsum([len(a) for a in acts])]).astype(np.int32)
-    return {
+    extra = {}
+    if features:
+        f = [g.features() for g in games]
+        extra = {"f_tiles": np.stack([x[0] for x in f]), "f_globals": np.stack([x[1] for x in f]),
+                 "f_actions": np.concatenate([x[2] for x in f])}
+    return extra | {
         "game": np.arange(len(games), dtype=np.int32),
         "seat": np.array([g.current_seat() or 0 for g in games], dtype=np.int8),
         "n_players": np.array([g.n_players for g in games], dtype=np.int8),

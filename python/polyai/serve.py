@@ -378,7 +378,7 @@ class PolicyServer:
                 game = self.pe.Game.from_server(initial, current, seat)
             except ValueError as e:
                 raise RequestError(str(e)) from None
-        obs = observe_games([game])
+        obs = observe_games([game], features=bool(getattr(self.policy, "features", False)))
         n_legal = len(obs["actions"])
         t2 = time.perf_counter()
         job = self.batcher.submit(obs, temperature, self.request_timeout)

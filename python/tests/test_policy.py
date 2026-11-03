@@ -163,6 +163,13 @@ def test_observe_games_matches_the_vecenv_layout(checkpoint):
     assert (c.index < np.diff(obs["act_off"])).all()
     with pytest.raises(ValueError):
         observe_games([games[0], pe.Game.sample(1, n_players=[2], sizes=[2])])
+    feat = observe_games(games, features=True)
+    for i, g in enumerate(games):
+        ft, fg, fa = g.features()
+        np.testing.assert_array_equal(feat["f_tiles"][i], ft)
+        np.testing.assert_array_equal(feat["f_globals"][i], fg)
+        np.testing.assert_array_equal(feat["f_actions"][feat["act_off"][i]:feat["act_off"][i + 1]], fa)
+    np.testing.assert_array_equal(feat["actions"], obs["actions"])
 
 
 def test_tta_views_and_choices(checkpoint):
