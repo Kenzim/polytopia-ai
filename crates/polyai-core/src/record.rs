@@ -241,6 +241,8 @@ fn put_command(w: &mut W, c: &Command) {
             w.u(u64::from(with));
         }
         EndTurn => w.u(25),
+        FreezeArea { unit } => unit_only(w, 26, unit),
+        BreakIce { unit } => unit_only(w, 27, unit),
     }
 }
 
@@ -282,6 +284,8 @@ fn get_command(r: &mut R) -> Result<Command, String> {
         }
         24 => EstablishEmbassy { with: r.u()? as u8 },
         25 => EndTurn,
+        26 => FreezeArea { unit: unit(r)? },
+        27 => BreakIce { unit: unit(r)? },
         t => return Err(format!("bad command tag {t}")),
     })
 }

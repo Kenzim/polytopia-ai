@@ -10,10 +10,10 @@ pub const N_KINDS: usize = 32;
 pub const KIND_PAD: i16 = 0;
 pub const NONE_TILE: i16 = -1;
 
-pub const KIND_NAMES: [&str; 26] = [
+pub const KIND_NAMES: [&str; 28] = [
     "Move", "Attack", "Capture", "Promote", "Recover", "HealOthers", "Explode", "Disband", "ExamineRuins", "Stay", "Swarm", "Boost",
     "Disembark", "Upgrade", "Train", "Build", "Destroy", "Decompose", "ClearTileEffect", "CityReward", "Research", "BreakPeace",
-    "PeaceTreaty", "EstablishEmbassy", "PeaceResponse", "EndTurn",
+    "PeaceTreaty", "EstablishEmbassy", "PeaceResponse", "EndTurn", "FreezeArea", "BreakIce",
 ];
 
 pub const K_MOVE: i16 = 1;
@@ -42,6 +42,10 @@ pub const K_PEACE_TREATY: i16 = 23;
 pub const K_ESTABLISH_EMBASSY: i16 = 24;
 pub const K_PEACE_RESPONSE: i16 = 25;
 pub const K_END_TURN: i16 = 26;
+/// Polaris commands (engine 5dfedee onwards). They only arise for Polaris units, outside the 13 encoded tribes, so no
+/// trained model has seen them; they use spare rows of the `N_KINDS` embedding.
+pub const K_FREEZE_AREA: i16 = 27;
+pub const K_BREAK_ICE: i16 = 28;
 
 fn reward_id(r: CityReward) -> i16 {
     match r {
@@ -128,6 +132,8 @@ pub fn encode_command(e: &Engine, slots: &SlotMap, cmd: &Command) -> Option<Acti
         Swarm { unit } => unit_kind(K_SWARM, unit),
         Boost { unit } => unit_kind(K_BOOST, unit),
         Disembark { unit } => unit_kind(K_DISEMBARK, unit),
+        FreezeArea { unit } => unit_kind(K_FREEZE_AREA, unit),
+        BreakIce { unit } => unit_kind(K_BREAK_ICE, unit),
         Upgrade { unit, to } => same(K_UPGRADE, to as i16, unit_tile(unit)?),
         Train { city, unit_type } => same(K_TRAIN, unit_type as i16, tile_of(e, city)?),
         Build { at, improvement } => same(K_BUILD, improvement as i16, tile_of(e, at)?),
@@ -175,6 +181,8 @@ pub fn decode_command(e: &Engine, slots: &SlotMap, a: Action) -> Option<Command>
         K_SWARM => Swarm { unit: unit()? },
         K_BOOST => Boost { unit: unit()? },
         K_DISEMBARK => Disembark { unit: unit()? },
+        K_FREEZE_AREA => FreezeArea { unit: unit()? },
+        K_BREAK_ICE => BreakIce { unit: unit()? },
         K_UPGRADE => Upgrade { unit: upgrader()?, to: i32::from(arg) },
         K_TRAIN => Train { city: wc_of(e, src)?, unit_type: i32::from(arg) },
         K_BUILD => Build { at: wc_of(e, src)?, improvement: i32::from(arg) },
@@ -214,6 +222,8 @@ pub fn kind_of(cmd: &Command) -> i16 {
         Swarm { .. } => K_SWARM,
         Boost { .. } => K_BOOST,
         Disembark { .. } => K_DISEMBARK,
+        FreezeArea { .. } => K_FREEZE_AREA,
+        BreakIce { .. } => K_BREAK_ICE,
         Upgrade { .. } => K_UPGRADE,
         Train { .. } => K_TRAIN,
         Build { .. } => K_BUILD,

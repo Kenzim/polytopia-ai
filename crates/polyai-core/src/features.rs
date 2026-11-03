@@ -22,7 +22,7 @@ use polytopia_sim::engine::{Command, Engine, Wc, NATURE};
 use polytopia_sim::rules::combat::{
     defence_bonus, get_battle_results, BattleQuery, CombatUnit, DefenceBonusInput, CITY_IMPROVEMENT, FORTIFY_ABILITY,
 };
-use polytopia_sim::rules::path::attack_options;
+use polytopia_sim::rules::path::{attack_options, tile_being_captured};
 use polytopia_sim::{CityReward, UnitState};
 
 // ---------- column layouts ----------
@@ -215,7 +215,7 @@ pub fn attack_preview(e: &Engine, me: u8, attacker: &UnitState, defender: &UnitS
     let in_options = e.unit_info(defender).is_some_and(|info| {
         let mut probe = defender.clone();
         probe.leader = 0;
-        attack_options(&e.s, &probe, e.unit_range(defender), true, info.data.attack, &info.abilities, true, |_| false, |_| false)
+        attack_options(&e.s, &probe, e.unit_range(defender), true, info.data.attack, &info.abilities, true, |t| tile_being_captured(&e.s, t), |_| false)
             .contains(&attacker.coordinates)
     });
     let q = BattleQuery {

@@ -112,6 +112,7 @@ ACTION_KINDS = [
     "Move", "Attack", "Capture", "Promote", "Recover", "HealOthers", "Explode", "Disband", "ExamineRuins", "Stay",
     "Swarm", "Boost", "Disembark", "Upgrade", "Train", "Build", "Destroy", "Decompose", "ClearTileEffect",
     "CityReward", "Research", "BreakPeace", "PeaceTreaty", "EstablishEmbassy", "PeaceResponse", "EndTurn",
+    "FreezeArea", "BreakIce",  # Polaris only (engine 5dfedee); never seen by models trained on the 13 tribes
 ]
 KIND_PAD = 0  # padding rows in a batch; real kinds are 1..len(ACTION_KINDS)
 KIND_ID = {name: i + 1 for i, name in enumerate(ACTION_KINDS)}
