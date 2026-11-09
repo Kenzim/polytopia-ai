@@ -191,6 +191,29 @@ clean (0 illegal, 0 unmapped), 3 skipped for more than 8 players (including the 
 `tools/human_report.py` passed all its checks. The Might games there are mid-game saves, so none was finished and
 every winner is -1; finished games are untested until real ones arrive.
 
+### First real corpus (2026-11-09)
+
+1,479 Challengermode tournament games fetched by the client into `human/raw`, converted with engine `a28cd84`
+(`polyai-human --raw raw --out shards --meta meta_cm.jsonl`, single thread, 3 min 48 s, under `nice`):
+
+| Outcome | Games | Why |
+|---|---|---|
+| clean | 1,256 | 0 illegal, 0 unmapped; **413,504 positions** in 10 shards (1,154 Small, 90 Tiny, 12 Normal) |
+| unsupported tribe | 138 | tribe 5 (73), Polaris 16 (38), tribe 3 (27): outside our 13-tribe encoding |
+| dirty (engine mismatch) | 72 | the engine rejects at least one recorded command: 16 games with 1, 21 with 2 to 5, 35 with more |
+| skipped | 12 | save versions 112 and 119; the parser reads 121 to 124 |
+| too many players | 1 | 10 players |
+
+Only 209 of the clean games end in an elimination our engine sees (`over`); the rest end by resignation, timeout or the
+server, so they train the policy only (`winner = -1`). All clean games are 1v1 Might. The dirty games are worth sending to
+the engine manager as parity cases; Polaris games need an encoding change (14th tribe) to be used.
+
+Training (`tools/human_round.sh`): `hbc1_rl3_human` is rl3 u480 behaviour-cloned on the human shards (shard 8 held
+out, lr 5e-5, 6,000 steps, KL term off since human rows have no candidate scores): held-out human top-1 rose from
+0.261 to 0.395 (top-3 0.431 to 0.605). On its own it is weaker than rl3 (39.5% head to head over 200 games, 55.0% vs
+retail Crazy against rl3's 76.0%), so it is the start of a 300-update self-play round with the autoloop recipe
+(KL to itself), gated like the loop.
+
 ## 5. Open
 
 - The client change in section 3 and a source of ids (Challengermode key or share links): both need the client manager
