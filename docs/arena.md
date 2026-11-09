@@ -244,8 +244,8 @@ find. Data in `/kvm/polytopia-ai-data/arena/exploiter/`.
 
 Models: `avg_hXX` = XX% hrl1_human_b6c96@300 + rest rl3_b6c96@480 (every float tensor, BatchNorm statistics included;
 `tools/avg_weights.py`). `soup5` = uniform mean of rl3 u480, hrl1@300 and autoloop candidates r1, r2, r3.
-Protocol (`tools/soup_eval.sh`): 400-game Might gate vs hrl1@300 on one fresh seed block (seed 3,000,000 onwards is not
-reused), 150-turn cap; 200 games vs retail Crazy on the loop's fixed seeds; 200 games vs retail Crazy on Water World.
+Protocol (`tools/soup_eval.sh`): 400-game Might gate vs hrl1@300 on seeds 2,700,000 to 2,700,199
+(the autoloop's round blocks start at 2,000,000 + 1000 per round, so no overlap), 150-turn cap; 200 games vs retail Crazy on the loop's fixed seeds; 200 games vs retail Crazy on Water World.
 
 | Model | Gate vs hrl1 W-D-L | Score (95% CI) | Capped | vs Crazy | Water World vs Crazy |
 |---|---|---|---|---|---|
