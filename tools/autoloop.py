@@ -35,7 +35,7 @@ AI = Path(__file__).resolve().parents[1]
 PY = "/kvm/polytopia/.venv/bin/python"
 DATA = Path("/kvm/polytopia-ai-data")
 NOTIFY_TOKEN = Path("/root/.config/polytopia/autoloop_notify_token")
-NOTIFY_URL = "https://forge.stackken.com/notify"
+NOTIFY_URL = "http://192.168.11.98:8001/notify"
 
 
 @dataclass
