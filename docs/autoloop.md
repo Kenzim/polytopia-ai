@@ -19,7 +19,9 @@
    difference at 200 games each) stops a candidate that beats the champion only by losing general strength.
 5. A candidate that is not promoted is pruned to `ckpt_final.pt` (a full run directory is about 440 MB).
 
-A round takes about 5 hours (training about 3.8 h, gate and guard about 1 h), so 4 to 5 rounds a day.
+A round takes about 2.5 to 5 hours depending on host load (training measured at about 20 s per update on
+2026-11-09, gate and guard about 1 h), so roughly 5 to 9 rounds a day. The champion's Crazy baseline for rl3 u480
+is 152-48-0 of 200, 76.0%, so a candidate needs at least 68% to pass the guard.
 
 ## Resources
 

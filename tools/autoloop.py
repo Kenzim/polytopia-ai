@@ -311,6 +311,10 @@ class Loop:
                         f"polyai.serve is unchanged.")
         else:
             write_json(self.root / "state.json", new)
+            if k == 1:  # the first gate result is reported even without a promotion
+                self.notify(f"autoloop round 1 decided: {result['candidate_id']} not promoted.\n"
+                            f"gate {fmt(result['gate'])}\ncrazy {fmt(result['crazy'])} (champion "
+                            f"{100 * result['champion_crazy']['score']:.1f}%)")
             if not result["promoted"] and not c.keep_failed_runs:
                 self.prune(Path(result["candidate"]).parent)
         self.status()
