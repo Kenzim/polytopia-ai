@@ -1,0 +1,23 @@
+[Unit]
+Description=Polytopia AI automatic training loop: self-play round, gate against the champion, promote (ai/tools/autoloop.py)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Environment=HOME=/root TMPDIR=/kvm/tmp/tmp UV_CACHE_DIR=/kvm/tmp/uv-cache PYTHONUNBUFFERED=1
+WorkingDirectory=/kvm/polytopia/ai
+ExecStart=/kvm/polytopia/.venv/bin/python /kvm/polytopia/ai/tools/autoloop.py run
+Restart=always
+RestartSec=120
+# Shared host: low priority, at most 20 cores, idle disk priority. Training uses 12 + 4 threads, evaluation 8.
+Nice=15
+CPUWeight=20
+CPUQuota=2000%
+IOSchedulingClass=idle
+KillMode=control-group
+TimeoutStopSec=60
+
+[Install]
+WantedBy=multi-user.target
