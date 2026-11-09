@@ -239,3 +239,22 @@ rl3 rose from 50% (updates 0-19) to about 60% (updates 80-99), with draws rising
 Reading: what the exploiter learnt beats rl3's sampled play, not its greedy play, and it cost general strength. 100
 updates of plain PPO find no exploitable hole in greedy rl3 u480; this does not rule out holes a stronger search would
 find. Data in `/kvm/polytopia-ai-data/arena/exploiter/`.
+
+## Weight averaging (model soups), 2026-11-09
+
+Models: `avg_hXX` = XX% hrl1_human_b6c96@300 + rest rl3_b6c96@480 (every float tensor, BatchNorm statistics included;
+`tools/avg_weights.py`). `soup5` = uniform mean of rl3 u480, hrl1@300 and autoloop candidates r1, r2, r3.
+Protocol (`tools/soup_eval.sh`): 400-game Might gate vs hrl1@300 on one fresh seed block (seed 3,000,000 onwards is not
+reused), 150-turn cap; 200 games vs retail Crazy on the loop's fixed seeds; 200 games vs retail Crazy on Water World.
+
+| Model | Gate vs hrl1 W-D-L | Score (95% CI) | Capped | vs Crazy | Water World vs Crazy |
+|---|---|---|---|---|---|
+| avg_h25 | 163-69-168 | 49.4% (44.5 to 54.3) | 69 | 80.0% | 14.0% |
+| avg_h50 | 160-60-180 | 47.5% (42.7 to 52.4) | 60 | 82.0% | 13.8% |
+| avg_h75 | 151-66-183 | 46.0% (41.2 to 50.9) | 66 | 79.5% | 14.5% |
+| soup5 | 176-75-149 | 53.4% (48.5 to 58.2) | 75 | 83.0% | 14.2% |
+| rl3 u480 | 130-66-204 | 40.8% (36.0 to 45.6) | 66 | 76.5% | 13.5% |
+| hrl1@300 (champion) | | | | 77.8% | 13.8% |
+
+No soup passes the 55% gate. Capped games cluster on Continents (37 to 48 of 96) and Normal maps (27 to 36 of 112).
+Water World is never in training (default presets exclude it): every model scores about 14% against Crazy there.
