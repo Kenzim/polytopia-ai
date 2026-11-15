@@ -214,6 +214,32 @@ out, lr 5e-5, 6,000 steps, KL term off since human rows have no candidate scores
 retail Crazy against rl3's 76.0%), so it is the start of a 300-update self-play round with the autoloop recipe
 (KL to itself), gated like the loop.
 
+## 4b. Learning from BPolait (`tools/bpolait_round.sh`)
+
+The headless client's BPolait games (`client/games/<id>.json` plus the two state blobs) hold every command of both
+seats, and each of our commands carries the `policy_id` that chose it. To the server both seats are people, so
+`polyai-human --seats FILE` records only the listed players: `tools/bpolait_corpus.py` writes BPolait's player id per
+game and converts BPolait's moves only (`game_key = bpolait:<id>`), with about one game in five held out by id
+(`human/bpolait/val`). It also prints every game with map, size, result, scores and the model that played us.
+
+Volume: a Tiny or Small Might game gives about 370 BPolait positions, against 413,504 human positions. Outcomes are far
+too few for RL (a few dozen games a day), so the route is imitation:
+
+1. **Imitator** `bpbc_gNNNN`: behaviour cloning from `hbc1_rl3_human` (the human-imitation model, which already predicts
+   BPolait's moves as often as a person's) on the human shards plus the BPolait shards repeated 10 times, 3,000 steps.
+   Kept only if held-out BPolait top-1 beats hbc1's by a point.
+2. **Gated round**: the champion trains 300 updates of the loop's recipe with the imitator as KL reference and as the
+   `bc` pool opponent (weight 0.25, sampled at temperature 1), so self-play meets BPolait-like play every update.
+   Gate and promotion exactly as the loop's.
+
+`MIN_GAMES` defaults to 100 (about 37,000 positions; 20 held-out games give about 7,000 positions, so a 1 to 2 point
+agreement gain is measurable). Dry run on 24 games (19 training): held-out top-1 0.446 for hbc1, 0.464 for the
+imitator, top-3 0.669 to 0.690; within noise at 1,500 held-out positions. The imitator's win-probability head
+overfits the few outcomes (Brier 0.12 to 0.23); the round uses only its policy.
+
+Agreement of our models with BPolait on all 22 games of 15 Nov (8,236 positions, `tools/agreement.py`): rl3 u480
+0.181, hrl1 0.320, wrl1 0.294, hbc1 0.397.
+
 ## 5. Open
 
 - The client change in section 3 and a source of ids (Challengermode key or share links): both need the client manager

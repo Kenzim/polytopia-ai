@@ -37,7 +37,23 @@ const END_MATCH: u16 = 22;
 /// sits just before the last end-turn of every regression game); it is counted, not treated as an unmapped command.
 const NO_COMMAND: u16 = 35;
 
-const USAGE: &str = "usage: polyai-human --raw DIR --out DIR [--meta FILE] [--keep K] [--shard-size P] [--limit N]";
+const USAGE: &str = "usage: polyai-human --raw DIR --out DIR [--meta FILE] [--keep K] [--shard-size P] [--limit N] \
+                     [--seats FILE] [--key-prefix P]";
+
+/// `--seats FILE`: one game per line, `<id> <player>[,<player>...]`; only listed games are replayed and only the
+/// listed players' moves are recorded (for games where every seat is a person to the server, such as our own).
+fn read_seats(path: &Path) -> HashMap<String, Vec<u8>> {
+    std::fs::read_to_string(path)
+        .expect("read the seats file")
+        .lines()
+        .filter_map(|l| {
+            let mut it = l.split_whitespace();
+            let id = it.next()?.to_string();
+            let players = it.next()?.split(',').map(|p| p.parse().expect("player id")).collect();
+            Some((id, players))
+        })
+        .collect()
+}
 
 #[derive(Default)]
 struct Meta {
@@ -142,7 +158,15 @@ fn kept(seed: i32, index: usize, keep: u32) -> bool {
 type Rows = Vec<(Row, Labels)>;
 
 /// Replay one game. `Err` is a skip with its reason; the meta is filled either way as far as it got.
-fn replay(id: &str, initial: &[u8], current: &[u8], keep: u32, m: &mut Meta) -> Result<(Rows, i32), String> {
+/// `only`: when given, the recorded seats are these player ids instead of every seat not marked `auto_play`.
+fn replay(
+    id: &str,
+    initial: &[u8],
+    current: &[u8],
+    keep: u32,
+    only: Option<&[u8]>,
+    m: &mut Meta,
+) -> Result<(Rows, i32), String> {
     let save = SaveFile::parse_server(initial, current).map_err(|e| format!("cannot decode the blobs: {e}"))?;
     let mut e = Engine::from_state(save.initial.clone());
     let s = &e.s.settings;
@@ -155,7 +179,7 @@ fn replay(id: &str, initial: &[u8], current: &[u8], keep: u32, m: &mut Meta) -> 
         .players
         .iter()
         .filter(|p| p.id != NATURE)
-        .map(|p| (p.id, p.tribe, !p.auto_play))
+        .map(|p| (p.id, p.tribe, only.map_or(!p.auto_play, |o| o.contains(&p.id))))
         .collect();
     m.players = seats.len();
     m.humans = seats.iter().filter(|s| s.2).count();
@@ -295,6 +319,7 @@ fn flush(bufs: &mut HashMap<(usize, usize), ShardBuf>, key: (usize, usize), out:
 fn main() {
     let (mut raw, mut out, mut meta): (Option<PathBuf>, Option<PathBuf>, Option<PathBuf>) = (None, None, None);
     let (mut keep, mut shard_size, mut limit) = (1u32, 50_000usize, usize::MAX);
+    let (mut seats, mut prefix): (Option<HashMap<String, Vec<u8>>>, String) = (None, "human".into());
     let mut args = std::env::args().skip(1);
     while let Some(a) = args.next() {
         let mut val = || args.next().unwrap_or_else(|| panic!("{a} needs a value"));
@@ -305,6 +330,8 @@ fn main() {
             "--keep" => keep = val().parse().expect("--keep K"),
             "--shard-size" => shard_size = val().parse().expect("--shard-size P"),
             "--limit" => limit = val().parse().expect("--limit N"),
+            "--seats" => seats = Some(read_seats(Path::new(&val()))),
+            "--key-prefix" => prefix = val(),
             _ => {
                 eprintln!("{USAGE}");
                 std::process::exit(2);
@@ -328,6 +355,7 @@ fn main() {
         .flatten()
         .filter_map(|f| f.file_name().to_string_lossy().strip_suffix("_init.bin").map(str::to_string))
         .filter(|id| raw.join(format!("{id}_cur.bin")).exists())
+        .filter(|id| seats.as_ref().is_none_or(|s| s.contains_key(id)))
         .collect();
     ids.sort();
     ids.truncate(limit);
@@ -342,7 +370,8 @@ fn main() {
         let result = match (read("init"), read("cur")) {
             (Ok(i), Ok(c)) => {
                 let mm = &mut m;
-                std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| replay(id, &i, &c, keep, mm)))
+                let only = seats.as_ref().and_then(|s| s.get(id)).map(Vec::as_slice);
+                std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| replay(id, &i, &c, keep, only, mm)))
                     .unwrap_or_else(|p| {
                         let why = p
                             .downcast_ref::<String>()
@@ -358,7 +387,7 @@ fn main() {
             Ok((rows, seed)) => {
                 m.status = "ok".into();
                 let key = (m.height, m.width);
-                let game_key = format!("human:{id}");
+                let game_key = format!("{prefix}:{id}");
                 let buf = bufs.entry(key).or_insert_with(|| ShardBuf::new(key.0, key.1));
                 for (r, l) in &rows {
                     let origin = Origin {

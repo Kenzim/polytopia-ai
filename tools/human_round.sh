@@ -4,9 +4,13 @@
 # trains, gates against the champion, runs the Crazy guard, then sends a Forge notification.
 # Usage: tools/human_round.sh NAME INIT_CKPT CHAMPION_CKPT GATE_SEED_START
 # Optional env: PRESETS (comma list passed to polyai.rl --presets; repeats weight a preset), SEED (default 101),
-# TAG (round label in promotions.jsonl, default human), WATER=1 (also 200 Water World games vs retail Crazy).
+# TAG (round label in promotions.jsonl, default human), WATER=1 (also 200 Water World games vs retail Crazy),
+# REF (KL reference and the pool's `bc` opponent, default INIT_CKPT), BC_WEIGHT (pool weight of `bc`, default 0.15;
+# the self weight shrinks by the difference).
 set -u
 NAME=$1 INIT=$2 CHAMP=$3 GSEED=$4
+REF=${REF:-$INIT} BC_WEIGHT=${BC_WEIGHT:-0.15}
+SELF_WEIGHT=$(python3 -c "print(round(0.5 - $BC_WEIGHT, 4))")
 D=/kvm/polytopia-ai-data
 R=$D/runs
 A=$D/arena/${ARENA_DIR:-human}
@@ -26,9 +30,9 @@ while pgrep -f "polyai.rl --name $NAME " > /dev/null; do sleep 30; done  # a pre
 RESUME=""
 [ -f $R/$NAME/ckpt_last.pt ] && RESUME=--resume
 if [ ! -f $R/$NAME/ckpt_final.pt ]; then
-  nice -n 10 ionice -c3 $PY -m polyai.rl --name $NAME --init $INIT --ref $INIT --runs-dir $R \
+  nice -n 10 ionice -c3 $PY -m polyai.rl --name $NAME --init $INIT --ref $REF --runs-dir $R \
     --updates 300 --games 384 --rollout-steps 32768 --n-players 2:55,3:25,4:20 --turn-limit 150 --mode might $PRESET_ARG \
-    --pool-weights retail:easy=0.05,retail:normal=0.15,retail:hard=0.15,retail:crazy=0.15,bc=0.15,self=0.35 \
+    --pool-weights retail:easy=0.05,retail:normal=0.15,retail:hard=0.15,retail:crazy=0.15,bc=$BC_WEIGHT,self=$SELF_WEIGHT \
     --lr 3e-05 --ent-coef 0.0005 --kl-coef 0.02 --kl-coef-end 0.02 --critic-warmup 2 --snapshot-every 10 \
     --max-snapshots 6 --ckpt-every 20 --adv-filter 0.5 --seed $SEED --threads 12 --torch-threads 4 \
     --need-gb 1.5 --device cuda $RESUME >> $R/$NAME.log 2>&1 || { log "train failed"; exit 1; }
