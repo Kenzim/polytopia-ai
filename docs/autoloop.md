@@ -36,9 +36,10 @@ From round 49 (16 Nov 2026) the loop runs on the training node **poly4090** (Ryz
 16 GB, `root@poly4090.local`; the IP comes from DHCP), not on epyc. Same paths as epyc. The unit there has the
 drop-in `deploy/systemd/poly4090.conf` (no shared-host throttling), and `config.json` sets `train_threads` 20,
 `need_gb` 4, `eval_threads` 24 and `extra_train_args` `--tf32 --collector rust`. On epyc the unit is stopped and
-disabled; epyc's copy of `autoloop/` and `runs/auto_r*` is stale from round 49 on, so read status on the node
-(`ssh root@poly4090.local cat /kvm/polytopia-ai-data/autoloop/status.txt`). A promoted champion has to be copied
-to epyc before `polyai.serve` can load it.
+disabled. Epyc's `polyai-node-sync.timer` (`deploy/systemd/polyai-node-sync.*`) pulls the node's
+`/kvm/polytopia-ai-data` (except `human/`, without overwriting newer files) every 15 minutes, so epyc's copy,
+including a promoted champion for `polyai.serve`, is at most 15 minutes behind. Live status:
+`ssh root@192.168.11.41 cat /kvm/polytopia-ai-data/autoloop/status.txt`.
 
 Benchmark (one 300-update round recipe, updates 1 to 60, same seed and init):
 

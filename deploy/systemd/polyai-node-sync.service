@@ -1,0 +1,10 @@
+[Unit]
+Description=Pull AI training results from the training node poly4090 into epyc's /kvm/polytopia-ai-data
+After=network-online.target
+
+[Service]
+Type=oneshot
+Nice=10
+IOSchedulingClass=idle
+Environment=SSH_AUTH_SOCK=
+ExecStart=/usr/bin/rsync -a --update --exclude human/ -e "ssh -o BatchMode=yes -o ConnectTimeout=10" root@192.168.11.41:/kvm/polytopia-ai-data/ /kvm/polytopia-ai-data/
