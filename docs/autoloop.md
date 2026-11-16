@@ -52,6 +52,14 @@ Benchmark (one 300-update round recipe, updates 1 to 60, same seed and init):
 The engine side is not the bottleneck there: load average stays at 2 to 3 and 20 threads run as fast as 28.
 `--infer-graphs --infer-compile` made rollouts 3 times slower and are left off.
 
+The limit is the trainer's single main Python thread (99.9% of one core; the others 10 to 50%). py-spy on round 49
+(`--collector rust`, update 70 to 85, 3,000 main-thread samples): network forward on the CPU side (module calls and
+kernel launches) 45%, PPO update 24 to 28%, `collate` (numpy to tensor batches) 12%, `choose` (sampling, copy
+back) 8 to 10%, the Rust collector call 5 to 6%. Per update `infer_secs` is 7.7 of a 12 s rollout and the engine
+wait 4.0 s. Ways to move work off that thread, cheapest first: `--overlap` (play the next rollout during the PPO
+update), larger inference batches (`--min-infer`, `--gather-ms`; fewer, bigger forward calls per network), then
+several rollout processes feeding one learner.
+
 ## Files (`/kvm/polytopia-ai-data/autoloop/`)
 
 | file | content |
