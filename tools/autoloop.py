@@ -4,11 +4,16 @@
     autoloop.py run      [--dir DIR] [--dry-run]   # the loop (systemd: polyai-autoloop.service)
     autoloop.py status   [--dir DIR]               # print status.txt and the last rounds
 
-Each round trains a candidate from the current champion with a new seed (the recipe below), then plays
+Each round trains a candidate with a new seed (the recipe below), then plays
   * the gate: 400 games head to head against the champion on a fresh block of evaluation seeds per round,
   * a guard: 200 games against retail Crazy on fixed seeds, compared with the champion on the same seeds.
 The candidate is promoted when its gate score is at least GATE_SCORE (0.55 over 400 games: z = 2.0 against 0.5,
 one-sided p about 0.023) and its Crazy score is no more than CRAZY_DROP below the champion's.
+
+By default every round starts from the champion. With continue_line, a round starts from the line instead: the
+previous round's candidate, so training accumulates across rounds that do not pass the gate. The line goes back to
+the champion when a candidate is promoted (it is then the champion), fails the Crazy guard, scores below LINE_FLOOR
+in the gate, or after LINE_MAX_ROUNDS rounds in a row without a promotion.
 
 Every phase is idempotent (rl.py --resume, the arena tools skip finished games), and the decision for a round is
 written before the champion changes, so a crash or reboot at any point resumes where it stopped. The loop never
@@ -56,6 +61,11 @@ class Config:
     features: bool = False
     belief_weight: float = 0.0
     extra_train_args: list[str] = field(default_factory=list)
+    pool_weights: str = "retail:easy=0.05,retail:normal=0.15,retail:hard=0.15,retail:crazy=0.15,bc=0.15,self=0.35"
+    # Accumulating line (see the module docstring).
+    continue_line: bool = False
+    line_floor: float = 0.30
+    line_max_rounds: int = 8
     # Gate and guard.
     gate_seeds: int = 200  # each seed is played twice, seats swapped
     gate_seed_base: int = 2_000_000  # round k uses seeds gate_seed_base + 1000 k onwards: a fresh block every round
@@ -112,6 +122,19 @@ def score_file(path: Path) -> dict:
 def fmt(r: dict) -> str:
     return (f"{r['wins']}-{r['losses']}-{r['draws']} of {r['games']}, {100 * r['score']:.1f}% "
             f"(95% CI {100 * r['ci95'][0]:.1f} to {100 * r['ci95'][1]:.1f})")
+
+
+def next_line(st: dict, result: dict, c: Config) -> dict:
+    """The line the next round starts from, given this round's result (empty when continue_line is off)."""
+    if not c.continue_line:
+        return {}
+    guard_ok = result["crazy"]["score"] >= result["champion_crazy"]["score"] - c.crazy_drop
+    rounds = st.get("line_rounds", 0) + 1
+    if result["promoted"] or not guard_ok or result["gate"]["score"] < c.line_floor or rounds >= c.line_max_rounds:
+        champ, champ_id = ((result["candidate"], result["candidate_id"]) if result["promoted"]
+                           else (st["champion"], st["champion_id"]))
+        return {"line": champ, "line_id": champ_id, "line_rounds": 0}
+    return {"line": result["candidate"], "line_id": result["candidate_id"], "line_rounds": rounds}
 
 
 class Loop:
@@ -207,18 +230,17 @@ class Loop:
             delay = min(delay * 2, 3600)
 
     # -- phases -----------------------------------------------------------------------------------------------
-    def train(self, k: int, champ: str) -> Path:
+    def train(self, k: int, init: str) -> Path:
         c = self.cfg
         name = f"{c.prefix}{k:04d}"
         run = Path(c.runs_dir) / name
         final = run / "ckpt_final.pt"
         if final.exists():
             return final
-        args = [PY, "-m", "polyai.rl", "--name", name, "--init", champ, "--ref", c.ref, "--runs-dir", c.runs_dir,
+        args = [PY, "-m", "polyai.rl", "--name", name, "--init", init, "--ref", c.ref, "--runs-dir", c.runs_dir,
                 "--updates", str(c.updates), "--games", str(c.games), "--rollout-steps", str(c.rollout_steps),
                 "--n-players", "2:55,3:25,4:20", "--turn-limit", "150", "--mode", "might",
-                "--pool-weights",
-                "retail:easy=0.05,retail:normal=0.15,retail:hard=0.15,retail:crazy=0.15,bc=0.15,self=0.35",
+                "--pool-weights", c.pool_weights,
                 "--lr", "3e-05", "--ent-coef", "0.0005", "--kl-coef", "0.02", "--kl-coef-end", "0.02",
                 "--critic-warmup", "2", "--snapshot-every", "10", "--max-snapshots", "6", "--ckpt-every", "20",
                 "--adv-filter", "0.5", "--seed", str(k), "--threads", str(c.train_threads),
@@ -274,15 +296,20 @@ class Loop:
         rd.mkdir(exist_ok=True)
         info = rd / "round.json"
         if not info.exists():
+            init, init_id = st["champion"], st["champion_id"]
+            if c.continue_line and st.get("line"):
+                init, init_id = st["line"], st["line_id"]
             write_json(info, {"round": k, "champion": st["champion"], "champion_id": st["champion_id"],
-                              "started": now(), "config": asdict(c)})
+                              "init": init, "init_id": init_id, "started": now(), "config": asdict(c)})
         meta = json.loads(info.read_text())
         champ = meta["champion"]
+        init = meta.get("init", champ)
         result_path = rd / "result.json"
         if not result_path.exists():
-            self.log(f"round {k}: champion {meta['champion_id']}")
+            self.log(f"round {k}: champion {meta['champion_id']}, "
+                     f"starting from {meta.get('init_id', meta['champion_id'])}")
             champ_crazy = self.champion_crazy(st)
-            cand = self.train(k, champ)
+            cand = self.train(k, init)
             cand_id = f"{c.prefix}{k:04d}@{c.updates}"
             g = self.gate(k, str(cand), champ)
             cz = self.crazy(str(cand), rd / "crazy.jsonl", rd / "crazy.log", "crazy guard")
@@ -290,7 +317,7 @@ class Loop:
             result = {"round": k, "decided": now(), "champion_id": meta["champion_id"], "champion": champ,
                       "candidate_id": cand_id, "candidate": str(cand), "gate": g, "crazy": cz,
                       "champion_crazy": champ_crazy, "gate_score": c.gate_score, "crazy_drop": c.crazy_drop,
-                      "promoted": promoted}
+                      "init_id": meta.get("init_id", meta["champion_id"]), "promoted": promoted}
             write_json(result_path, result)
             with open(self.root / "history.jsonl", "a") as f:
                 f.write(json.dumps(result) + "\n")
@@ -298,6 +325,7 @@ class Loop:
                      f"{'PROMOTED' if promoted else 'not promoted'}")
         result = json.loads(result_path.read_text())
         new = dict(st, round=k + 1)
+        new.update(next_line(st, result, c))
         if result["promoted"] and st["champion"] != result["candidate"]:
             new.update(champion=result["candidate"], champion_id=result["candidate_id"], champion_since=now())
             with open(self.root / "promotions.jsonl", "a") as f:
@@ -316,7 +344,9 @@ class Loop:
                             f"gate {fmt(result['gate'])}\ncrazy {fmt(result['crazy'])} (champion "
                             f"{100 * result['champion_crazy']['score']:.1f}%)")
             if not result["promoted"] and not c.keep_failed_runs:
-                self.prune(Path(result["candidate"]).parent)
+                self.prune(Path(result["candidate"]).parent)  # keeps ckpt_final.pt, which the line may start from
+        if new.get("line") != st.get("line"):
+            self.log(f"round {k}: line now {new.get('line_id')} ({new.get('line_rounds', 0)} rounds)")
         self.status()
         return result
 
