@@ -30,6 +30,28 @@ is 152-48-0 of 200, 76.0%, so a candidate needs at least 68% to pass the guard.
 * CPU: training 12 env + 4 torch threads, evaluation 8 threads, one phase at a time. The unit sets `Nice=15`,
   `CPUWeight=20`, `CPUQuota=2000%` (20 cores at most) and idle disk priority.
 
+## Where it runs
+
+From round 49 (16 Nov 2026) the loop runs on the training node **poly4090** (Ryzen 9 7945HX, RTX 4090 Laptop
+16 GB, `root@poly4090.local`; the IP comes from DHCP), not on epyc. Same paths as epyc. The unit there has the
+drop-in `deploy/systemd/poly4090.conf` (no shared-host throttling), and `config.json` sets `train_threads` 20,
+`need_gb` 4, `eval_threads` 24 and `extra_train_args` `--tf32 --collector rust`. On epyc the unit is stopped and
+disabled; epyc's copy of `autoloop/` and `runs/auto_r*` is stale from round 49 on, so read status on the node
+(`ssh root@poly4090.local cat /kvm/polytopia-ai-data/autoloop/status.txt`). A promoted champion has to be copied
+to epyc before `polyai.serve` can load it.
+
+Benchmark (one 300-update round recipe, updates 1 to 60, same seed and init):
+
+| setup | rollout s | update s | total s per update |
+|---|---|---|---|
+| epyc RTX 3060, round 47 (host lightly loaded) | 14.4 | 9.4 | 23.8 |
+| epyc RTX 3060, round 48 (host loaded) | 28.9 | 20.5 | 49.4 |
+| poly4090, Python collector, 12 or 28 threads (updates 3 to 15) | 5.3 to 6.7 | 6.2 to 7.1 | about 12.5 |
+| poly4090, `--tf32 --collector rust`, 28 threads | 5.2 | 2.7 | 7.9 |
+
+The engine side is not the bottleneck there: load average stays at 2 to 3 and 20 threads run as fast as 28.
+`--infer-graphs --infer-compile` made rollouts 3 times slower and are left off.
+
 ## Files (`/kvm/polytopia-ai-data/autoloop/`)
 
 | file | content |

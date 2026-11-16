@@ -132,6 +132,7 @@ class RLConfig:
     overlap: bool = False  # play the next rollout (with the weights before this update) while the PPO update runs
     infer_graphs: bool = False  # rollout inference through CUDA graphs on padded fixed shapes (infer_fast.py), CUDA only
     infer_compile: bool = False  # rollout inference through torch.compile on padded fixed shapes (with or without graphs)
+    tf32: bool = False  # TF32 for float32 matmuls and convolutions on CUDA (the bf16 autocast paths are unaffected)
     collector: str = "python"  # "rust": arms, batching, learner rows and GAE in the engine module (docs/collector.md)
     need_gb: float = 2.5
     device: str = "cuda"
@@ -907,6 +908,9 @@ def train(cfg: RLConfig) -> dict:
     cap = check_gpu_memory(cfg.need_gb, device)
     if device.type == "cuda":
         torch.cuda.reset_peak_memory_stats(device)
+        if cfg.tf32:
+            torch.backends.cuda.matmul.allow_tf32 = True
+            torch.backends.cudnn.allow_tf32 = True
     if cfg.temperature <= 0 or cfg.opp_temperature <= 0:
         raise SystemExit("sampling temperatures must be positive")
 
