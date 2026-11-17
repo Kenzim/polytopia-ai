@@ -125,7 +125,7 @@ pub fn honest_view(e: &Engine, me: u8) -> Engine {
     let mut v = e.clone();
     let everyone: Vec<u8> = v.s.players.iter().map(|p| p.id).chain([NATURE]).collect();
     for k in 0..v.s.fog.len() {
-        v.s.fog[k].explorers = if e.is_explored(me, k) { everyone.clone() } else { Vec::new() };
+        v.s.fog[k].explorers = if e.is_explored(me, k) { everyone.as_slice().into() } else { Default::default() };
     }
     v.s.units.retain(|u| {
         u.owner == me || e.tile_index(u.coordinates).is_some_and(|k| e.is_explored(me, k)) && (!u.invisible || e.at_peace(me, u.owner))
