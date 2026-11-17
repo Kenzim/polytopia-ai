@@ -62,6 +62,8 @@ class Config:
     belief_weight: float = 0.0
     extra_train_args: list[str] = field(default_factory=list)
     pool_weights: str = "retail:easy=0.05,retail:normal=0.15,retail:hard=0.15,retail:crazy=0.15,bc=0.15,self=0.35"
+    # Player-count mix of training games (rl.py --n-players); live play against BPolait is always 1v1.
+    n_players: str = "2:55,3:25,4:20"
     # Accumulating line (see the module docstring).
     continue_line: bool = False
     line_floor: float = 0.30
@@ -239,7 +241,7 @@ class Loop:
             return final
         args = [PY, "-m", "polyai.rl", "--name", name, "--init", init, "--ref", c.ref, "--runs-dir", c.runs_dir,
                 "--updates", str(c.updates), "--games", str(c.games), "--rollout-steps", str(c.rollout_steps),
-                "--n-players", "2:55,3:25,4:20", "--turn-limit", "150", "--mode", "might",
+                "--n-players", c.n_players, "--turn-limit", "150", "--mode", "might",
                 "--pool-weights", c.pool_weights,
                 "--lr", "3e-05", "--ent-coef", "0.0005", "--kl-coef", "0.02", "--kl-coef-end", "0.02",
                 "--critic-warmup", "2", "--snapshot-every", "10", "--max-snapshots", "6", "--ckpt-every", "20",

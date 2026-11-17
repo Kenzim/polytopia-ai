@@ -94,6 +94,8 @@ class RLConfig:
     drop_capped: bool = False  # leave capped (drawn) games out of training instead of rewarding 0.5
     # opponent pool
     pool_weights: str = ",".join(f"{k}={v}" for k, v in DEFAULT_POOL_WEIGHTS.items())
+    # fixed model opponents besides `bc`, `name=checkpoint,...`; each needs a `name=w` weight in pool_weights to be played
+    extra_opponents: str = ""
     beat_target: float = 0.7
     weight_floor: float = 0.1
     weight_cap: float = 2.0
@@ -517,6 +519,12 @@ class Pool:
     def add_snapshot(self, entry: str, policy: NetPolicy, info: EntryInfo) -> None:
         self.info[entry], self.nets[entry] = info, policy
         self.snapshots.append(entry)
+
+    def add_fixed(self, entry: str, policy: NetPolicy, info: EntryInfo) -> None:
+        """A frozen model opponent that stays for the whole run, like `bc`."""
+        if entry in self.info or entry == "self" or entry.startswith(("self:", "retail:")):
+            raise ValueError(f"extra opponent name {entry!r} clashes with a built-in pool entry")
+        self.info[entry], self.nets[entry] = info, policy
 
     def drop_oldest(self, keep: int, in_use: set[str]) -> None:
         while len(self.snapshots) > keep:
@@ -969,6 +977,16 @@ def train(cfg: RLConfig) -> dict:
     ref_id = policy_id_of(ref_path, checkpoint_step(ref_path))
     pool = Pool(cfg, NetPolicy(ref, ref_id, device, max_batch=cfg.max_batch, seed=cfg.seed + 1, **fast),
                 EntryInfo("bc", ref_id, str(ref_path)))
+    for i, item in enumerate(x for x in cfg.extra_opponents.split(",") if x.strip()):
+        name, sep, path = item.partition("=")
+        if not sep:
+            raise SystemExit(f"--extra-opponents: expected name=checkpoint, got {item!r}")
+        p = resolve_checkpoint(path.strip())
+        net = load_checkpoint(p).to(device).to(memory_format=torch.channels_last).eval()
+        pid = policy_id_of(p, checkpoint_step(p))
+        pool.add_fixed(name.strip(), NetPolicy(net, pid, device, max_batch=cfg.max_batch, seed=cfg.seed + 101 + i, **fast),
+                       EntryInfo(name.strip(), pid, str(p)))
+        print(f"extra opponent {name.strip()}: {pid}", flush=True)
 
     def add_snapshot(update: int, from_file: Path | None = None) -> None:
         entry = f"self:u{update:05d}"
