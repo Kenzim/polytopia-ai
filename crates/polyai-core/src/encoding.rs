@@ -104,9 +104,19 @@ pub fn command_unit(c: &Command) -> Option<u32> {
     }
 }
 
-/// The commands the model chooses from: the engine's legal list plus a `Stay` for every own unit that can move,
-/// inserted before the final `EndTurn` (encoding.md section 4). With a trigger pending it is just the choices.
+/// The commands the model chooses from: [`engine_actions`] less builds on tiles the mover has not explored. The
+/// server accepts those, but offering them would reveal hidden terrain (road against water) to the model.
 pub fn legal_actions(e: &Engine) -> Vec<Command> {
+    let me = e.current_player();
+    let mut v = engine_actions(e);
+    v.retain(|c| !matches!(*c, Command::Build { at, .. } if !e.is_explored_at(me, at)));
+    v
+}
+
+/// The engine's legal list plus a `Stay` for every own unit that can move, inserted before the final `EndTurn`
+/// (encoding.md section 4). With a trigger pending it is just the choices. Use it to check recorded commands,
+/// which may include builds the model is never offered.
+pub fn engine_actions(e: &Engine) -> Vec<Command> {
     let mut v = e.legal_commands();
     let me = e.current_player();
     if e.is_over() || e.pending_trigger(me).is_some() {

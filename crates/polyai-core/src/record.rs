@@ -385,7 +385,7 @@ impl GameRecord {
         let mut e = self.setup.build();
         for (i, c) in self.commands.iter().enumerate() {
             if check_legal {
-                let legal = crate::encoding::legal_actions(&e);
+                let legal = crate::encoding::engine_actions(&e);
                 if !legal.contains(c) {
                     return Err(format!("command {i} {c:?} is not legal on replay"));
                 }
