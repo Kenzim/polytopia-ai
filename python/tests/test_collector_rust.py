@@ -87,6 +87,24 @@ def test_gae_matches_python():
             np.testing.assert_allclose(a, b, atol=1e-6)
             np.testing.assert_allclose(r, s, atol=1e-6)
             assert len(a) == len(b)
+            turns = np.sort(rng.integers(1, 30, n)).astype(np.int16)
+            a, r = compute_gae(v, 1.0, terminal, 0.99, 0.95, turns)
+            b, s = pe.compute_gae_rust(list(v), 1.0, terminal, 0.99, 0.95, turns.tolist())
+            np.testing.assert_allclose(a, b, atol=1e-6)
+            np.testing.assert_allclose(r, s, atol=1e-6)
+            assert len(a) == len(b)
+
+
+def test_per_turn_credit_gives_identical_rollouts_and_changes_the_advantages():
+    py_cls, rust_cls = collector_classes()
+    kw = dict(rollout_steps=1200, games=6, turn_limit=8)
+    (py, _), (rs, _) = play(py_cls, credit_per_turn=True, **kw), play(rust_cls, credit_per_turn=True, **kw)
+    assert_same_stores(py[0][0], rs[0][0])
+    (plain, _) = play(py_cls, **kw)
+    hw = next(iter(plain[0][0]))
+    a, b = plain[0][0][hw], py[0][0][hw]
+    np.testing.assert_array_equal(a["chosen"], b["chosen"])  # same games; only the credit differs
+    assert not np.allclose(a["adv"][a["train"]], b["adv"][b["train"]])
 
 
 @pytest.mark.parametrize("snapshots,rollouts", [(0, 1), (2, 2)])

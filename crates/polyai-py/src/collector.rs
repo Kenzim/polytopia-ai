@@ -40,8 +40,9 @@ impl Workers {
     }
 }
 
-/// Generalised advantage estimation of one trajectory (`polyai.rl.compute_gae`, same arithmetic in `f64`).
-fn gae(values: &[f64], final_reward: f64, terminal: bool, gamma: f64, lam: f64) -> (Vec<f32>, Vec<f32>) {
+/// Generalised advantage estimation of one trajectory (`polyai.rl.compute_gae`, same arithmetic in `f64`). With
+/// `turns`, gamma and lam apply once per game turn between consecutive commands instead of once per command.
+fn gae(values: &[f64], final_reward: f64, terminal: bool, gamma: f64, lam: f64, turns: Option<&[i16]>) -> (Vec<f32>, Vec<f32>) {
     let mut n = values.len();
     let mut reward: Vec<f64>;
     let v_next: Vec<f64>;
@@ -60,11 +61,18 @@ fn gae(values: &[f64], final_reward: f64, terminal: bool, gamma: f64, lam: f64) 
         v_next = values[1..].to_vec();
         v = &values[..n];
     }
+    let step = |t: usize| -> f64 {
+        match turns {
+            Some(tu) if t + 1 < tu.len() => f64::from((i32::from(tu[t + 1]) - i32::from(tu[t])).max(0)),
+            _ => 1.0,
+        }
+    };
     let mut adv = vec![0.0f64; n];
     let mut last = 0.0f64;
     for t in (0..n).rev() {
-        let delta = reward[t] + gamma * v_next[t] - v[t];
-        last = delta + gamma * lam * last;
+        let k = step(t);
+        let delta = reward[t] + gamma.powf(k) * v_next[t] - v[t];
+        last = delta + (gamma * lam).powf(k) * last;
         adv[t] = last;
     }
     (adv.iter().map(|&a| a as f32).collect(), adv.iter().zip(v).map(|(&a, &x)| (a + x) as f32).collect())
@@ -91,6 +99,8 @@ struct Store {
     chosen: Vec<i32>,
     logp: Vec<f32>,
     value: Vec<f32>,
+    /// Game turn of each row, for per-turn credit.
+    turn: Vec<i16>,
     adv: Vec<f32>,
     ret: Vec<f32>,
     train: Vec<bool>,
@@ -121,6 +131,7 @@ impl Store {
         self.chosen.push(chosen);
         self.logp.push(logp);
         self.value.push(value);
+        self.turn.push(p.turn);
         self.adv.push(0.0);
         self.ret.push(0.0);
         self.train.push(false);
@@ -275,6 +286,7 @@ struct Core {
     pad_sizes: bool,
     gamma: f64,
     lam: f64,
+    per_turn: bool,
     drop_capped: bool,
     /// In order of first use, as the Python collector's dict of `SizeStore`s.
     stores: Vec<Store>,
@@ -286,14 +298,16 @@ struct Core {
 }
 
 /// Close the learner's trajectory in `slot` of `arm`: GAE over its stored values, marking the rows as trained.
-fn flush(arm: &mut ArmState, stores: &mut [Store], slot: usize, outcome: f64, terminal: bool, gamma: f64, lam: f64) {
+#[allow(clippy::too_many_arguments)]
+fn flush(arm: &mut ArmState, stores: &mut [Store], slot: usize, outcome: f64, terminal: bool, gamma: f64, lam: f64, per_turn: bool) {
     let ids = std::mem::take(&mut arm.traj[slot]);
     if ids.is_empty() {
         return;
     }
     let st = &mut stores[arm.traj_store[slot]];
     let values: Vec<f64> = ids.iter().map(|&i| f64::from(st.value[i as usize])).collect();
-    let (adv, ret) = gae(&values, outcome, terminal, gamma, lam);
+    let turns: Option<Vec<i16>> = per_turn.then(|| ids.iter().map(|&i| st.turn[i as usize]).collect());
+    let (adv, ret) = gae(&values, outcome, terminal, gamma, lam, turns.as_deref());
     for (k, &id) in ids.iter().take(adv.len()).enumerate() {
         let id = id as usize;
         st.adv[id] = adv[k];
@@ -333,7 +347,7 @@ impl Core {
     /// Take in a finished engine step of arm `ai` (`Collector._after_step`).
     fn after_step(&mut self, ai: usize, out: StepOut, ev: &mut Events) {
         let (touched, finished) = out;
-        let (gamma, lam, drop_capped) = (self.gamma, self.lam, self.drop_capped);
+        let (gamma, lam, per_turn, drop_capped) = (self.gamma, self.lam, self.per_turn, self.drop_capped);
         let arm = &mut self.arms[ai];
         arm.in_flight = false;
         let mut reset = vec![false; arm.active.len()];
@@ -350,7 +364,7 @@ impl Core {
             if f.capped && drop_capped {
                 arm.traj[slot].clear();
             } else {
-                flush(arm, &mut self.stores, slot, outcome, true, gamma, lam);
+                flush(arm, &mut self.stores, slot, outcome, true, gamma, lam, per_turn);
             }
             reset[slot] = true;
             if arm.n_active > arm.quota {
@@ -644,10 +658,10 @@ impl Core {
     }
 
     fn cut(&mut self) {
-        let (gamma, lam) = (self.gamma, self.lam);
+        let (gamma, lam, per_turn) = (self.gamma, self.lam, self.per_turn);
         for arm in &mut self.arms {
             for slot in 0..arm.traj.len() {
-                flush(arm, &mut self.stores, slot, 0.0, false, gamma, lam);
+                flush(arm, &mut self.stores, slot, 0.0, false, gamma, lam, per_turn);
             }
         }
     }
@@ -671,9 +685,9 @@ pub struct PyCore(Mutex<Core>);
 #[pymethods]
 impl PyCore {
     #[new]
-    #[pyo3(signature = (workers, max_lead, min_infer, gather_ms, pad_sizes, gamma, lam, drop_capped))]
+    #[pyo3(signature = (workers, max_lead, min_infer, gather_ms, pad_sizes, gamma, lam, drop_capped, per_turn=false))]
     #[allow(clippy::too_many_arguments)]
-    fn new(workers: usize, max_lead: u64, min_infer: usize, gather_ms: f64, pad_sizes: bool, gamma: f64, lam: f64, drop_capped: bool) -> PyResult<Self> {
+    fn new(workers: usize, max_lead: u64, min_infer: usize, gather_ms: f64, pad_sizes: bool, gamma: f64, lam: f64, drop_capped: bool, per_turn: bool) -> PyResult<Self> {
         let (tx, rx) = channel();
         let workers = Workers::new(workers.clamp(1, MAX_THREADS));
         Ok(PyCore(Mutex::new(Core {
@@ -688,6 +702,7 @@ impl PyCore {
             pad_sizes,
             gamma,
             lam,
+            per_turn,
             drop_capped,
             stores: Vec::new(),
             n_learner: 0,
@@ -854,7 +869,8 @@ impl PyCore {
 
 /// `polyai.rl.compute_gae` in Rust, exposed for the tests.
 #[pyfunction]
-pub fn compute_gae_rust<'py>(py: Python<'py>, values: Vec<f64>, final_reward: f64, terminal: bool, gamma: f64, lam: f64) -> (Bound<'py, PyArray1<f32>>, Bound<'py, PyArray1<f32>>) {
-    let (a, r) = gae(&values, final_reward, terminal, gamma, lam);
+#[pyo3(signature = (values, final_reward, terminal, gamma, lam, turns=None))]
+pub fn compute_gae_rust<'py>(py: Python<'py>, values: Vec<f64>, final_reward: f64, terminal: bool, gamma: f64, lam: f64, turns: Option<Vec<i16>>) -> (Bound<'py, PyArray1<f32>>, Bound<'py, PyArray1<f32>>) {
+    let (a, r) = gae(&values, final_reward, terminal, gamma, lam, turns.as_deref());
     (PyArray1::from_vec(py, a), PyArray1::from_vec(py, r))
 }

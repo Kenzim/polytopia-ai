@@ -60,7 +60,7 @@ class RustCollector(Collector):
                  executor: ThreadPoolExecutor, games_log=None):
         super().__init__(cfg, pe, learner, pool, rng, executor, games_log)
         self.core = pe.RolloutCore(executor._max_workers, cfg.max_lead, cfg.min_infer, cfg.gather_ms, cfg.pad_sizes,
-                                   cfg.gamma, cfg.lam, cfg.drop_capped)
+                                   cfg.gamma, cfg.lam, cfg.drop_capped, cfg.credit_per_turn)
         self._arm_list: list[RustArm] = []
         self._names = {0: "learner"}  # policy index of the core -> pool entry
 

@@ -111,6 +111,7 @@ class RLConfig:
     clip: float = 0.2
     gamma: float = 1.0
     lam: float = 0.95
+    credit_per_turn: bool = False  # gamma and lam apply once per game turn, not once per command (compute_gae)
     vf_coef: float = 0.5
     ent_coef: float = 0.005
     target_kl: float = 0.05  # stop the epochs early when the mean approximate KL to the behaviour policy passes it
@@ -163,16 +164,26 @@ class RLConfig:
 # ---------------------------------------------------------------------------------------------------------------
 
 
-def compute_gae(values: np.ndarray, final_reward: float, terminal: bool, gamma: float, lam: float
-                ) -> tuple[np.ndarray, np.ndarray]:
+def compute_gae(values: np.ndarray, final_reward: float, terminal: bool, gamma: float, lam: float,
+                turns: np.ndarray | None = None) -> tuple[np.ndarray, np.ndarray]:
     """Advantages and return targets of one trajectory of the learner's commands.
 
     `values[t]` is the value estimate at command t. The only reward is `final_reward` after the last command. A
     terminal trajectory (the game ended) bootstraps from 0; a truncated one (the update's rollout ended mid-game) has
     no later value, so its last command serves as the bootstrap value and is not trained: the result has one entry
-    fewer than `values`. The returns are `adv + values`."""
+    fewer than `values`. The returns are `adv + values`.
+
+    With `turns` (the game turn of each command) gamma and lam apply once per game turn instead of once per command:
+    the step from command t to t+1 is discounted by gamma ** k and lam ** k, k the number of turns between them (0
+    within a turn). The step after a terminal command counts as one turn."""
     v = np.asarray(values, dtype=np.float64)
     n = len(v)
+    if turns is None:
+        k = np.ones(n if terminal else max(n - 1, 0))
+    else:
+        k = np.maximum(np.diff(np.asarray(turns, dtype=np.float64)), 0.0)
+        if terminal:
+            k = np.append(k, 1.0)
     if terminal:
         reward = np.zeros(n)
         reward[-1] = final_reward
@@ -184,11 +195,13 @@ def compute_gae(values: np.ndarray, final_reward: float, terminal: bool, gamma: 
         reward = np.zeros(n)
         v_next = v[1:]
         v = v[:n]
-    delta = reward + gamma * v_next - v
+    g = np.power(gamma, k)
+    gl = np.power(gamma * lam, k)
+    delta = reward + g * v_next - v
     adv = np.zeros(n)
     last = 0.0
     for t in range(n - 1, -1, -1):
-        last = delta[t] + gamma * lam * last
+        last = delta[t] + gl[t] * last
         adv[t] = last
     return adv.astype(np.float32), (adv + v).astype(np.float32)
 
@@ -213,6 +226,7 @@ class SizeStore:
         self._chosen = np.zeros(self._cap, np.int32)
         self._logp = np.zeros(self._cap, np.float32)
         self._value = np.zeros(self._cap, np.float32)
+        self._turn = np.zeros(self._cap, np.int16)
         self._adv = np.zeros(self._cap, np.float32)
         self._ret = np.zeros(self._cap, np.float32)
         self._train = np.zeros(self._cap, bool)
@@ -221,7 +235,7 @@ class SizeStore:
         if self.n + extra <= self._cap:
             return
         cap = max(self._cap * 2, self.n + extra)
-        for name in ("_chosen", "_logp", "_value", "_adv", "_ret", "_train"):
+        for name in ("_chosen", "_logp", "_value", "_turn", "_adv", "_ret", "_train"):
             old = getattr(self, name)
             new = np.zeros(cap, old.dtype)
             new[: self._cap] = old
@@ -233,6 +247,7 @@ class SizeStore:
         self._reserve(b)
         s = slice(self.n, self.n + b)
         self._chosen[s], self._logp[s], self._value[s] = index, logp, value
+        self._turn[s] = obs["turn"]
         self.tiles.append(np.asarray(obs["tiles"]))
         self.globals.append(np.asarray(obs["globals"]))
         self.lens.append(np.diff(np.asarray(obs["act_off"], dtype=np.int64)))
@@ -250,6 +265,10 @@ class SizeStore:
     @property
     def value(self) -> np.ndarray:
         return self._value[: self.n]
+
+    @property
+    def turn(self) -> np.ndarray:
+        return self._turn[: self.n]
 
     def mark(self, ids: np.ndarray, adv: np.ndarray, ret: np.ndarray) -> None:
         self._adv[ids], self._ret[ids], self._train[ids] = adv, ret, True
@@ -779,7 +798,8 @@ class Collector:
         hw, ids = tr
         ids = np.asarray(ids)
         store = self.stores[hw]
-        adv, ret = compute_gae(store.value[ids], outcome, terminal, self.cfg.gamma, self.cfg.lam)
+        turns = store.turn[ids] if self.cfg.credit_per_turn else None
+        adv, ret = compute_gae(store.value[ids], outcome, terminal, self.cfg.gamma, self.cfg.lam, turns)
         store.mark(ids[: len(adv)], adv, ret)
 
     def _on_finished(self, arm: Arm, slot: int, f: dict) -> None:

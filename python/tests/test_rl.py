@@ -111,6 +111,40 @@ def test_gae_discounting_and_truncation():
     assert compute_gae(np.array([0.3]), 0.0, False, 1.0, 0.95)[0].shape == (0,)
 
 
+def test_gae_per_turn_by_hand():
+    v = np.array([0.5, 0.25, 0.75])
+    d = np.array([-0.25, 0.5, 0.25])
+    # commands 0 and 1 share a turn: no lambda between them
+    adv, ret = compute_gae(v, 1.0, True, 1.0, 0.5, turns=np.array([3, 3, 4]))
+    exp = np.array([d[0] + (d[1] + 0.5 * d[2]), d[1] + 0.5 * d[2], d[2]])
+    np.testing.assert_allclose(adv, exp, atol=1e-6)
+    np.testing.assert_allclose(ret, exp + v, atol=1e-6)
+    # gamma too applies per turn; two turns between commands count twice. Lambda 0 still sums within a turn.
+    adv, _ = compute_gae(np.array([0.4, 0.6, 0.3]), 1.0, True, 0.9, 0.0, turns=np.array([5, 5, 7]))
+    d1 = 0.81 * 0.3 - 0.6
+    np.testing.assert_allclose(adv, [0.6 - 0.4 + d1, d1, 1.0 - 0.3], atol=1e-6)
+    # truncated: same shape rule as per command
+    adv, _ = compute_gae(np.array([0.4, 0.6, 0.2]), 0.0, False, 1.0, 0.0, turns=np.array([1, 1, 2]))
+    np.testing.assert_allclose(adv, [0.2 - 0.4, 0.2 - 0.6], atol=1e-6)
+    # one command per turn is the per-command estimate
+    v = np.random.default_rng(1).uniform(size=12)
+    for terminal in (True, False):
+        a = compute_gae(v, 1.0, terminal, 0.99, 0.95)
+        b = compute_gae(v, 1.0, terminal, 0.99, 0.95, turns=np.arange(12))
+        np.testing.assert_allclose(a[0], b[0], atol=1e-6)
+        np.testing.assert_allclose(a[1], b[1], atol=1e-6)
+
+
+def test_gae_per_turn_carries_the_result_back_through_a_long_game():
+    # 10 turns of 30 commands, a flat value of 0.5 and a win: only the last delta (0.5) is non-zero
+    v = np.full(300, 0.5)
+    turns = np.repeat(np.arange(1, 11), 30)
+    per_cmd, _ = compute_gae(v, 1.0, True, 1.0, 0.95)
+    per_turn, _ = compute_gae(v, 1.0, True, 1.0, 0.95, turns=turns)
+    assert per_turn[0] == pytest.approx(0.5 * 0.95 ** 9, rel=1e-5)  # nine turn boundaries back to the first command
+    assert per_cmd[0] < 1e-6
+
+
 # ---------------------------------------------------------------------------------------------------------------
 # The loss
 # ---------------------------------------------------------------------------------------------------------------
