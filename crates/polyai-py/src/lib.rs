@@ -179,6 +179,14 @@ fn rebuild_server(initial: &[u8], current: &[u8], seat: u8) -> Result<Engine, St
         if c.kind == 20 || c.player == NATURE {
             continue;
         }
+        // The end-match command is not a `Command`; it ends a game that is in `FinalTurn`.
+        if c.kind == 22 {
+            if e.end_match().is_err() {
+                e.s.current_command += 1;
+                unsupported += 1;
+            }
+            continue;
+        }
         match e.command_from_raw(c) {
             Some(cmd) => e.apply_unchecked(cmd),
             None => {
