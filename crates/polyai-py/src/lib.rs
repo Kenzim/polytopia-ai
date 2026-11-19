@@ -187,6 +187,14 @@ fn rebuild_server(initial: &[u8], current: &[u8], seat: u8) -> Result<Engine, St
             }
             continue;
         }
+        // The resign command is not a `Command`: it puts the player on auto-play and runs the winner check.
+        if c.kind == 35 {
+            if e.resign(c.n as u8).is_err() {
+                e.s.current_command += 1;
+                unsupported += 1;
+            }
+            continue;
+        }
         match e.command_from_raw(c) {
             Some(cmd) => e.apply_unchecked(cmd),
             None => {
