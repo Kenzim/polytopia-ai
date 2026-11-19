@@ -33,7 +33,7 @@ import sys
 import time
 from collections import defaultdict
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
-from dataclasses import asdict, dataclass, fields
+from dataclasses import asdict, dataclass, fields, replace
 from pathlib import Path
 
 import numpy as np
@@ -42,7 +42,8 @@ import torch.nn.functional as F
 
 from . import schema as S
 from .belief import full_belief_loss
-from .model import BELIEF_PREFIXES, ModelOutput, PolyNet, add_belief, add_features, feature_inputs
+from .model import (BELIEF_PREFIXES, ModelOutput, PolyNet, add_belief, add_features, critic_value, feature_inputs,
+                    make_critic)
 from .policy import collate, collate_features, resolve_checkpoint
 from .rl_pool import (
     DEFAULT_POOL_WEIGHTS,
@@ -112,6 +113,10 @@ class RLConfig:
     gamma: float = 1.0
     lam: float = 0.95
     credit_per_turn: bool = False  # gamma and lam apply once per game turn, not once per command (compute_gae)
+    # Privileged critic (docs/rl.md): a separate value network that also sees the truth under the fog computes the
+    # advantages; it is trained next to the policy and never used in play. Its learning rate is critic_lr (0: lr).
+    priv_critic: bool = False
+    critic_lr: float = 0.0
     vf_coef: float = 0.5
     ent_coef: float = 0.005
     target_kl: float = 0.05  # stop the epochs early when the mean approximate KL to the behaviour policy passes it
@@ -227,6 +232,9 @@ class SizeStore:
         self._logp = np.zeros(self._cap, np.float32)
         self._value = np.zeros(self._cap, np.float32)
         self._turn = np.zeros(self._cap, np.int16)
+        self._traj = np.full(self._cap, -1, np.int64)
+        self._traj_out = np.zeros(self._cap, np.float32)
+        self._traj_term = np.zeros(self._cap, bool)
         self._adv = np.zeros(self._cap, np.float32)
         self._ret = np.zeros(self._cap, np.float32)
         self._train = np.zeros(self._cap, bool)
@@ -235,9 +243,10 @@ class SizeStore:
         if self.n + extra <= self._cap:
             return
         cap = max(self._cap * 2, self.n + extra)
-        for name in ("_chosen", "_logp", "_value", "_turn", "_adv", "_ret", "_train"):
+        for name in ("_chosen", "_logp", "_value", "_turn", "_traj", "_traj_out", "_traj_term", "_adv", "_ret",
+                     "_train"):
             old = getattr(self, name)
-            new = np.zeros(cap, old.dtype)
+            new = np.full(cap, -1, old.dtype) if name == "_traj" else np.zeros(cap, old.dtype)
             new[: self._cap] = old
             setattr(self, name, new)
         self._cap = cap
@@ -273,6 +282,9 @@ class SizeStore:
     def mark(self, ids: np.ndarray, adv: np.ndarray, ret: np.ndarray) -> None:
         self._adv[ids], self._ret[ids], self._train[ids] = adv, ret, True
 
+    def set_traj(self, ids: np.ndarray, traj: int, outcome: float, terminal: bool) -> None:
+        self._traj[ids], self._traj_out[ids], self._traj_term[ids] = traj, outcome, terminal
+
     def finalize(self) -> dict:
         """One observation-like dict of everything stored, plus the per-decision arrays."""
         lens = np.concatenate(self.lens)
@@ -284,7 +296,8 @@ class SizeStore:
             **{k: np.concatenate(v) for k, v in self.feats.items()},
             **{k: np.concatenate(v) for k, v in self.truth.items()},
             "chosen": self._chosen[:n], "logp": self._logp[:n], "value": self._value[:n],
-            "adv": self._adv[:n], "ret": self._ret[:n], "train": np.nonzero(self._train[:n])[0],
+            "adv": self._adv[:n], "ret": self._ret[:n], "turn": self._turn[:n], "traj": self._traj[:n],
+            "traj_out": self._traj_out[:n], "traj_term": self._traj_term[:n], "train": np.nonzero(self._train[:n])[0],
         }
 
 
@@ -326,9 +339,8 @@ def ppo_loss(out: ModelOutput, ref_logits: torch.Tensor | None, mb: dict[str, to
     wl = out.winner_logits.float()
     lse = torch.logsumexp(wl, dim=1)
     log_win = wl[:, 0] - lse
-    log_not = (torch.logsumexp(wl[:, 1:], dim=1) - lse).clamp(min=-40.0)
     ret = mb["ret"]
-    value_loss = -(ret * log_win + (1 - ret) * log_not).mean()
+    value_loss = value_bce(wl, ret)
 
     ent_coef = cfg.ent_coef if ent_coef is None else ent_coef
     loss = policy_scale * (pg_loss - ent_coef * entropy + kl_coef * kl) + cfg.vf_coef * value_loss
@@ -414,9 +426,71 @@ def filter_by_advantage(data: dict[tuple, dict], frac: float) -> int:
     return keep
 
 
+def value_bce(winner_logits: torch.Tensor, ret: torch.Tensor) -> torch.Tensor:
+    """Binary cross-entropy of my win probability (slot 0 of the winner softmax) against the return target."""
+    wl = winner_logits.float()
+    lse = torch.logsumexp(wl, dim=1)
+    log_win = wl[:, 0] - lse
+    log_not = (torch.logsumexp(wl[:, 1:], dim=1) - lse).clamp(min=-40.0)
+    return -(ret * log_win + (1 - ret) * log_not).mean()
+
+
+def critic_inputs(d: dict, sel: np.ndarray, device: torch.device) -> dict:
+    def tens(k: str) -> torch.Tensor:
+        return torch.from_numpy(np.ascontiguousarray(d[k][sel])).to(device)
+    return {"truth": tens("truth"), "truth_mask": tens("truth_mask"), "truth_g": tens("truth_g")}
+
+
+def trajectory_gae(d: dict, vals: np.ndarray, cfg: RLConfig) -> tuple[np.ndarray, np.ndarray]:
+    """`adv` and `ret` of a finalized store recomputed over the values `vals` (one per row), trajectory by trajectory
+    with each one's outcome and terminal flag. Rows of no flushed trajectory keep their stored values."""
+    adv, ret = d["adv"].copy(), d["ret"].copy()
+    rows = np.nonzero(d["traj"] >= 0)[0]
+    if not len(rows):
+        return adv, ret
+    order = rows[np.argsort(d["traj"][rows], kind="stable")]
+    bounds = np.nonzero(np.diff(d["traj"][order]))[0] + 1
+    for ids in np.split(order, bounds):
+        turns = d["turn"][ids] if cfg.credit_per_turn else None
+        a, r = compute_gae(vals[ids], float(d["traj_out"][ids[0]]), bool(d["traj_term"][ids[0]]), cfg.gamma, cfg.lam,
+                           turns)
+        adv[ids[: len(a)]], ret[ids[: len(a)]] = a, r
+    return adv, ret
+
+
+@torch.no_grad()
+def critic_advantages(critic: PolyNet, data: dict, cfg: RLConfig, device: torch.device, batch: int = 1024) -> dict:
+    """Replace `adv` and `ret` of every stored trajectory by GAE over the privileged critic's values (same outcome,
+    terminal flag and per-turn option as the collector used). Returns metrics comparing the two value estimates."""
+    critic.eval()
+    v_pol, v_crit = [], []
+    for d in data.values():
+        rows = np.nonzero(d["traj"] >= 0)[0]
+        if not len(rows):
+            continue
+        vals = np.zeros(len(d["traj"]), np.float32)
+        for i in range(0, len(rows), batch):
+            sel = rows[i:i + batch]
+            tiles, globals_, _, _ = collate(d, sel, device)
+            f = feature_inputs(collate_features(d, sel, device), critic)
+            with torch.autocast(device.type, dtype=torch.bfloat16, enabled=cfg.bf16 and device.type == "cuda"):
+                wl = critic_value(critic, tiles, globals_, **critic_inputs(d, sel, device),
+                                  f_tiles=f.get("f_tiles"), f_globals=f.get("f_globals"))
+            vals[sel] = F.softmax(wl, dim=-1)[:, 0].cpu().numpy()
+        d["adv"], d["ret"] = trajectory_gae(d, vals, cfg)
+        v_pol.append(d["value"][rows])
+        v_crit.append(vals[rows])
+    if not v_pol:
+        return {}
+    vp, vc = np.concatenate(v_pol), np.concatenate(v_crit)
+    return {"critic_value_mean": float(vc.mean()), "policy_value_mean": float(vp.mean()),
+            "critic_policy_value_corr": float(np.corrcoef(vp, vc)[0, 1]) if vp.std() > 0 and vc.std() > 0 else 0.0}
+
+
 def ppo_update(model: PolyNet, ref: PolyNet | None, opt: torch.optim.Optimizer, stores: dict[tuple, SizeStore],
                cfg: RLConfig, update: int, device: torch.device, rng: np.random.Generator,
-               extra: list[dict] | None = None, ema: WeightEMA | None = None, ent_coef: float | None = None) -> dict:
+               extra: list[dict] | None = None, ema: WeightEMA | None = None, ent_coef: float | None = None,
+               critic: PolyNet | None = None, critic_opt: torch.optim.Optimizer | None = None) -> dict:
     """Several epochs of minibatch PPO over everything the rollout stored. Returns the mean metrics.
 
     `ref` is the network of the KL penalty (the BC policy, or the moving anchor with `--anchor-every`). `ema` is updated
@@ -426,13 +500,17 @@ def ppo_update(model: PolyNet, ref: PolyNet | None, opt: torch.optim.Optimizer, 
     `extra` is the hook for another source of positions (interfaces.md section 3: live games joining as an off-policy
     stream). Each item has the layout of `SizeStore.finalize()` (one board size: `tiles`, `globals`, `act_off`,
     `actions`, `chosen`, `logp`, `adv`, `ret`, `train`) and is trained on next to the rollout; nothing produces it yet,
-    and the truncated importance ratio for such positions is not built."""
+    and the truncated importance ratio for such positions is not built.
+
+    With `critic` (the privileged critic), the advantages and returns are first recomputed from its values
+    (`critic_advantages`), and it is trained on every minibatch against those returns with `critic_opt`."""
     data = {hw: st.finalize() for hw, st in stores.items() if st.n}
     for i, d in enumerate(extra or []):
         data[("extra", i)] = d
     n_train = sum(len(d["train"]) for d in data.values())
     if n_train < 2:
         return {"positions": n_train, "skipped": True}
+    crit_metrics = critic_advantages(critic, data, cfg, device) if critic is not None else {}
     adv_all = np.concatenate([d["adv"][d["train"]] for d in data.values()])
     mean, std = float(adv_all.mean()), float(adv_all.std()) + 1e-8
     for d in data.values():
@@ -485,6 +563,16 @@ def ppo_update(model: PolyNet, ref: PolyNet | None, opt: torch.optim.Optimizer, 
             opt.step()
             if ema is not None:
                 ema.update(model)
+            if critic is not None:  # BatchNorm stays on running statistics, as for the policy
+                with torch.autocast(device.type, dtype=torch.bfloat16, enabled=cfg.bf16 and device.type == "cuda"):
+                    wl = critic_value(critic, tiles, globals_, **critic_inputs(d, sel, device),
+                                      f_tiles=feats.get("f_tiles"), f_globals=feats.get("f_globals"))
+                closs = value_bce(wl, mb["ret"])
+                critic_opt.zero_grad(set_to_none=True)
+                closs.backward()
+                torch.nn.utils.clip_grad_norm_(critic.parameters(), cfg.grad_clip)
+                critic_opt.step()
+                sums["critic_loss"] += float(closs.detach())
             for k, v in losses.items():
                 sums[k] += float(v.detach())
             sums["grad_norm"] += float(gn)
@@ -497,7 +585,7 @@ def ppo_update(model: PolyNet, ref: PolyNet | None, opt: torch.optim.Optimizer, 
     res = {k: v / max(count, 1) for k, v in sums.items()}
     res.update(positions=n_train, positions_kept=n_kept, minibatches=count, epochs_done=epochs_done, kl_coef=kl_coef,
                ent_coef=ent_coef, policy_scale=policy_scale, adv_mean=mean, adv_std=std,
-               early_stop=bool(epochs_done < cfg.epochs), ret_mean=ret_mean)
+               early_stop=bool(epochs_done < cfg.epochs), ret_mean=ret_mean, **crit_metrics)
     return res
 
 
@@ -602,6 +690,7 @@ class Collector:
         self.n_learner = 0
         self.n_opp = 0
         self.turns_ema = 60.0  # running mean game length in turns, for the length weight of the win statistics
+        self.n_traj = 0  # trajectories flushed so far (the next trajectory id)
         self.sizes = [SIZE_IDS[s] for s in cfg.sizes.split(",") if s] if cfg.sizes else None
         self.presets = [PRESET_IDS[s] for s in cfg.presets.split(",") if s] if cfg.presets else None
         self.t_infer = 0.0
@@ -614,7 +703,7 @@ class Collector:
         seed_start = int(self.rng.integers(1, TRAIN_SEED_MAX + 1))
         kw = dict(split="train", sizes=self.sizes, presets=self.presets, turn_limit=self.cfg.turn_limit,
                   threads=1, auto_reset=True, **mode_kw(MODES[self.cfg.mode]), **feature_kw(self.cfg.features),
-                  **({"truth": True} if self.cfg.belief_weight > 0 else {}))
+                  **({"truth": True} if self.cfg.belief_weight > 0 or self.cfg.priv_critic else {}))
         if key[0] == "retail":
             difficulty = RETAIL_NAMES.index(key[1].split(":")[1])
             seat = key[2]
@@ -798,6 +887,8 @@ class Collector:
         hw, ids = tr
         ids = np.asarray(ids)
         store = self.stores[hw]
+        store.set_traj(ids, self.n_traj, outcome, terminal)
+        self.n_traj += 1
         turns = store.turn[ids] if self.cfg.credit_per_turn else None
         adv, ret = compute_gae(store.value[ids], outcome, terminal, self.cfg.gamma, self.cfg.lam, turns)
         store.mark(ids[: len(adv)], adv, ret)
@@ -959,6 +1050,10 @@ def train(cfg: RLConfig) -> dict:
     if cfg.belief_weight > 0:  # fresh belief heads on the learner's trunk (the reference and the pool stay plain)
         model = add_belief(model, cfg.belief_hidden).to(memory_format=torch.channels_last).eval()
     opt = make_rl_optimizer(model, cfg)
+    critic = critic_opt = None
+    if cfg.priv_critic:  # starts as a copy of the learner's network, so its first estimates are the learner's own
+        critic = make_critic(model).to(memory_format=torch.channels_last).eval()
+        critic_opt = make_optimizer(critic, replace(cfg, lr=cfg.critic_lr or cfg.lr))
     update0 = 0
     rl_state: dict = {}
     if cfg.resume:
@@ -972,6 +1067,11 @@ def train(cfg: RLConfig) -> dict:
         opt.load_state_dict(state["optimizer"])
         update0 = int(state["step"])
         rl_state = state.get("rl", {})
+        if critic is not None:
+            if "critic" not in rl_state:
+                raise SystemExit(f"cannot resume: {last} has no privileged critic")
+            critic.load_state_dict(rl_state["critic"])
+            critic_opt.load_state_dict(rl_state["critic_opt"])
         print(f"resumed {cfg.name} from update {update0}", flush=True)
 
     ema = WeightEMA(model, cfg.ema, state.get("ema") if cfg.resume else None) if cfg.ema > 0 else None
@@ -1062,6 +1162,8 @@ def train(cfg: RLConfig) -> dict:
             st["anchor"] = {"update": anchor["update"], "model": anchor["net"].state_dict()}
         if cfg.ent_schedule and last_entropy is not None:
             st["last_entropy"] = last_entropy
+        if critic is not None:
+            st["critic"], st["critic_opt"] = critic.state_dict(), critic_opt.state_dict()
         return st
 
     def begin_rollout(update: int, played_by: int) -> dict:
@@ -1095,7 +1197,7 @@ def train(cfg: RLConfig) -> dict:
             nxt = roll_ex.submit(run_rollout)
         t1 = time.perf_counter()
         res = ppo_update(model, anchor["net"], opt, stores, cfg, update, device, ppo_rng, ema=ema,
-                         ent_coef=ent_coef_at(update, cfg, last_entropy))
+                         ent_coef=ent_coef_at(update, cfg, last_entropy), critic=critic, critic_opt=critic_opt)
         t2 = time.perf_counter()
         if cfg.anchor_every > 0:
             res["anchor"] = "ref" if anchor["update"] == 0 else f"self:u{anchor['update']:05d}"
@@ -1150,6 +1252,8 @@ def train(cfg: RLConfig) -> dict:
     done = max(update0, cfg.updates)
     save_rl_checkpoint(run_dir / "ckpt_last.pt", model, done, opt, snapshot_state(done), ema)
     save_plain_checkpoint(run_dir / "ckpt_final.pt", model, done, ema)
+    if critic is not None:
+        save_checkpoint(run_dir / "critic_final.pt", critic, done)
     if ema is not None:
         save_ema_checkpoint(run_dir / "ckpt_ema_final.pt", model, done, ema)
     peak = torch.cuda.max_memory_allocated(device) / 1024**2 if device.type == "cuda" else 0.0

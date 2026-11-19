@@ -98,6 +98,25 @@ the affine parameters train. A test checks that the stored log-probabilities equ
 games stream of interfaces.md section 3. Nothing fills it yet, and the truncated importance ratio for off-policy
 positions is not built.
 
+### Credit per game turn (`--credit-per-turn`, off by default)
+
+A turn is 25 to 30 commands, so with `--lam` 0.95 applied per command the game result reaches a decision 10 turns
+earlier at about 1e-6 of its size. With this option gamma and lambda apply once per game turn: the step from one
+command to the next is discounted by `gamma ** k` and `lam ** k`, `k` the number of game turns between them (0 within
+a turn, so a turn's commands share credit fully). Both collectors store each row's game turn for this.
+
+### Privileged critic (`--priv-critic`, off by default)
+
+A separate value network computes the advantages. It starts as a copy of the learner (so its first estimates are the
+learner's own) with extra, zero-initialised inputs for the truth under the fog: the labels of `docs/belief.md` embedded
+on the hidden tiles only, and the scalar truth. Before each update it values every stored row; `trajectory_gae`
+recomputes each trajectory's `adv` and `ret` from those values with the trajectory's own outcome, terminal flag and
+per-turn option (the stores keep `traj`, `traj_out` and `traj_term` for this). It is then trained on every minibatch
+against those returns, with its own AdamW at `--critic-lr` (0: `--lr`). The policy never sees the truth and is used in
+play as before; its own value head still trains, on the critic's returns. The critic is saved in `ckpt_last.pt` (for
+`--resume`) and as `critic_final.pt`. Metrics add `critic_loss`, `critic_value_mean`, `policy_value_mean` and
+`critic_policy_value_corr`.
+
 ## Metrics (`kind: update`)
 
 `update`, `learner_policy_id`, `learner_decisions`, `opponent_decisions`, `games_finished`, `capped_games`,

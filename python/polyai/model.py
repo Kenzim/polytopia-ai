@@ -33,6 +33,10 @@ class ModelConfig:
     # function without them: tiles through a 3x3 conv into the trunk input, globals through a linear layer into the
     # global vector, actions through a linear layer into the policy MLP's first layer. Left out of `to_dict` when False.
     features: bool = False
+    # Truth inputs for a privileged critic (docs/rl.md "Privileged critic"): what lies under the fog (embedded on the
+    # hidden tiles only) and the scalar truth, both zero-initialised so the critic starts as the plain network. A policy
+    # never has them. Left out of `to_dict` when False.
+    truth_input: bool = False
 
     def to_dict(self) -> dict:
         d = asdict(self)
@@ -42,6 +46,8 @@ class ModelConfig:
             del d["belief_scalars"]
         if not d["features"]:
             del d["features"]
+        if not d["truth_input"]:
+            del d["truth_input"]
         return d
 
 
@@ -165,6 +171,10 @@ class PolyNet(nn.Module):
             self.feat_global_proj = nn.Linear(S.FEAT_G, c, bias=False)
             self.feat_action_proj = nn.Linear(S.FEAT_A, ph, bias=False)
             self.register_buffer("feat_scale", torch.tensor(S.FEAT_T_DIVISORS, dtype=torch.float32), persistent=False)
+        self.truth_embed = self.truth_g_proj = None
+        if cfg.truth_input:
+            self.truth_embed = nn.ModuleList([nn.Embedding(v, c) for v in S.TRUTH_VOCABS])
+            self.truth_g_proj = nn.Linear(S.TRUTH_G, c, bias=False)
         self._init()
 
     def _init(self) -> None:
@@ -181,6 +191,9 @@ class PolyNet(nn.Module):
         if self.feat_tile_conv is not None:
             for m in (self.feat_tile_conv, self.feat_global_proj, self.feat_action_proj):
                 nn.init.zeros_(m.weight)
+        if self.truth_embed is not None:
+            for m in list(self.truth_embed) + [self.truth_g_proj]:
+                nn.init.zeros_(m.weight)
 
     def n_params(self) -> int:
         return sum(p.numel() for p in self.parameters())
@@ -188,14 +201,23 @@ class PolyNet(nn.Module):
     def encode(
         self, tiles: torch.Tensor, globals_: torch.Tensor, board_mask: torch.Tensor | None,
         f_tiles: torch.Tensor | None = None, f_globals: torch.Tensor | None = None,
+        truth: torch.Tensor | None = None, truth_mask: torch.Tensor | None = None, truth_g: torch.Tensor | None = None,
     ) -> tuple[torch.Tensor, torch.Tensor | None]:
         """tiles int [B, H, W, F], globals [B, G] -> (trunk features [B, C, H, W] after BN + ReLU, board mask or None).
         `f_tiles` int [B, H, W, FEAT_T] and `f_globals` [B, FEAT_G] are the optional engine features; a model built
-        without `features` ignores them, one built with them treats missing ones as zeros."""
+        without `features` ignores them, one built with them treats missing ones as zeros. `truth` int [B, H, W,
+        TRUTH_K], `truth_mask` [B, H, W] (1 = hidden) and `truth_g` [B, TRUTH_G] are read only by a model built with
+        `truth_input`."""
         x = None
         for i, emb in enumerate(self.cat_embed):
             e = emb(tiles[..., i].long().clamp(0, S.CAT_VOCABS[i] - 1))
             x = e if x is None else x + e
+        if self.truth_embed is not None and truth is not None:
+            t = None
+            for k, emb in enumerate(self.truth_embed):
+                e = emb(truth[..., k].long().clamp(0, S.TRUTH_VOCABS[k] - 1))
+                t = e if t is None else t + e
+            x = x + t * truth_mask[..., None].to(t.dtype)
         num = tiles[..., S.N_CAT :].to(self.num_scale.dtype) / self.num_scale
         x = x + self.num_proj(num)
         gl = globals_.float()
@@ -203,6 +225,8 @@ class PolyNet(nn.Module):
         x = x + self.global_mlp(gl.to(x.dtype))[:, None, None, :]
         if self.feat_global_proj is not None and f_globals is not None:
             x = x + self.feat_global_proj(f_globals.to(x.dtype))[:, None, None, :]
+        if self.truth_g_proj is not None and truth_g is not None:
+            x = x + self.truth_g_proj(torch.asinh(truth_g.float()).to(x.dtype))[:, None, None, :]
         x = x.permute(0, 3, 1, 2).contiguous(memory_format=torch.channels_last)
         if self.feat_tile_conv is not None and f_tiles is not None:
             ft = (f_tiles.to(self.feat_scale.dtype) / self.feat_scale).permute(0, 3, 1, 2)
@@ -380,7 +404,32 @@ def win_probability(out: ModelOutput) -> torch.Tensor:
     return F.softmax(out.winner_logits, dim=-1)[:, 0]
 
 
+TRUTH_PREFIXES = ("truth_embed.", "truth_g_proj.")  # parameter names of the truth inputs
+
+
+def make_critic(model: PolyNet) -> PolyNet:
+    """A privileged critic from a policy network: a copy of its weights (belief heads left out) plus zero-initialised
+    truth inputs, so it starts with the policy's own win estimate."""
+    cfg = replace(model.cfg, truth_input=True, belief_hidden=0, belief_scalars=False)
+    new = build_model(cfg)
+    sd = {k: v for k, v in model.state_dict().items() if not k.startswith(BELIEF_PREFIXES)}
+    missing, unexpected = new.load_state_dict(sd, strict=False)
+    if unexpected or any(not k.startswith(TRUTH_PREFIXES) for k in missing):
+        raise ValueError(f"cannot make a critic: missing {missing}, unexpected {unexpected}")
+    return new.to(next(model.parameters()).device)
+
+
+def critic_value(critic: PolyNet, tiles: torch.Tensor, globals_: torch.Tensor, truth: torch.Tensor,
+                 truth_mask: torch.Tensor, truth_g: torch.Tensor, board_mask: torch.Tensor | None = None,
+                 f_tiles: torch.Tensor | None = None, f_globals: torch.Tensor | None = None) -> torch.Tensor:
+    """The critic's winner logits [B, N_SLOTS] (the value path of `forward` only, with the truth inputs)."""
+    feat, mask = critic.encode(tiles, globals_, board_mask, f_tiles, f_globals, truth, truth_mask, truth_g)
+    g = critic.pool_fc(masked_mean_max(feat, mask))
+    return critic.value_mlp(F.relu(g)).float()
+
+
 __all__ = [
     "CONFIGS", "ModelConfig", "ModelOutput", "PolyNet", "build_model", "eval_pawns", "masked_mean_max",
     "win_probability", "MASK_FILL", "add_features", "add_belief", "BELIEF_PREFIXES", "feature_inputs", "FEAT_PREFIX", "FEAT_KEYS",
+    "TRUTH_PREFIXES", "make_critic", "critic_value",
 ]

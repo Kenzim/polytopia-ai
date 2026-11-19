@@ -101,6 +101,11 @@ struct Store {
     value: Vec<f32>,
     /// Game turn of each row, for per-turn credit.
     turn: Vec<i16>,
+    /// Trajectory of each row (-1 until its trajectory is flushed) and that trajectory's outcome and terminal flag,
+    /// so the advantages can be recomputed after the rollout (privileged critic).
+    traj: Vec<i64>,
+    traj_out: Vec<f32>,
+    traj_term: Vec<bool>,
     adv: Vec<f32>,
     ret: Vec<f32>,
     train: Vec<bool>,
@@ -132,6 +137,9 @@ impl Store {
         self.logp.push(logp);
         self.value.push(value);
         self.turn.push(p.turn);
+        self.traj.push(-1);
+        self.traj_out.push(0.0);
+        self.traj_term.push(false);
         self.adv.push(0.0);
         self.ret.push(0.0);
         self.train.push(false);
@@ -168,6 +176,10 @@ impl Store {
         d.set_item("value", PyArray1::from_vec(py, self.value))?;
         d.set_item("adv", PyArray1::from_vec(py, self.adv))?;
         d.set_item("ret", PyArray1::from_vec(py, self.ret))?;
+        d.set_item("turn", PyArray1::from_vec(py, self.turn))?;
+        d.set_item("traj", PyArray1::from_vec(py, self.traj))?;
+        d.set_item("traj_out", PyArray1::from_vec(py, self.traj_out))?;
+        d.set_item("traj_term", PyArray1::from_vec(py, self.traj_term))?;
         d.set_item("train", PyArray1::from_vec(py, train))?;
         Ok(d)
     }
@@ -288,6 +300,8 @@ struct Core {
     lam: f64,
     per_turn: bool,
     drop_capped: bool,
+    /// Trajectories flushed so far (the next trajectory id).
+    n_traj: i64,
     /// In order of first use, as the Python collector's dict of `SizeStore`s.
     stores: Vec<Store>,
     n_learner: usize,
@@ -299,12 +313,19 @@ struct Core {
 
 /// Close the learner's trajectory in `slot` of `arm`: GAE over its stored values, marking the rows as trained.
 #[allow(clippy::too_many_arguments)]
-fn flush(arm: &mut ArmState, stores: &mut [Store], slot: usize, outcome: f64, terminal: bool, gamma: f64, lam: f64, per_turn: bool) {
+fn flush(arm: &mut ArmState, stores: &mut [Store], slot: usize, outcome: f64, terminal: bool, gamma: f64, lam: f64, per_turn: bool, n_traj: &mut i64) {
     let ids = std::mem::take(&mut arm.traj[slot]);
     if ids.is_empty() {
         return;
     }
     let st = &mut stores[arm.traj_store[slot]];
+    let tid = *n_traj;
+    *n_traj += 1;
+    for &i in &ids {
+        st.traj[i as usize] = tid;
+        st.traj_out[i as usize] = outcome as f32;
+        st.traj_term[i as usize] = terminal;
+    }
     let values: Vec<f64> = ids.iter().map(|&i| f64::from(st.value[i as usize])).collect();
     let turns: Option<Vec<i16>> = per_turn.then(|| ids.iter().map(|&i| st.turn[i as usize]).collect());
     let (adv, ret) = gae(&values, outcome, terminal, gamma, lam, turns.as_deref());
@@ -364,7 +385,7 @@ impl Core {
             if f.capped && drop_capped {
                 arm.traj[slot].clear();
             } else {
-                flush(arm, &mut self.stores, slot, outcome, true, gamma, lam, per_turn);
+                flush(arm, &mut self.stores, slot, outcome, true, gamma, lam, per_turn, &mut self.n_traj);
             }
             reset[slot] = true;
             if arm.n_active > arm.quota {
@@ -661,7 +682,7 @@ impl Core {
         let (gamma, lam, per_turn) = (self.gamma, self.lam, self.per_turn);
         for arm in &mut self.arms {
             for slot in 0..arm.traj.len() {
-                flush(arm, &mut self.stores, slot, 0.0, false, gamma, lam, per_turn);
+                flush(arm, &mut self.stores, slot, 0.0, false, gamma, lam, per_turn, &mut self.n_traj);
             }
         }
     }
@@ -704,6 +725,7 @@ impl PyCore {
             lam,
             per_turn,
             drop_capped,
+            n_traj: 0,
             stores: Vec::new(),
             n_learner: 0,
             n_opp: 0,

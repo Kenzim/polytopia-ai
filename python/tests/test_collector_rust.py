@@ -58,6 +58,16 @@ def play(cls, rollouts=1, **kw):
     return out, col
 
 
+def canonical_traj(t: np.ndarray) -> np.ndarray:
+    """Trajectory ids relabelled by first appearance: the grouping, not the order the trajectories were closed in."""
+    out = np.full_like(t, -1)
+    seen: dict[int, int] = {}
+    for i, x in enumerate(t):
+        if x >= 0:
+            out[i] = seen.setdefault(int(x), len(seen))
+    return out
+
+
 def assert_same_stores(a: dict, b: dict):
     assert list(a) == list(b)
     for hw in a:
@@ -67,6 +77,8 @@ def assert_same_stores(a: dict, b: dict):
             assert x.dtype == y.dtype and x.shape == y.shape, (hw, k, x.dtype, y.dtype, x.shape, y.shape)
             if k in ("adv", "ret"):
                 np.testing.assert_allclose(x, y, rtol=0, atol=1e-6, err_msg=f"{hw} {k}")
+            elif k == "traj":
+                np.testing.assert_array_equal(canonical_traj(x), canonical_traj(y), err_msg=f"{hw} {k}")
             else:
                 np.testing.assert_array_equal(x, y, err_msg=f"{hw} {k}")
 
