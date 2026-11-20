@@ -23,7 +23,7 @@ use polytopia_sim::rules::combat::{
     defence_bonus, get_battle_results, BattleQuery, CombatUnit, DefenceBonusInput, CITY_IMPROVEMENT, FORTIFY_ABILITY,
 };
 use polytopia_sim::rules::path::{attack_options, tile_being_captured};
-use polytopia_sim::{CityReward, UnitState};
+use polytopia_sim::{CityReward, Explorers, GameState, OwnedTech, TileExplorers, UnitState};
 
 // ---------- column layouts ----------
 
@@ -137,11 +137,61 @@ pub fn honest_view(e: &Engine, me: u8) -> Engine {
     v
 }
 
+/// What the engine reads of [`honest_view`] when it works out where a unit can move: the same state, without the
+/// city names and without the engine's own bookkeeping (AI memory, opinions, pending actions), which a move search
+/// never looks at. Cheaper to build than the full copy.
+fn reach_view(e: &Engine, me: u8, explored: &[bool]) -> Engine {
+    let s = &e.s;
+    let everyone: Explorers = s.players.iter().map(|p| p.id).chain([NATURE]).collect();
+    let known = |k: usize| explored.get(k).copied().unwrap_or_else(|| e.is_explored(me, k));
+    let fog = s
+        .fog
+        .iter()
+        .enumerate()
+        .map(|(k, f)| TileExplorers { tile: f.tile, explorers: if known(k) { everyone.clone() } else { Explorers::new() } })
+        .collect();
+    let units = s
+        .units
+        .iter()
+        .filter(|u| u.owner == me || e.tile_index(u.coordinates).is_some_and(|k| explored[k]) && (!u.invisible || e.at_peace(me, u.owner)))
+        .cloned()
+        .collect();
+    let mine = e.techs(me);
+    let tech = s.tech.iter().map(|r| if r.player == me { r.clone() } else { OwnedTech { tech: mine.to_vec(), ..r.clone() } }).collect();
+    let state = GameState {
+        version: s.version,
+        seed: s.seed,
+        map: s.map.clone(),
+        players: s.players.clone(),
+        player_runtime: s.player_runtime.clone(),
+        units,
+        improvements: s.improvements.clone(),
+        tech,
+        diplomacy: s.diplomacy.clone(),
+        fog,
+        tasks: s.tasks.clone(),
+        current_player_index: s.current_player_index,
+        current_turn: s.current_turn,
+        current_unit_id: s.current_unit_id,
+        current_state: s.current_state,
+        current_command: s.current_command,
+        settings: s.settings,
+        city_names: Default::default(),
+        unit_grid: Default::default(),
+    };
+    Engine::new(e.t.clone(), state)
+}
+
 /// Combat figures of a unit as the mover can know them, with the unit standing on `at`: the defence bonus is the one
 /// the mover's own techs unlock for that terrain (the real bonus for the mover's own units, the best visible guess
 /// for the others), with the city and wall bonus of the tile.
 pub fn visible_combat_unit(e: &Engine, me: u8, unit: &UnitState, at: Wc) -> CombatUnit {
-    let mut cu = e.combat_unit(unit);
+    visible_combat_unit_from(e, me, unit, at, e.combat_unit(unit), e.has_ability(unit, FORTIFY_ABILITY))
+}
+
+/// [`visible_combat_unit`] given the unit's own figures (`Engine::combat_unit`) and whether it fortifies, which do
+/// not depend on the tile.
+fn visible_combat_unit_from(e: &Engine, me: u8, unit: &UnitState, at: Wc, mut cu: CombatUnit, has_fortify: bool) -> CombatUnit {
     let tile = e.tile(at);
     let mut input = DefenceBonusInput {
         version: e.s.version,
@@ -153,7 +203,7 @@ pub fn visible_combat_unit(e: &Engine, me: u8, unit: &UnitState, at: Wc) -> Comb
         improvement_known: false,
         is_city: false,
         same_owner: false,
-        has_fortify: e.has_ability(unit, FORTIFY_ABILITY),
+        has_fortify,
         has_city_wall: false,
     };
     if let Some(tile) = tile {
@@ -243,6 +293,13 @@ struct Ctx<'a> {
     threats: Vec<Vec<u16>>,
 }
 
+/// A unit of the mover's with the figures every one of its commands needs.
+struct Actor<'a> {
+    unit: &'a UnitState,
+    cu: CombatUnit,
+    has_fortify: bool,
+}
+
 impl<'a> Ctx<'a> {
     fn idx(&self, c: Wc) -> Option<usize> {
         self.e.tile_index(c)
@@ -250,9 +307,12 @@ impl<'a> Ctx<'a> {
 
     /// Damage the threats on `tile` could do to `unit` standing there with `health` (strongest, total, count),
     /// leaving out the unit with id `except`.
-    fn end_threat(&self, unit: &UnitState, health: i32, tile: Wc, except: Option<u32>) -> (usize, i32, i32) {
+    fn end_threat(&self, actor: &Actor, health: i32, tile: Wc, except: Option<u32>) -> (usize, i32, i32) {
         let Some(k) = self.idx(tile) else { return (0, 0, 0) };
-        let mut cu = visible_combat_unit(self.e, self.me, unit, tile);
+        if self.threats[k].is_empty() {
+            return (0, 0, 0);
+        }
+        let mut cu = visible_combat_unit_from(self.e, self.me, actor.unit, tile, actor.cu.clone(), actor.has_fortify);
         cu.health = health;
         let (mut n, mut max, mut sum) = (0, 0, 0);
         for &h in &self.threats[k] {
@@ -297,36 +357,40 @@ pub fn features(e: &Engine, me: u8, slots: &SlotMap, legal: &[Command]) -> Featu
             hostile.push(i);
         }
     }
-    let view = honest_view(e, me);
     let reference = reference_defender();
     let hostile_cu: Vec<CombatUnit> = hostile.iter().map(|&i| e.combat_unit(&e.s.units[i])).collect();
     let hostile_ref_dmg: Vec<i32> = hostile_cu.iter().map(|c| damage(e, c, &reference)).collect();
     let mut threats: Vec<Vec<u16>> = vec![Vec::new(); n];
-    let mut seen = vec![u16::MAX; n];
-    for (hi, &ui) in hostile.iter().enumerate() {
-        let u = &e.s.units[ui];
-        if e.unit_attack(u) <= 0 || u.leader != 0 {
-            continue;
-        }
-        let range = e.unit_range(u).max(1);
-        let mut from = vec![u.coordinates];
-        if let Some(vu) = view.unit(u.id) {
-            for d in view.movement_options_ignoring_state(vu) {
-                if e.tile_index(d).is_some_and(|k| explored[k]) {
-                    from.push(d);
+    let attackers: Vec<usize> = (0..hostile.len()).filter(|&hi| hostile_cu[hi].attack > 0 && e.s.units[hostile[hi]].leader == 0).collect();
+    if !attackers.is_empty() {
+        let view = reach_view(e, me, &explored);
+        let _shared = view.query_scope();
+        let mut seen = vec![u16::MAX; n];
+        let mut from = Vec::new();
+        for hi in attackers {
+            let u = &e.s.units[hostile[hi]];
+            let range = e.unit_range(u).max(1);
+            from.clear();
+            from.push(u.coordinates);
+            if let Some(vu) = view.unit(u.id) {
+                for d in view.movement_options_ignoring_state(vu) {
+                    if e.tile_index(d).is_some_and(|k| explored[k]) {
+                        from.push(d);
+                    }
                 }
             }
-        }
-        for d in from {
-            for c in e.area_iter(d, range) {
-                let Some(k) = e.tile_index(c) else { continue };
-                if explored[k] && seen[k] != hi as u16 {
-                    seen[k] = hi as u16;
-                    threats[k].push(hi as u16);
+            for &d in &from {
+                for c in e.area_iter(d, range) {
+                    let Some(k) = e.tile_index(c) else { continue };
+                    if explored[k] && seen[k] != hi as u16 {
+                        seen[k] = hi as u16;
+                        threats[k].push(hi as u16);
+                    }
                 }
             }
         }
     }
+    let _shared = e.query_scope();
     let ctx = Ctx { e, me, explored, hostile, hostile_cu, hostile_ref_dmg, threats };
 
     // Our reach: the tiles our units can move onto, and the tiles they can attack after moving.
@@ -418,13 +482,19 @@ pub fn features(e: &Engine, me: u8, slots: &SlotMap, legal: &[Command]) -> Featu
 
     // Action features.
     let mut actions = vec![0f32; legal.len() * A_F];
+    // The commands of one unit follow each other in the legal list, so the last unit looked up is kept.
+    let mut actor: Option<Actor> = None;
     for (i, cmd) in legal.iter().enumerate() {
         let row = &mut actions[i * A_F..(i + 1) * A_F];
         let Some(uid) = command_unit(cmd) else { continue };
         if matches!(cmd, Command::Disband { .. } | Command::Explode { .. }) {
             continue;
         }
-        let Some(u) = e.unit(uid) else { continue };
+        if actor.as_ref().is_none_or(|a| a.unit.id != uid) {
+            actor = e.unit(uid).map(|unit| Actor { unit, cu: e.combat_unit(unit), has_fortify: e.has_ability(unit, FORTIFY_ABILITY) });
+        }
+        let Some(actor) = actor.as_ref() else { continue };
+        let u = actor.unit;
         let mut end = u.coordinates;
         let mut health = i32::from(u.health);
         let mut except = None;
@@ -441,7 +511,7 @@ pub fn features(e: &Engine, me: u8, slots: &SlotMap, legal: &[Command]) -> Featu
             }
             Command::Attack { target, .. } => {
                 if let Some(d) = e.unit_at(target) {
-                    let cu_a = e.combat_unit(u);
+                    let cu_a = &actor.cu;
                     if !cu_a.has_infiltrate && !cu_a.has_convert {
                         let (dealt, taken) = attack_preview(e, me, u, d);
                         let dh = i32::from(d.health);
@@ -471,7 +541,7 @@ pub fn features(e: &Engine, me: u8, slots: &SlotMap, legal: &[Command]) -> Featu
             }
             _ => {}
         }
-        let (tn, tmax, tsum) = ctx.end_threat(u, health, end, except);
+        let (tn, tmax, tsum) = ctx.end_threat(actor, health, end, except);
         row[A_END_THREAT_N] = tn as f32 / 4.0;
         row[A_END_THREAT_MAX] = tmax as f32 / HP_SCALE;
         row[A_END_THREAT_SUM] = tsum as f32 / HP_SCALE;
