@@ -24,6 +24,10 @@ engine service records). A `choose` answer also carries the chosen command's `te
 is over or another player is to move, and answers with `cmds`: `[{"text", "p", "value"}]` in order. Either way the
 network sees only the mover's encoding, which keeps to what that player has explored (docs/encoding.md section 2).
 
+An `evaluate` request (`polyai.evaluate`) carries a web engine line (a polytopia-position file and the steps played
+from it, by command text) and asks for every player's win chance and the mover's preferred moves at points of it;
+`--value` names the analysis value checkpoint that gives the win chances (without it they are null).
+
 `PolicyClient` is the small blocking client the tests use.
 """
 
@@ -103,6 +107,20 @@ def _decode_b64(req: dict, key: str) -> bytes:
     if not out:
         raise RequestError(f"'{key}' is empty")
     return out
+
+
+def parse_line(line) -> tuple[str, list[str]]:
+    """(position JSON text, step texts) of a request's web engine `line`, or `RequestError` naming what is wrong.
+    `choose`, `turn` and `evaluate` all read their line through this."""
+    if not isinstance(line, dict) or not isinstance(line.get("position"), dict):
+        raise RequestError("'line' must be an object with a 'position' object and a 'steps' list")
+    steps = line.get("steps", [])
+    if not isinstance(steps, list):
+        raise RequestError("'line.steps' must be a list of objects with a 'text' string")
+    for i, s in enumerate(steps):
+        if not isinstance(s, dict) or not isinstance(s.get("text"), str):
+            raise RequestError(f"'line.steps' must be a list of objects with a 'text' string (step {i} is not)")
+    return json.dumps(line["position"], separators=(",", ":")), [s["text"] for s in steps]
 
 
 # ---------------------------------------------------------------------------------------------------------------
@@ -216,11 +234,14 @@ class PolicyServer:
     """`policy` behind a Unix socket. `start()` serves on a background thread, `serve_forever()` on this one."""
 
     def __init__(self, policy: Policy, socket_path: str | Path = DEFAULT_SOCKET, *, window_ms: float = 3.0,
-                 max_jobs: int = 32, rebuild_workers: int = 4, request_timeout: float = 30.0, read_timeout: float = 30.0):
+                 max_jobs: int = 32, rebuild_workers: int = 4, request_timeout: float = 30.0, read_timeout: float = 30.0,
+                 evaluator=None):
         import polyai_engine as pe
 
         self.pe = pe
         self.policy = policy
+        self.evaluator = evaluator
+        self.evaluate_lock = threading.Lock()
         self.path = Path(socket_path)
         self.request_timeout, self.read_timeout = request_timeout, read_timeout
         self.batcher = Batcher(policy, window_ms, max_jobs)
@@ -355,7 +376,9 @@ class PolicyServer:
                 return self._choose(req, t0)
             if op == "turn":
                 return self._turn(req, t0)
-            raise RequestError(f"unknown op {op!r}; use 'choose', 'turn' or 'info'")
+            if op == "evaluate":
+                return self._evaluate(req)
+            raise RequestError(f"unknown op {op!r}; use 'choose', 'turn', 'evaluate' or 'info'")
         except RequestError as e:
             return self._fail(str(e))
         except BaseException as e:  # noqa: BLE001  (a Rust panic arrives here too)
@@ -367,7 +390,21 @@ class PolicyServer:
     def _info(self) -> dict:
         return {"v": PROTOCOL, "ok": True, "policy_id": self.policy.policy_id, "encoding": self.pe.ENCODING_VERSION,
                 "engine": self.pe.ENGINE_COMMIT, "device": str(getattr(self.policy, "device", "?")),
-                "requests": self.requests}
+                "requests": self.requests, "ops": ["info", "choose", "turn"] + (["evaluate"] if self.evaluator else []),
+                "value_id": getattr(self.evaluator, "value_id", None)}
+
+    def _evaluate(self, req: dict) -> dict:
+        from .evaluate import EvaluateError
+
+        if self.evaluator is None:
+            raise RequestError("this service does not answer 'evaluate' (it has no evaluator)")
+        try:
+            with self.evaluate_lock:
+                out = self.evaluator.evaluate(req)
+        except EvaluateError as e:
+            raise RequestError(str(e)) from None
+        log.info("evaluate: %d points, %.0f ms", len(out["evals"]), out["think_ms"])
+        return {"v": PROTOCOL, "ok": True} | out
 
     @staticmethod
     def _seat(req: dict) -> int:
@@ -397,15 +434,10 @@ class PolicyServer:
                     return self.pe.Game.from_server(initial, current, seat), None
                 except ValueError as e:
                     raise RequestError(str(e)) from None
-        if not isinstance(line, dict) or not isinstance(line.get("position"), dict):
-            raise RequestError("'line' must be an object with a 'position' object and a 'steps' list")
-        steps = line.get("steps", [])
-        if not isinstance(steps, list) or not all(isinstance(s, dict) and isinstance(s.get("text"), str) for s in steps):
-            raise RequestError("'line.steps' must be a list of objects with a 'text' string")
-        texts = [s["text"] for s in steps]
+        position, texts = parse_line(line)
         with self.rebuild_slots:
             try:
-                game = self.pe.Game.from_line(json.dumps(line["position"], separators=(",", ":")), texts)
+                game = self.pe.Game.from_line(position, texts)
             except ValueError as e:
                 raise RequestError(str(e)) from None
         if game.is_over():
@@ -577,6 +609,16 @@ class PolicyClient:
                              "temperature": temperature, "max_commands": max_commands})
 
 
+    def evaluate(self, position: dict | str, steps: list, at: list[int] | None = None, seats: list[int] | None = None,
+                 moves: int = 0, after: bool = False, played: bool = False) -> dict:
+        """`steps` are `{"text", "ai"}` objects or plain command texts."""
+        if isinstance(position, str):
+            position = json.loads(position)
+        steps = [s if isinstance(s, dict) else {"text": s, "ai": False} for s in steps]
+        return self.request({"v": PROTOCOL, "op": "evaluate", "line": {"position": position, "steps": steps},
+                             "at": at, "seats": seats, "moves": moves, "after": after, "played": played})
+
+
 def check(path: str | Path) -> dict:
     """Load a checkpoint the way the service does (restricted unpickler, CPU) and describe it, or say why it fails."""
     try:
@@ -609,6 +651,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--max-batch", type=int, default=32, help="most requests in one batch")
     ap.add_argument("--seed", type=int, default=0, help="seed of the sampling generator")
     ap.add_argument("--tta", action="store_true", help="average the policy over the board symmetries (8x the inference)")
+    ap.add_argument("--value", help="analysis value checkpoint (polyai.train_value) for 'evaluate'; without it win chances are null")
+    ap.add_argument("--no-evaluate", action="store_true", help="do not answer 'evaluate' requests")
     ap.add_argument("-v", "--verbose", action="store_true", help="log every request")
     a = ap.parse_args(argv)
 
@@ -628,11 +672,17 @@ def main(argv: list[str] | None = None) -> int:
             device = torch.device("cuda", torch.cuda.current_device())
         check_gpu_memory(a.gpu_gb, device)
     policy = ModelPolicy(a.model, device, seed=a.seed, tta=a.tta, weights_only=True, name=a.name)
+    evaluator = None
+    if not a.no_evaluate:
+        from .evaluate import Evaluator
+
+        evaluator = Evaluator(policy, a.value, device)
     server = PolicyServer(policy, a.socket, window_ms=a.batch_ms, max_jobs=a.max_batch,
-                          request_timeout=a.request_seconds)
+                          request_timeout=a.request_seconds, evaluator=evaluator)
     server.bind()
     signal.signal(signal.SIGTERM, lambda *_: server.closing.set())
-    print(f"{policy.policy_id} ({policy.path}) on {a.device}, listening on {server.path}", flush=True)
+    value = f", value {evaluator.value_id}" if evaluator and evaluator.value_id else ""
+    print(f"{policy.policy_id} ({policy.path}) on {a.device}{value}, listening on {server.path}", flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

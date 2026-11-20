@@ -51,3 +51,25 @@ impl SlotMap {
         self.slot_of(id).map_or(0, |s| s as i16 + 1)
     }
 }
+
+/// Kinds of [`slot_kinds`]: no player, a person, and a bot at difficulty `d` (0 easy to 3 crazy, 4 frozen) as
+/// `KIND_BOT + d`.
+pub const KIND_NONE: i8 = 0;
+pub const KIND_PERSON: i8 = 1;
+pub const KIND_BOT: i8 = 2;
+
+/// Who plays each player slot of `me` (slots 0..7 as in [`SlotMap`]): a person (not on auto-play) or a bot and its
+/// level. Public facts of the game, which every player is shown.
+pub fn slot_kinds(e: &Engine, me: u8) -> [i8; N_SLOTS - 1] {
+    let map = SlotMap::new(e, me);
+    let mut out = [KIND_NONE; N_SLOTS - 1];
+    for (k, x) in out.iter_mut().enumerate() {
+        let Some(p) = map.id_of(k).and_then(|id| e.player(id)) else { continue };
+        *x = if p.auto_play {
+            KIND_BOT + polytopia_sim::ai::decide::difficulty_from_handicap_value(p.handicap).clamp(0, 4) as i8
+        } else {
+            KIND_PERSON
+        };
+    }
+    out
+}

@@ -20,6 +20,10 @@
 //! every shard. `--part I/N` converts only every N-th game, starting at the I-th (0-based) of the sorted ids, so N
 //! runs with their own `--out` cover the games in parallel.
 //!
+//! `--value-rows DIR` also writes value shards (`polyai-gen/src/value_shard.rs`) to `DIR`: before one command in
+//! `--value-keep K` (default 8) of any player, one row per living player, each encoded from that player's own view,
+//! labelled with the same winner as the shards. They train and check a win estimate for every seat.
+//!
 //! Scope: the 12 normal tribes plus Cymanti (`polyai_core::TRIBES`). A game with any other tribe is skipped and counted.
 
 #[path = "../../polyai-gen/src/npz.rs"]
@@ -30,6 +34,8 @@ mod npz;
 mod shard;
 #[path = "../../polyai-gen/src/truth_shard.rs"]
 mod truth_shard;
+#[path = "../../polyai-gen/src/value_shard.rs"]
+mod value_shard;
 
 use polyai_core::truth::{truth, truth_globals, Truth, TRUTH_G};
 use polyai_core::*;
@@ -40,6 +46,7 @@ use std::collections::HashMap;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use truth_shard::TruthBuf;
+use value_shard::{ValueBuf, ValueRow};
 
 /// The command kind of the end-match command (not a decision).
 const END_MATCH: u16 = 22;
@@ -49,7 +56,9 @@ const END_MATCH: u16 = 22;
 const NO_COMMAND: u16 = 35;
 
 const USAGE: &str = "usage: polyai-human --raw DIR --out DIR [--meta FILE] [--keep K] [--shard-size P] [--limit N] \
-                     [--seats FILE] [--key-prefix P] [--resign-wins] [--truth] [--part I/N]";
+                     [--seats FILE] [--key-prefix P] [--resign-wins] [--truth] [--part I/N] [--value-rows DIR] [--value-keep K]";
+/// Mixed into the game's seed so the value rows sample other positions than the shards.
+const VALUE_SALT: i32 = 0x5a17;
 
 /// `--seats FILE`: one game per line, `<id> <player>[,<player>...]`; only listed games are replayed and only the
 /// listed players' moves are recorded (for games where every seat is a person to the server, such as our own).
@@ -92,6 +101,9 @@ struct Meta {
     resigned: Vec<u8>,
     rows: usize,
     left_out: Vec<String>,
+    // Not written to the meta file: what the value rows need.
+    order: Vec<u8>,
+    rules_mode: i32,
 }
 
 fn esc(s: &str) -> String {
@@ -172,6 +184,37 @@ type Rows = Vec<(Row, Labels)>;
 /// The truth labels and scalars of the rows, in the same order; empty without `--truth`.
 type Truths = Vec<(Truth, [f32; TRUTH_G])>;
 
+/// A value row before the game's winner is known.
+struct SeatView {
+    obs: Obs,
+    seat: u8,
+    mover: bool,
+    turn: i16,
+    alive: u8,
+    slot_kind: [i8; 8],
+}
+
+/// Every living player's own view of the position, the mover's with its legal list (the `can_act` column).
+fn seat_views(e: &mut Engine) -> Vec<SeatView> {
+    let me = e.current_player();
+    let legal = legal_actions(e);
+    let alive = e.living_players();
+    alive
+        .iter()
+        .map(|&p| {
+            let slots = SlotMap::new(e, p);
+            let obs = encode(e, p, &slots, if p == me { &legal } else { &[] });
+            SeatView { obs, seat: p, mover: p == me, turn: e.s.current_turn as i16, alive: alive.len() as u8, slot_kind: slot_kinds(e, p) }
+        })
+        .collect()
+}
+
+/// The winner's slot relative to `seat` (-1: no winner).
+fn relative_winner(order: &[u8], seat: u8, winners: &[u8]) -> i8 {
+    let ids = slot_ids(order, seat);
+    winners.iter().find_map(|w| ids[..MAX_SLOTS].iter().position(|&x| x == *w && x != 0)).map_or(-1, |k| k as i8)
+}
+
 /// Replay one game. `Err` is a skip with its reason; the meta is filled either way as far as it got.
 /// `only`: when given, the recorded seats are these player ids instead of every seat not marked `auto_play`.
 /// `resign_wins`, `with_truth`: see `--resign-wins` and `--truth` in the module documentation.
@@ -184,12 +227,14 @@ fn replay(
     only: Option<&[u8]>,
     resign_wins: bool,
     with_truth: bool,
+    value_keep: u32,
     m: &mut Meta,
-) -> Result<(Rows, Truths, i32), String> {
+) -> Result<(Rows, Truths, i32, Vec<SeatView>), String> {
     let save = SaveFile::parse_server(initial, current).map_err(|e| format!("cannot decode the blobs: {e}"))?;
     let mut e = Engine::from_state(save.initial.clone());
     let s = &e.s.settings;
     m.mode = s.base_game_mode;
+    m.rules_mode = s.rules_game_mode;
     m.turn_limit = s.turn_limit;
     m.height = e.height() as usize;
     m.width = e.width() as usize;
@@ -217,10 +262,12 @@ fn replay(
         e.start_match();
     }
     let order: Vec<u8> = seats.iter().map(|s| s.0).collect();
+    m.order = order.clone();
     let human = |p: u8| seats.iter().any(|s| s.0 == p && s.2);
     let seed = seed_of(id);
     let mut rows: Vec<Row> = Vec::new();
     let mut truths: Truths = Vec::new();
+    let mut views: Vec<SeatView> = Vec::new();
     for (i, raw) in save.commands.iter().enumerate() {
         if raw.kind == 20 || raw.player == NATURE {
             continue;
@@ -242,6 +289,9 @@ fn replay(
             continue;
         };
         let me = e.current_player();
+        if value_keep > 0 && me == raw.player && !e.is_over() && kept(seed ^ VALUE_SALT, i, value_keep) {
+            views.extend(seat_views(&mut e));
+        }
         if me != raw.player {
             m.off_turn += 1;
         } else if human(me) {
@@ -335,7 +385,7 @@ fn replay(
         return Err(format!("not a clean replay: {} illegal, {} unmapped commands", m.illegal, m.unmapped));
     }
     m.rows = out.len();
-    Ok((out, truths, seed))
+    Ok((out, truths, seed, views))
 }
 
 /// The winner `--resign-wins` gives: the other seat of a two-seat game with no winner where exactly one seat resigned.
@@ -365,16 +415,28 @@ fn flush(
     }
 }
 
+fn flush_values(bufs: &mut HashMap<(usize, usize), ValueBuf>, key: (usize, usize), out: &Path, n: &mut usize) {
+    if let Some(b) = bufs.remove(&key).filter(|b| b.len() > 0) {
+        let path = out.join(format!("value-{:05}-{}x{}.npz", *n, key.0, key.1));
+        b.write(&path).expect("write the value shard");
+        eprintln!("wrote {} ({} value rows)", path.display(), b.len());
+        *n += 1;
+    }
+}
+
 fn main() {
     let (mut raw, mut out, mut meta): (Option<PathBuf>, Option<PathBuf>, Option<PathBuf>) = (None, None, None);
     let (mut keep, mut shard_size, mut limit) = (1u32, 50_000usize, usize::MAX);
     let (mut seats, mut prefix): (Option<HashMap<String, Vec<u8>>>, String) = (None, "human".into());
     let (mut resign_wins, mut with_truth, mut part) = (false, false, (0usize, 1usize));
+    let (mut value_out, mut value_keep): (Option<PathBuf>, u32) = (None, 8);
     let mut args = std::env::args().skip(1);
     while let Some(a) = args.next() {
         let mut val = || args.next().unwrap_or_else(|| panic!("{a} needs a value"));
         match a.as_str() {
             "--resign-wins" => resign_wins = true,
+            "--value-rows" => value_out = Some(val().into()),
+            "--value-keep" => value_keep = val().parse().expect("--value-keep K"),
             "--truth" => with_truth = true,
             "--part" => {
                 let v = val();
@@ -422,6 +484,18 @@ fn main() {
     let mut bufs: HashMap<(usize, usize), ShardBuf> = HashMap::new();
     let mut tbufs: HashMap<(usize, usize), TruthBuf> = HashMap::new();
     let mut shards = 0;
+    let mut vbufs: HashMap<(usize, usize), ValueBuf> = HashMap::new();
+    let mut vshards = 0;
+    if let Some(dir) = &value_out {
+        std::fs::create_dir_all(dir).expect("create the value-rows directory");
+        for f in std::fs::read_dir(dir).expect("read the value-rows directory").flatten() {
+            let name = f.file_name().to_string_lossy().into_owned();
+            if name.starts_with("value-") && name.ends_with(".npz") {
+                std::fs::remove_file(f.path()).expect("remove a stale value shard");
+            }
+        }
+    }
+    let vkeep = if value_out.is_some() { value_keep.max(1) } else { 0 };
     // A panic inside the engine on a strange game is a skip, not the end of the run.
     std::panic::set_hook(Box::new(|_| {}));
     for id in &ids {
@@ -431,7 +505,7 @@ fn main() {
             (Ok(i), Ok(c)) => {
                 let mm = &mut m;
                 let only = seats.as_ref().and_then(|s| s.get(id)).map(Vec::as_slice);
-                std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| replay(id, &i, &c, keep, only, resign_wins, with_truth, mm)))
+                std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| replay(id, &i, &c, keep, only, resign_wins, with_truth, vkeep, mm)))
                     .unwrap_or_else(|p| {
                         let why = p
                             .downcast_ref::<String>()
@@ -444,10 +518,31 @@ fn main() {
             _ => Err("cannot read the blobs".into()),
         };
         match result {
-            Ok((rows, truths, seed)) => {
+            Ok((rows, truths, seed, views)) => {
                 m.status = "ok".into();
                 let key = (m.height, m.width);
                 let game_key = format!("{prefix}:{id}");
+                if let Some(dir) = &value_out {
+                    let vb = vbufs.entry(key).or_insert_with(|| ValueBuf::new(key.0, key.1));
+                    let order = &m.order;
+                    for v in views {
+                        vb.push(ValueRow {
+                            winner: relative_winner(order, v.seat, &m.winners),
+                            slot_kind: v.slot_kind,
+                            obs: v.obs,
+                            seat: v.seat,
+                            mover: v.mover,
+                            turn: v.turn,
+                            n_players: m.players as u8,
+                            alive: v.alive,
+                            mode: m.rules_mode as i8,
+                            game_key: &game_key,
+                        });
+                    }
+                    if vb.len() >= shard_size {
+                        flush_values(&mut vbufs, key, dir, &mut vshards);
+                    }
+                }
                 let buf = bufs.entry(key).or_insert_with(|| ShardBuf::new(key.0, key.1));
                 for (r, l) in &rows {
                     let origin = Origin {
@@ -494,6 +589,12 @@ fn main() {
     let keys: Vec<_> = bufs.keys().copied().collect();
     for key in keys {
         flush(&mut bufs, &mut tbufs, key, &out, &mut shards);
+    }
+    if let Some(dir) = &value_out {
+        let keys: Vec<_> = vbufs.keys().copied().collect();
+        for key in keys {
+            flush_values(&mut vbufs, key, dir, &mut vshards);
+        }
     }
     meta_out.flush().expect("flush the meta file");
 }

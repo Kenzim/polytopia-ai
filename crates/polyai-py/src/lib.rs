@@ -228,6 +228,37 @@ fn rebuild_server(initial: &[u8], current: &[u8], seat: u8) -> Result<Engine, St
     Ok(e)
 }
 
+/// The start of the message of a position that is valid but that the encoding cannot hold (a tribe outside the 13, or
+/// more than 8 players), so a caller can tell it from a malformed one.
+const UNSUPPORTED: &str = "unsupported position: ";
+
+/// The engine of a polytopia-position file (`Engine::from_position`), checked for what the encoding supports.
+fn engine_from_position(position_json: &str, strict: bool) -> Result<Engine, String> {
+    let v = Json::parse(position_json).map_err(|e| format!("the position is not valid JSON: {e}"))?;
+    let e = Engine::from_position(&v).map_err(|e| format!("cannot build the position: {e}"))?;
+    if !strict {
+        return Ok(e);
+    }
+    if let Some(p) = e.s.players.iter().find(|p| p.id != NATURE && tribe_index(p.tribe).is_none()) {
+        return Err(format!("{UNSUPPORTED}player {} has tribe {}, which is not one of the 13 supported tribes", p.id, p.tribe));
+    }
+    let n_players = e.s.players.iter().filter(|p| p.id != NATURE).count();
+    if !(1..=MAX_PLAYERS).contains(&n_players) {
+        return Err(format!("{UNSUPPORTED}the position has {n_players} players; the encoding holds 1 to {MAX_PLAYERS}"));
+    }
+    Ok(e)
+}
+
+/// The command whose `format!("{cmd:?}")` is `text` among those the player to move may play: the engine's legal list
+/// and a `Stay` for each own unit (`engine_actions`), and `EndTurn`, which the retail AI may play when the list does
+/// not hold it (as `ai_pick` does).
+fn command_by_text(e: &Engine, text: &str) -> Option<Command> {
+    if text == "EndTurn" {
+        return Some(Command::EndTurn);
+    }
+    engine_actions(e).into_iter().find(|c| format!("{c:?}") == text)
+}
+
 /// One game. Seats are indices into the setup's seat list; Nature has no seat.
 #[pyclass(name = "Game")]
 struct PyGame(Mutex<GameInner>);
@@ -308,27 +339,19 @@ impl PyGame {
         Ok(Self(Mutex::new(GameInner { e, setup: None, order, commands: Vec::new(), counter: TurnCounter::default(), legal: None })))
     }
 
-    /// Build a game from a position document (the engine's `polytopia-position` JSON, `Engine::from_position`), for
-    /// states that come from outside the engine. Raises `ValueError` when the document does not load, a tribe is
-    /// outside the 13 supported or there are more players than the encoding holds. Like a server game it has no setup
-    /// and its seats are player-list indices.
+    /// Build a game from a position document (the engine's `polytopia-position` JSON, `Engine::from_position`, as
+    /// the web's engine service writes it), for states that come from outside the engine. Raises `ValueError` when
+    /// the document does not load, or when a tribe is outside the 13 supported or there are more players than the
+    /// encoding holds (the message then starts with `unsupported position: `), unless `strict` is false: such a game
+    /// can be played on and asked about, but not encoded. Like a server game it has no setup and its seats are
+    /// player-list indices.
     #[staticmethod]
-    fn from_position(py: Python<'_>, text: &str) -> PyResult<Self> {
+    #[pyo3(signature = (text, strict = true))]
+    fn from_position(py: Python<'_>, text: &str, strict: bool) -> PyResult<Self> {
         let built = py.allow_threads(|| {
-            std::panic::catch_unwind(|| {
-                let doc = Json::parse(text).map_err(|e| format!("the position is not valid JSON: {e}"))?;
-                Engine::from_position(&doc)
-            })
-            .unwrap_or_else(|_| Err("the engine failed while loading the position".to_string()))
+            std::panic::catch_unwind(|| engine_from_position(text, strict)).unwrap_or_else(|_| Err("the engine failed while loading the position".to_string()))
         });
         let e = built.map_err(value_err)?;
-        if let Some(p) = e.s.players.iter().find(|p| p.id != NATURE && tribe_index(p.tribe).is_none()) {
-            return Err(value_err(format!("player {} has tribe {}, which is not one of the 13 supported tribes", p.id, p.tribe)));
-        }
-        let n_players = e.s.players.iter().filter(|p| p.id != NATURE).count();
-        if n_players > MAX_PLAYERS {
-            return Err(value_err(format!("the game has {n_players} players; the encoding holds at most {MAX_PLAYERS}")));
-        }
         let order = player_order(&e);
         Ok(Self(Mutex::new(GameInner { e, setup: None, order, commands: Vec::new(), counter: TurnCounter::default(), legal: None })))
     }
@@ -337,6 +360,90 @@ impl PyGame {
     fn position(&self) -> String {
         let g = self.0.lock().unwrap();
         g.e.to_position().to_string()
+    }
+
+    /// A web engine line: the position, then each step played by its command text (`format!("{cmd:?}")`, the text
+    /// the web's engine service records), whatever produced it. Raises `ValueError` naming the first step the engine
+    /// refuses (`step 12: ...`).
+    #[staticmethod]
+    #[pyo3(signature = (position_json, steps, strict = true))]
+    fn from_line(py: Python<'_>, position_json: &str, steps: Vec<String>, strict: bool) -> PyResult<Self> {
+        let game = Self::from_position(py, position_json, strict)?;
+        for (i, text) in steps.iter().enumerate() {
+            game.play_text(text).map_err(|e| value_err(format!("step {i}: {e}")))?;
+        }
+        Ok(game)
+    }
+
+    /// Play the command whose `format!("{cmd:?}")` is `text` (see `from_line`). Raises `ValueError` when the player to
+    /// move has no such command.
+    fn play_text(&self, text: &str) -> PyResult<()> {
+        let mut g = self.0.lock().unwrap();
+        if g.e.is_over() {
+            return Err(value_err(format!("the game is over; cannot play {text}")));
+        }
+        let cmd = command_by_text(&g.e, text).ok_or_else(|| value_err(format!("not a legal command for player {} now: {text}", g.e.current_player())))?;
+        let applied = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| g.apply(cmd)));
+        applied.map_err(|_| value_err(format!("the engine failed while playing {text}")))
+    }
+
+    /// `format!("{cmd:?}")` of every command of the current legal list, in the order of `legal_actions()`.
+    fn legal_texts(&self) -> Vec<String> {
+        let mut g = self.0.lock().unwrap();
+        g.legal().iter().map(|c| format!("{c:?}")).collect()
+    }
+
+    /// `(tiles, globals)` as `encode()` gives them, from the view of player `player_id` (an engine id), who need not
+    /// be the one to move: only what that player has explored, slots relative to them. `can_act` is set only for
+    /// the player to move. Raises `ValueError` for Nature or an id that is not a player.
+    fn encode_for<'py>(&self, py: Python<'py>, player_id: u8) -> PyResult<(Bound<'py, PyAny>, Bound<'py, PyAny>)> {
+        let mut g = self.0.lock().unwrap();
+        if player_id == NATURE || !g.order.contains(&player_id) {
+            return Err(value_err(format!("{player_id} is not a player of this game")));
+        }
+        let legal = if g.e.current_player() == player_id { g.legal().clone() } else { Vec::new() };
+        let slots = SlotMap::new(&g.e, player_id);
+        let obs = encode(&g.e, player_id, &slots, &legal);
+        Ok((tiles_array(py, obs.tiles, &[obs.h, obs.w, F_TILE])?, PyArray1::from_vec(py, obs.globals).into_any()))
+    }
+
+    /// Who plays each player slot of `player_id` (`polyai_core::slot_kinds`: 0 none, 1 a person, 2 + d a bot of
+    /// difficulty d), as int8[8].
+    fn slot_kinds<'py>(&self, py: Python<'py>, player_id: u8) -> PyResult<Bound<'py, PyAny>> {
+        let g = self.0.lock().unwrap();
+        if player_id == NATURE || !g.order.contains(&player_id) {
+            return Err(value_err(format!("{player_id} is not a player of this game")));
+        }
+        Ok(PyArray1::from_vec(py, polyai_core::slot_kinds(&g.e, player_id).to_vec()).into_any())
+    }
+
+    /// `[(player_id, alive, human)]` in turn order, Nature left out; `human` is a player not on auto-play.
+    fn players(&self) -> Vec<(u8, bool, bool)> {
+        let g = self.0.lock().unwrap();
+        g.order.iter().map(|&id| (id, g.e.is_alive(id), g.e.player(id).is_some_and(|p| !p.auto_play))).collect()
+    }
+
+    /// The game's rules: `rules_mode` (1 Perfection, 2 Domination, 3 Glory, 4 Might, 5 Custom), `base_mode`,
+    /// `turn_limit`, `score_limit`, `win_by_capital`, `win_by_extermination`, `game_type`.
+    fn settings<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
+        let g = self.0.lock().unwrap();
+        let s = &g.e.s.settings;
+        let d = PyDict::new(py);
+        d.set_item("rules_mode", s.rules_game_mode)?;
+        d.set_item("base_mode", s.base_game_mode)?;
+        d.set_item("turn_limit", s.turn_limit)?;
+        d.set_item("score_limit", s.score_limit)?;
+        d.set_item("win_by_capital", s.win_by_capital)?;
+        d.set_item("win_by_extermination", s.win_by_extermination)?;
+        d.set_item("game_type", s.game_type)?;
+        Ok(d)
+    }
+
+    /// Engine player ids of the winners by the game's own rule (`Engine::winners`, set when the game ends); empty
+    /// while it runs.
+    fn winner_ids(&self) -> Vec<u32> {
+        let g = self.0.lock().unwrap();
+        if g.e.is_over() { g.e.winners.iter().map(|&w| u32::from(w)).collect() } else { Vec::new() }
     }
 
     /// Engine player id of the player to move (255 is Nature). For a server game this is the id `seat` names.
