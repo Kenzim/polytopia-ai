@@ -97,6 +97,7 @@ tournament play.
 | 20 Nov | Faster collector code and a profile-guided build of the engine bindings | In the loop from round 99, which runs from its own checkout |
 | 20 Nov | A/Bs of sampling at temperature 0.5 in training, and of `--overlap` | Both worse than the features control; not adopted |
 | 20 Nov | A/B of value training on the opponents' positions too (`--value-opp`) | Worse, 37.0% against its control; not adopted |
+| 20 Nov | A/B without the KL anchor to the imitation model | Worse, 43.4% against its control; the anchor stays |
 
 The champions in order, each measured against the one before it over 400 games:
 
@@ -136,6 +137,7 @@ Each row is a 300-update run compared with a control from the same starting mode
 | Sampling at temperature 0.5 in training: the learner only, or learner and model opponents (with features) | 39.6% and 47.2% | Worse, and no better |
 | `--overlap`: play the next rollout during the update, with weights one update old (with features) | 44.6% | Worse; not adopted |
 | Value training on the opponents' positions too (`--value-opp 2.0`, a quarter of them, with features) | 37.0% | Worse; the value became timid and the policy weaker |
+| No KL anchor to the imitation model (`--kl-coef 0`, with features) | 43.4% | Worse; the anchor helps even though its distance stopped growing |
 
 Reports with the method and the full tables: `docs/arena.md`, `docs/rl.md`, `docs/belief.md`, `docs/features-ab.md`,
 `docs/search.md`, `docs/human-data.md`, `docs/loss_autopsy.md`, `docs/autoloop.md`, `docs/collector.md`.
@@ -156,7 +158,8 @@ losing. What the diagnostics of 20 November show:
   learner alone at 0.5 scored 39.6% against its control, and learner and model opponents at 0.5 scored 47.2%.
 - The policy's distance from the imitation model it is anchored to (`kl_bc`, the KL penalty at 0.02) rose from
   about 1.0 in rounds 1 to 54 to about 1.35 by rounds 66 to 75 and has stayed there since, the same time the gate
-  stopped passing. The anchor may be capping how far training can move the policy; an A/B without it is running.
+  stopped passing. Removing the anchor did not help: without it the distance doubled (2.75) and the run scored 43.4%
+  against its control, so the anchor is not what holds training back.
 - Round 77's promotion was not luck: it scores 55.1% against round 75 again on fresh maps. Round 95 scores 49.9%
   against round 75, so the 18 rounds since have drifted back to round 75's level.
 
@@ -179,8 +182,7 @@ no search; the site offers nothing weaker. Training with 8 of those games always
 to head (38.9% against its control) and no better against the site. An opponent that wins 97% of games is too strong
 to learn from by reinforcement alone.
 
-Next, in order: the A/Bs running now (no KL anchor, a pool without the weaker built-in AI levels, which cost about
-60% of collection CPU), an exploiter
+Next, in order: an exploiter
 trained to beat the champion and added to the pool (league training as in AlphaStar), then throughput (the GPU is
 about 40% busy during training).
 

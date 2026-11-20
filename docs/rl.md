@@ -71,7 +71,8 @@ games start together, so the numbers are dominated by the shortest games; give t
 Entries: `retail:easy|normal|hard|crazy`, `bc`, and `self:u<update>` (a frozen copy of the learner every
 `--snapshot-every` updates, newest `--max-snapshots` kept; the `self` weight is shared by them equally). Base weights
 `--pool-weights` (default `retail:easy=0.05,retail:normal=0.15,retail:hard=0.15,retail:crazy=0.15,bc=0.15,self=0.35`;
-an entry at 0 is off). The sampling weight is the base weight times `clip((1 - win rate) / (1 - beat_target), floor,
+an entry at 0 is off). The given entries are merged over the default, so an entry left out keeps its default weight:
+to drop an opponent, set it to 0. The sampling weight is the base weight times `clip((1 - win rate) / (1 - beat_target), floor,
 cap)` with `beat_target` 0.7, floor 0.1, cap 2.0: opponents the learner beats less than 70% of the time are played
 more. The win rate is a running decayed average per opponent and player count (`--stats-decay` per game, a prior of 5
 games at parity), mapped so that chance (1/n) counts as 0.5 whatever the number of players, so a four-player win rate

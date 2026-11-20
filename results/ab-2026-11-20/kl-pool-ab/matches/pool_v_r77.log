@@ -1,0 +1,25 @@
+model:abh_pool: /kvm/polytopia-ai-data/ab/runs/abh_pool/ckpt_final.pt (step 300)
+model:auto_r0077: /kvm/polytopia-ai-data/runs/auto_r0077/ckpt_final.pt (step 300)
+  model:abh_pool vs model:auto_r0077: 0/400 games, 0s
+  model:abh_pool vs model:auto_r0077: 15/400 games, 30s
+  model:abh_pool vs model:auto_r0077: 47/400 games, 60s
+  model:abh_pool vs model:auto_r0077: 75/400 games, 90s
+  model:abh_pool vs model:auto_r0077: 102/400 games, 120s
+  model:abh_pool vs model:auto_r0077: 121/400 games, 151s
+  model:abh_pool vs model:auto_r0077: 143/400 games, 181s
+  model:abh_pool vs model:auto_r0077: 169/400 games, 211s
+  model:abh_pool vs model:auto_r0077: 196/400 games, 241s
+  model:abh_pool vs model:auto_r0077: 223/400 games, 271s
+  model:abh_pool vs model:auto_r0077: 242/400 games, 301s
+  model:abh_pool vs model:auto_r0077: 265/400 games, 331s
+  model:abh_pool vs model:auto_r0077: 294/400 games, 361s
+  model:abh_pool vs model:auto_r0077: 313/400 games, 391s
+  model:abh_pool vs model:auto_r0077: 335/400 games, 421s
+  model:abh_pool vs model:auto_r0077: 345/400 games, 451s
+  model:abh_pool vs model:auto_r0077: 354/400 games, 481s
+  model:abh_pool vs model:auto_r0077: 365/400 games, 511s
+  model:abh_pool vs model:auto_r0077: 373/400 games, 541s
+  model:abh_pool vs model:auto_r0077: 383/400 games, 571s
+  model:abh_pool vs model:auto_r0077: 389/400 games, 601s
+  model:abh_pool vs model:auto_r0077: 396/400 games, 631s
+model:abh_pool vs model:auto_r0077: W-L-D 159-218-23 of 400, score 42.6%, capped 23

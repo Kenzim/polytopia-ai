@@ -1,0 +1,14 @@
+model:abh_kl0: /kvm/polytopia-ai-data/ab/runs/abh_kl0/ckpt_final.pt (step 300), 1.43M params
+  model:abh_kl0 vs retail:crazy: 0/400 games, 0s
+  model:abh_kl0 vs retail:crazy: 46/400 games, 15s
+  model:abh_kl0 vs retail:crazy: 125/400 games, 30s
+  model:abh_kl0 vs retail:crazy: 186/400 games, 45s
+  model:abh_kl0 vs retail:crazy: 247/400 games, 60s
+  model:abh_kl0 vs retail:crazy: 313/400 games, 75s
+  model:abh_kl0 vs retail:crazy: 370/400 games, 90s
+retail:crazy: +400 games
+
+result (model against each opponent; a draw is half a win):
+  model:abh_kl0 vs retail:crazy: W-L-D 348-52-0 of 400, score 87.0%, capped 0, mean turns 25.4
+GPU peak allocated 38 MiB
+results: /kvm/polytopia-ai-data/ab/eval-abh/kl0_crazy.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/ab/eval-abh/kl0_crazy.jsonl

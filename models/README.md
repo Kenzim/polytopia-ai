@@ -95,6 +95,8 @@ profile-guided bindings of engine 80a68d0. Round 77 scored 88.8% against Crazy i
 |---|---|---|---|---|
 | `abg_ctrl` | none (the control) | | 45.5% | 90.0% |
 | `abg_vopp` | `--value-opp 2.0 --value-opp-frac 0.25` | 37.0% | 35.9% | 85.5% |
+| `abh_kl0` | `--kl-coef 0 --kl-coef-end 0` (no anchor to the imitation model) | 43.4% | 38.8% | 87.0% |
+| `abh_pool` | `--pool-weights retail:crazy=0.05,bc=0.10,bpolait=0.20,self=0.65`. Not the intended test: the left-out entries kept their defaults (easy 0.05, normal 0.15, hard 0.15), so it played more of the weak built-in levels than the control | 41.5% (49.2% against `abh_kl0`) | 42.6% | 89.8% |
 
 ## Analysis value networks
 
