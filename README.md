@@ -155,7 +155,9 @@ losing. What the diagnostics of 20 November show:
 about 90% win 94%), but in the first five turns it gives 55 to 85% to whoever is to move. The cause is in the
 training data: only the learner's own positions are trained on, and the learner wins 65 to 75% of its training games
 because half the pool is weaker than it. A value that means something between equals needs positions from both
-seats of self-play games. The lookahead planned for live play waits for that.
+seats of self-play games. The lookahead planned for live play waits for that. Engine features help: a features model
+is calibrated from turn 6 (sides it gives 0.8 or more at turns 6 to 10 win 91%) and is rarely overconfident in the
+opening, and training the value on both seats (`--value-opp`) is under test.
 
 **Against BPolait** we win about a third of games. The autopsy points at the opening (growing cities and income more
 slowly through turns 4 to 8) and at an army of warriors with no archers or riders. Our imitation of BPolait is a weak

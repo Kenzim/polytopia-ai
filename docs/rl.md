@@ -185,6 +185,23 @@ the five at every stage and overconfident throughout (sides given 0.93 win 82% a
 check "sides given over 80% at the start win about 90%". A value estimate for play between equals needs symmetric
 training games (self-play rows of both seats), not only the learner's rows against the pool.
 
+Models with engine features need shards made with `polyai-human --features` (the set `calib_f` of
+docs/human-data.md: the same 12,488 games, 8,886 counted, 1,798,772 positions; 36 more games replay cleanly on the
+newer engine, 27 of them counted). Measured there on 2026-11-20 with `--turns 0,2,5,10,15,20` (round 77 gives the same numbers on both
+sets to within 0.001), `abd_feat` (`--features`, 300 updates from round 77) against round 77:
+
+| Turns | ECE: round 77, `abd_feat` | Share given >= 0.8, and won: round 77 | `abd_feat` |
+|---|---|---|---|
+| 0 | 0.268, 0.200 | 37%, 50.3% | 2%, 51.6% |
+| 3-5 | 0.246, 0.171 | 39%, 59.9% | 6%, 73.0% |
+| 6-10 | 0.152, 0.079 | 34%, 81.1% | 18%, 90.9% |
+| 11-15 | 0.043, 0.045 | 30%, 93.5% | 23%, 97.0% |
+| 16-20 | 0.034, 0.052 | 32%, 95.2% | 27%, 97.2% |
+
+The features model is far less overconfident in the opening and is calibrated from turn 6, five turns earlier than
+round 77; from turn 16 it is slightly underconfident (sides it gives 0.8 or more win 97%). It still says nothing
+useful at the start of a game. Output: `results/calibration/calib-features-2026-11-20.json`.
+
 ## Metrics (`kind: update`)
 
 `update`, `learner_policy_id`, `learner_decisions`, `opponent_decisions`, `games_finished`, `capped_games`,
