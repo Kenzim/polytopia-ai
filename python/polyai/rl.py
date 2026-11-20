@@ -162,6 +162,13 @@ class RLConfig:
     ent_decay_updates: int = 200
     anchor_every: int = 0  # every N updates the KL reference becomes a frozen copy of the current policy (0 = stay at ref)
     adv_filter: float = 1.0  # fraction of the samples kept in the update, those with the largest |advantage| (1 = all)
+    # Games against the PolytopAI website next to the rollout (docs/polytopai.md): the learner plays them while the
+    # rollout runs and their decisions join the update. They come on top of rollout_steps. 0 = off.
+    polytopai_games: int = 0  # games in flight against the site
+    polytopai_level: int = 3  # the site's strength setting: 1 easier, 3 standard
+    polytopai_sizes: str = "11,14,16"  # map widths drawn from
+    polytopai_maps: str = "1,2,3,4,6"  # the site's map types drawn from (5 is water world)
+    polytopai_site: str = "https://polytopai.com"
 
 
 # ---------------------------------------------------------------------------------------------------------------
@@ -1149,6 +1156,16 @@ def train(cfg: RLConfig) -> dict:
     if cfg.collector == "rust":
         from .rl_collect import RustCollector as collector_cls
     col = collector_cls(cfg, pe, learner, pool, rng, executor, games_log)
+    site = None
+    if cfg.polytopai_games > 0:  # a second policy object around the same network: the site's decisions come from other threads
+        from .polytopai import SiteArm
+
+        site = SiteArm(pe, NetPolicy(actor, learner.policy_id, device, max_batch=cfg.max_batch, seed=cfg.seed + 977 + update0),
+                       cfg.polytopai_games, level=cfg.polytopai_level, sizes=[int(x) for x in cfg.polytopai_sizes.split(",")],
+                       maps=[int(x) for x in cfg.polytopai_maps.split(",")], temperature=cfg.temperature, gamma=cfg.gamma,
+                       lam=cfg.lam, credit_per_turn=cfg.credit_per_turn, features=cfg.features,
+                       truth=cfg.belief_weight > 0 or cfg.priv_critic, seed=cfg.seed + update0, turn_cap=cfg.turn_limit,
+                       base=cfg.polytopai_site)
     print(f"{cfg.name}: {model.cfg.name or 'model'} {model.n_params() / 1e6:.2f}M params, {cfg.games} games in flight, "
           f"{cfg.rollout_steps} learner decisions per update, {workers} env threads + {torch_threads} torch threads, "
           f"device {device}, cap {cap / 1024**3:.2f} GiB", flush=True)
@@ -1178,7 +1195,11 @@ def train(cfg: RLConfig) -> dict:
 
     def run_rollout() -> float:
         t = time.perf_counter()
+        if site is not None:
+            site.resume()
         col.collect(cfg.rollout_steps)
+        if site is not None:
+            site.pause()
         return time.perf_counter() - t
 
     roll_ex = ThreadPoolExecutor(max_workers=1) if cfg.overlap else None
@@ -1190,14 +1211,25 @@ def train(cfg: RLConfig) -> dict:
         # this update's rollout is complete and the collector idle: take its results before the next one starts
         stores, results = col.stores, col.results
         n_learner, n_opp, t_infer, t_step = col.n_learner, col.n_opp, col.t_infer, col.t_step
+        site_data: list[dict] = []
+        if site is not None:  # paused since the rollout ended: what it gathered is this update's
+            site_data, site_results = site.take()
+            for r in site_results:
+                r["update"] = update
+                if games_log is not None:
+                    games_log.write(json.dumps(r) + "\n")
+            results = results + site_results
         behaviour_id = learner.policy_id
         nxt = None
         if roll_ex is not None and update + 1 < cfg.updates:
             next_weights = begin_rollout(update + 1, update)
             nxt = roll_ex.submit(run_rollout)
         t1 = time.perf_counter()
-        res = ppo_update(model, anchor["net"], opt, stores, cfg, update, device, ppo_rng, ema=ema,
+        res = ppo_update(model, anchor["net"], opt, stores, cfg, update, device, ppo_rng, extra=site_data, ema=ema,
                          ent_coef=ent_coef_at(update, cfg, last_entropy), critic=critic, critic_opt=critic_opt)
+        if site is not None:
+            res["site_decisions"] = sum(len(d["chosen"]) for d in site_data)
+            res["site_aborted"] = site.aborted
         t2 = time.perf_counter()
         if cfg.anchor_every > 0:
             res["anchor"] = "ref" if anchor["update"] == 0 else f"self:u{anchor['update']:05d}"
@@ -1249,6 +1281,8 @@ def train(cfg: RLConfig) -> dict:
 
     if roll_ex is not None:
         roll_ex.shutdown()
+    if site is not None:
+        site.close()
     done = max(update0, cfg.updates)
     save_rl_checkpoint(run_dir / "ckpt_last.pt", model, done, opt, snapshot_state(done), ema)
     save_plain_checkpoint(run_dir / "ckpt_final.pt", model, done, ema)

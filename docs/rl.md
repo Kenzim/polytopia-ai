@@ -211,6 +211,11 @@ Larger batches need no option: `--rollout-steps` (learner decisions per update, 
   of the trained positions with the largest absolute advantage (at least two) are kept for the epochs of that update.
   The value loss, entropy and KL terms also see only the kept positions, which makes the update cheaper and the policy
   gradient less noisy but biased towards decisive moves. `positions_kept` in the metrics counts them.
+- **`--polytopai-games N`** (0 = off). Keeps N games against the PolytopAI website's bot in flight next to the rollout;
+  their decisions join every update on top of `--rollout-steps` (`site_decisions` in the metrics), and their results
+  are logged under the opponent `site:polytopai<level>`. `--polytopai-level` (1 easier, 3 standard),
+  `--polytopai-sizes` and `--polytopai-maps` choose the games. Needs the network and bindings with
+  `Game.from_position`. See `polytopai.md`.
 
 ## Measurements and sizing
 

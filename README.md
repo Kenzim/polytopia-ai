@@ -154,6 +154,10 @@ seats of self-play games. The lookahead planned for live play waits for that.
 slowly through turns 4 to 8) and at an army of warriors with no archers or riders. Our imitation of BPolait is a weak
 stand-in for it: the model beats the imitation 67 to 84% of the time in training.
 
+**Against the PolytopAI website's bot** (played through the site's own browser game, `docs/polytopai.md`) round 77
+won 9 of 199 games at the site's easier setting. The bridge can run about 950 such games an hour and feed them into
+training (`--polytopai-games`), which has not yet been tested as an A/B.
+
 Next, in order: the features and advantage-filter A/Bs from round 77, value training on both seats, an exploiter
 trained to beat the champion and added to the pool (league training as in AlphaStar), then throughput (the GPU is
 about 40% busy during training).
@@ -171,6 +175,8 @@ python -m polyai.arena --model ../models/auto_r0077 --opponent retail:crazy --mo
 python -m polyai.rl --name myrun --init ../models/auto_r0077 --ref ../models/bc3_b6c96_v11 --mode might \
     --updates 300                                                 # self-play; docs/rl.md lists every option
 python -m polyai.calibrate --shards DIR --model r77=../models/auto_r0077/ckpt_final.pt
+python -m polyai.polytopai --ckpt ../models/auto_r0077 --games 100 --parallel 8 --level 1 \
+    --out /tmp/r77_site.jsonl                                     # games against the PolytopAI website
 python -m pytest -q                                               # the Python tests
 ```
 

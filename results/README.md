@@ -27,6 +27,7 @@ python tools/cells.py ...                                      # per-tribe and p
 | `value-rank/` | The value-rank test: realised results of candidate turns | `docs/search.md` |
 | `ab-2026-11-19/` | The three-arm A/B from round 77: `run.sh` is the training command, `matches/` the ten 400-game matches, `plateau-diagnostics/` the six matches of 20 November on why rounds stopped passing the gate | `docs/rl.md`, top-level README |
 | `calibration/` | Output of `polyai.calibrate` for round 77 and the three A/B arms on 8,859 human games: Brier score, calibration error and win share per probability bucket and game stage. Aggregates only, no games | `docs/rl.md` |
+| `polytopai/` | Round 77, top move, against the PolytopAI website's bot at its easier setting: one line per game and the summary (score, speed, how often the two legal lists agreed) | `docs/polytopai.md` |
 
 Not here: the human games and anything else under `human/` on the training host, the live games against BPolait
 (they are in the client's repository), run directories with their per-update metrics, and the imitation datasets.

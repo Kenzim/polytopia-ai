@@ -7,6 +7,7 @@ use polyai_core::features::{self, Features};
 use polyai_core::*;
 use polytopia_sim::engine::replay::{RawCmd, SaveFile};
 use polytopia_sim::engine::{Command, Engine, NATURE};
+use polytopia_sim::json::Json;
 use polytopia_sim::GameState;
 use pyo3::exceptions::{PyIndexError, PyValueError};
 use pyo3::prelude::*;
@@ -305,6 +306,37 @@ impl PyGame {
         let e = built.map_err(value_err)?;
         let order = player_order(&e);
         Ok(Self(Mutex::new(GameInner { e, setup: None, order, commands: Vec::new(), counter: TurnCounter::default(), legal: None })))
+    }
+
+    /// Build a game from a position document (the engine's `polytopia-position` JSON, `Engine::from_position`), for
+    /// states that come from outside the engine. Raises `ValueError` when the document does not load, a tribe is
+    /// outside the 13 supported or there are more players than the encoding holds. Like a server game it has no setup
+    /// and its seats are player-list indices.
+    #[staticmethod]
+    fn from_position(py: Python<'_>, text: &str) -> PyResult<Self> {
+        let built = py.allow_threads(|| {
+            std::panic::catch_unwind(|| {
+                let doc = Json::parse(text).map_err(|e| format!("the position is not valid JSON: {e}"))?;
+                Engine::from_position(&doc)
+            })
+            .unwrap_or_else(|_| Err("the engine failed while loading the position".to_string()))
+        });
+        let e = built.map_err(value_err)?;
+        if let Some(p) = e.s.players.iter().find(|p| p.id != NATURE && tribe_index(p.tribe).is_none()) {
+            return Err(value_err(format!("player {} has tribe {}, which is not one of the 13 supported tribes", p.id, p.tribe)));
+        }
+        let n_players = e.s.players.iter().filter(|p| p.id != NATURE).count();
+        if n_players > MAX_PLAYERS {
+            return Err(value_err(format!("the game has {n_players} players; the encoding holds at most {MAX_PLAYERS}")));
+        }
+        let order = player_order(&e);
+        Ok(Self(Mutex::new(GameInner { e, setup: None, order, commands: Vec::new(), counter: TurnCounter::default(), legal: None })))
+    }
+
+    /// The current state as a position document (`Engine::to_position`), the inverse of `from_position`.
+    fn position(&self) -> String {
+        let g = self.0.lock().unwrap();
+        g.e.to_position().to_string()
     }
 
     /// Engine player id of the player to move (255 is Nature). For a server game this is the id `seat` names.

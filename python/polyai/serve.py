@@ -184,12 +184,16 @@ def _stack(obs_list: list[dict]) -> dict:
     if len(obs_list) == 1:
         return obs_list[0]
     lens = np.concatenate([np.diff(o["act_off"]) for o in obs_list])
-    return {
+    out = {
         "tiles": np.concatenate([o["tiles"] for o in obs_list]),
         "globals": np.concatenate([o["globals"] for o in obs_list]),
         "act_off": np.concatenate([[0], np.cumsum(lens)]).astype(np.int32),
         "actions": np.concatenate([o["actions"] for o in obs_list]),
     }
+    for k in ("f_tiles", "f_globals", "f_actions"):  # the engine features, when the observations carry them
+        if k in obs_list[0]:
+            out[k] = np.concatenate([o[k] for o in obs_list])
+    return out
 
 
 # ---------------------------------------------------------------------------------------------------------------
