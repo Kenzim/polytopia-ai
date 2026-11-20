@@ -45,7 +45,7 @@ class _ValueJob:
     globals_: np.ndarray
     kinds: np.ndarray
     mover: bool
-    temp: float
+    ab: tuple[float, float]
     out: dict
     key: str
 
@@ -183,14 +183,15 @@ class Evaluator:
         kinds = np.asarray(g.slot_kinds(pid))
         kind = kind_of(info["mode"], info["n_players"], kinds)
         stage = int(stage_of(int(g.turn)))
-        temp = self.cal.temperature(kind, stage)
-        if temp is None:
+        mover = int(g.mover_id) == pid
+        ab = self.cal.get(kind, stage, mover)
+        if ab is None:
             win[key] = None
             why[key] = self.cal.reason(kind, stage)
             return
         tiles, globals_ = g.encode_for(pid)
         win[key] = None
-        jobs.append(_ValueJob(tiles, globals_, kinds, int(g.mover_id) == pid, float(temp), win, key))
+        jobs.append(_ValueJob(tiles, globals_, kinds, mover, ab, win, key))
 
     def _after_value(self, p: _Point, m: dict, info: dict, jobs: list) -> None:
         c = p.game.clone()
@@ -225,8 +226,8 @@ class Evaluator:
                 with torch.autocast(self.device.type, dtype=torch.bfloat16, enabled=self.device.type == "cuda"):
                     logits = self.value(put([j.tiles for j in chunk]), put([j.globals_ for j in chunk]),
                                         put([j.kinds for j in chunk]), put([np.int8(j.mover) for j in chunk]))
-                temps = torch.tensor([j.temp for j in chunk], dtype=torch.float32, device=self.device)
-                p = calibrated_win(logits.float(), temps).cpu().numpy()
+                ab = torch.tensor([j.ab for j in chunk], dtype=torch.float32, device=self.device)
+                p = calibrated_win(logits.float(), ab[:, 0], ab[:, 1]).cpu().numpy()
                 for j, x in zip(chunk, p):
                     j.out[j.key] = round(float(x), 4)
 

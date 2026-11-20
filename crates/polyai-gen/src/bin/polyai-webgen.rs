@@ -1,7 +1,11 @@
 //! Games of the kinds the website hosts, played out by the retail AI, written as value shards
 //! (`polyai-gen/src/value_shard.rs`) for training and checking the analysis win chance.
 //!
-//! `polyai-webgen --out DIR --games N [--seed-start S] [--threads T] [--keep K] [--max-turns M] [--shard-size P]`
+//! `polyai-webgen --out DIR --games N [--seed-start S] [--threads T] [--keep K] [--max-turns M] [--shard-size P]
+//!  [--players 2:20,3:25,4:25,5:20,6:10] [--modes perfection:50,domination:30,might:20]`
+//!
+//! `--players` and `--modes` are weighted lists (the defaults shown); seeds give the same games only with the same
+//! lists.
 //!
 //! A game is set up as the web's engine service sets up a generated game (`Engine::try_new_game` with one seat or
 //! more marked human, bot handicaps by level, `settings.difficulty` the top bot level): mode Perfection (30 turns,
@@ -45,10 +49,30 @@ struct Args {
     keep: u32,
     max_turns: u32,
     shard_size: usize,
+    players: Vec<(usize, u32)>,
+    modes: Vec<(i32, u32)>,
+}
+
+/// `a:w,b:w` -> [(a, w)].
+fn weighted<T>(s: &str, parse: impl Fn(&str) -> Option<T>) -> Option<Vec<(T, u32)>> {
+    s.split(',').map(|part| {
+        let (k, w) = part.split_once(':')?;
+        Some((parse(k.trim())?, w.trim().parse().ok()?))
+    }).collect::<Option<Vec<_>>>().filter(|v| !v.is_empty() && v.iter().any(|x| x.1 > 0))
 }
 
 fn parse_args() -> Result<Args, String> {
-    let mut a = Args { out: PathBuf::new(), games: 0, seed_start: 1, threads: 16, keep: 32, max_turns: 200, shard_size: 50_000 };
+    let mut a = Args {
+        out: PathBuf::new(),
+        games: 0,
+        seed_start: 1,
+        threads: 16,
+        keep: 32,
+        max_turns: 200,
+        shard_size: 50_000,
+        players: vec![(2, 20), (3, 25), (4, 25), (5, 20), (6, 10)],
+        modes: vec![(PERFECTION, 50), (DOMINATION, 30), (MIGHT, 20)],
+    };
     let mut it = std::env::args().skip(1);
     while let Some(flag) = it.next() {
         let v = it.next().ok_or(format!("{flag} needs a value"))?;
@@ -61,6 +85,18 @@ fn parse_args() -> Result<Args, String> {
             "--keep" => a.keep = v.parse().map_err(bad)?,
             "--max-turns" => a.max_turns = v.parse().map_err(bad)?,
             "--shard-size" => a.shard_size = v.parse().map_err(bad)?,
+            "--players" => {
+                a.players = weighted(&v, |k| k.parse().ok().filter(|n| (2..=8).contains(n))).ok_or(format!("bad value for {flag}"))?
+            }
+            "--modes" => {
+                let mode = |k: &str| match k {
+                    "perfection" => Some(PERFECTION),
+                    "domination" => Some(DOMINATION),
+                    "might" => Some(MIGHT),
+                    _ => None,
+                };
+                a.modes = weighted(&v, mode).ok_or(format!("bad value for {flag}"))?
+            }
             _ => return Err(format!("unknown option {flag}")),
         }
     }
@@ -85,10 +121,10 @@ struct WebSetup {
     stand_in: i32,
 }
 
-fn sample(seed: i32) -> WebSetup {
+fn sample(seed: i32, a: &Args) -> WebSetup {
     let mut r = Rng::new(seed as u32 as u64 | 0x7EB0_0000_0000);
-    let mode = [PERFECTION, DOMINATION, MIGHT][r.weighted(&[50, 30, 20])];
-    let n = [2usize, 3, 4, 5, 6][r.weighted(&[20, 25, 25, 20, 10])];
+    let mode = a.modes[r.weighted(&a.modes.iter().map(|m| m.1).collect::<Vec<_>>())].0;
+    let n = a.players[r.weighted(&a.players.iter().map(|m| m.1).collect::<Vec<_>>())].0;
     let sizes: Vec<MapSize> = [MapSize::Tiny, MapSize::Small, MapSize::Normal, MapSize::Large].into_iter().filter(|s| s.max_players() >= n).collect();
     let size = sizes[r.below(sizes.len())];
     let preset = [MapPreset::Dryland, MapPreset::Lakes, MapPreset::Continents, MapPreset::Archipelago, MapPreset::WaterWorld, MapPreset::Pangea][r.below(6)];
@@ -177,8 +213,9 @@ struct Played {
     error: Option<String>,
 }
 
-fn play(seed: i32, keep: u32, max_turns: u32) -> Played {
-    let setup = sample(seed);
+fn play(seed: i32, a: &Args) -> Played {
+    let (keep, max_turns) = (a.keep, a.max_turns);
+    let setup = sample(seed, a);
     let mut e = match build(&setup) {
         Ok(e) => e,
         Err(err) => return Played { setup, engine: None, views: vec![], winners: vec![], turns: 0, error: Some(err) },
@@ -259,8 +296,8 @@ fn main() {
                     return;
                 }
                 let seed = args.seed_start + k as i32;
-                let played = std::panic::catch_unwind(|| play(seed, args.keep, args.max_turns)).unwrap_or_else(|_| Played {
-                    setup: sample(seed),
+                let played = std::panic::catch_unwind(|| play(seed, &args)).unwrap_or_else(|_| Played {
+                    setup: sample(seed, &args),
                     engine: None,
                     views: vec![],
                     winners: vec![],

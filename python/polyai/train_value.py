@@ -27,9 +27,9 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-from .analysis import STAGE_NAMES, Calibration, ValueNet, save_value
+from .analysis import STAGE_NAMES, Calibration, ValueNet, load_value, save_value
 from .data import transform_tiles, valid_symmetries
-from .value_gate import (calibrated, concat, fit_temperatures, format_table, gate, load_splits, predict_logits,
+from .value_gate import (calibrated, concat, fit_calibration, format_table, gate, load_splits, predict_logits,
                          strip_buckets)
 
 KEYS = ("tiles", "globals", "slot_kind", "mover", "winner")
@@ -115,7 +115,7 @@ def gated(logits: np.ndarray, rows: dict, cal: Calibration) -> dict:
 def calibrate_and_gate(net: ValueNet, fit_shards: list[dict], test_shards: list[dict], device: torch.device):
     fit_rows, test_rows = concat(fit_shards), concat(test_shards)
     fit_logits = predict_logits(net, fit_shards, device)
-    temps = fit_temperatures(fit_logits, fit_rows)
+    temps = fit_calibration(fit_logits, fit_rows)
     cal = Calibration(temps)
     fit_rep = gated(fit_logits, fit_rows, cal)
     test_logits = predict_logits(net, test_shards, device)
@@ -140,8 +140,8 @@ def calibrate_and_gate(net: ValueNet, fit_shards: list[dict], test_shards: list[
         kept[kind], reasons[kind] = kt, kr
     final = Calibration(kept, reasons)
     final_rep = gated(test_logits, test_rows, final)
-    raw_rep = gated(test_logits, test_rows, Calibration({k: [1.0] * len(STAGE_NAMES) for k in temps}))
-    return final, {"uncalibrated": raw_rep, "temperature": test_rep, "given": final_rep}
+    raw_rep = gated(test_logits, test_rows, None)
+    return final, {"uncalibrated": raw_rep, "calibrated": test_rep, "given": final_rep}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -149,7 +149,8 @@ def main(argv: list[str] | None = None) -> int:
 
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--rows", nargs="+", required=True)
-    ap.add_argument("--init", required=True, help="policy checkpoint to start from")
+    ap.add_argument("--init", help="policy checkpoint to start from")
+    ap.add_argument("--init-value", help="analysis value checkpoint to start from instead (with --steps 0: recalibrate it)")
     ap.add_argument("--out", required=True)
     ap.add_argument("--name", help="value id the service reports (default: the out file's stem)")
     ap.add_argument("--steps", type=int, default=20000)
@@ -168,7 +169,9 @@ def main(argv: list[str] | None = None) -> int:
             device = torch.device("cuda", torch.cuda.current_device())
         check_gpu_memory(a.gpu_gb, device)
     torch.manual_seed(a.seed)
-    net = ValueNet.from_policy(load_checkpoint(a.init)).to(device)
+    if bool(a.init) == bool(a.init_value):
+        raise SystemExit("give one of --init and --init-value")
+    net = load_value(a.init_value, device)[0] if a.init_value else ValueNet.from_policy(load_checkpoint(a.init)).to(device)
     splits = load_splits(a.rows, ("train", "fit", "test") if a.steps > 0 else ("fit", "test"))
     fit_shards, test_shards = splits["fit"], splits["test"]
     info = {}
@@ -181,7 +184,7 @@ def main(argv: list[str] | None = None) -> int:
     net.eval()
     cal, reports = calibrate_and_gate(net, fit_shards, test_shards, device)
     name = a.name or Path(a.out).stem
-    meta = {"name": name, "init": str(a.init), "steps": a.steps, "rows": [str(r) for r in a.rows], "train": info,
+    meta = {"name": name, "init": str(a.init or a.init_value), "steps": a.steps, "rows": [str(r) for r in a.rows], "train": info,
             "gate": {k: strip_buckets(v) for k, v in reports.items()}}
     save_value(a.out, net, cal, meta)
     text = "\n".join(format_table(f"{name}: {k}", v) for k, v in reports.items())

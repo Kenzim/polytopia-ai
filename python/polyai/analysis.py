@@ -7,9 +7,9 @@ Those are public facts of the game. It is trained on value rows (`polyai-gen/src
 view at sampled positions, labelled with who won by the game's own rule. Slots without a player cannot win, so their
 logits are masked before the softmax.
 
-The calibration layer divides the logits by a temperature per (game kind, stage), fitted on held-out games
-(`polyai.train_value`). A (kind, stage) that the gate did not pass has no temperature, and `win_chances` gives
-`None` with the reason there.
+The calibration layer maps the network's win chance q to sigmoid(a * logit(q) + b), with (a, b) per game kind, stage
+and whether the viewer is the one to move, fitted on held-out games (`polyai.train_value`). A (kind, stage) that the
+gate did not pass has no map, and the service gives null with the reason there.
 """
 
 from __future__ import annotations
@@ -103,37 +103,51 @@ def mask_empty_slots(logits: torch.Tensor, kinds: torch.Tensor) -> torch.Tensor:
     return logits.masked_fill(empty, -1e4)
 
 
-class Calibration:
-    """Temperatures per (kind, stage); a missing entry means no number is given there."""
+Params = tuple[float, float, float, float]  # (scale, offset) when the viewer is not to move, then when it is
 
-    def __init__(self, temps: dict[str, list[float | None]] | None = None, reasons: dict[str, list[str | None]] | None = None):
-        self.temps = temps or {}
+
+class Calibration:
+    """Per (kind, stage) a logistic map of the network's win chance: p = sigmoid(a * logit(q) + b), with (a, b) for
+    the viewer not to move and for the viewer to move. A missing entry means no number is given there."""
+
+    def __init__(self, params: dict[str, list[Params | None]] | None = None, reasons: dict[str, list[str | None]] | None = None):
+        self.params = {k: [None if p is None else tuple(p) for p in v] for k, v in (params or {}).items()}
         self.reasons = reasons or {}
 
-    def temperature(self, kind: str, stage: int) -> float | None:
-        t = self.temps.get(kind)
-        return None if t is None else t[stage]
+    def get(self, kind: str, stage: int, mover: bool) -> tuple[float, float] | None:
+        t = self.params.get(kind)
+        if t is None or t[stage] is None:
+            return None
+        p = t[stage]
+        return (p[2], p[3]) if mover else (p[0], p[1])
 
     def reason(self, kind: str, stage: int) -> str:
         r = self.reasons.get(kind)
         if r is not None and r[stage]:
             return r[stage]
-        if kind not in self.temps:
+        if kind not in self.params:
             return f"no calibrated win chance for this kind of game ({kind})"
         return f"the win chance failed the calibration gate for {kind} games at turns {STAGE_NAMES[stage]}"
 
     def to_dict(self) -> dict:
-        return {"temps": self.temps, "reasons": self.reasons}
+        return {"params": {k: [None if p is None else list(p) for p in v] for k, v in self.params.items()},
+                "reasons": self.reasons}
 
     @classmethod
     def from_dict(cls, d: dict | None) -> "Calibration":
         d = d or {}
-        return cls(d.get("temps"), d.get("reasons"))
+        return cls(d.get("params"), d.get("reasons"))
 
 
-def calibrated_win(logits: torch.Tensor, temps: torch.Tensor) -> torch.Tensor:
-    """Slot 0's probability after dividing each row's logits by its temperature."""
-    return F.softmax(logits / temps[:, None], dim=-1)[:, 0]
+def raw_win(logits: torch.Tensor) -> torch.Tensor:
+    """The network's own win chance of slot 0."""
+    return F.softmax(logits.float(), dim=-1)[:, 0]
+
+
+def calibrated_win(logits: torch.Tensor, a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
+    """sigmoid(a * logit(q) + b) of slot 0's softmax probability q, per row."""
+    q = raw_win(logits).clamp(1e-6, 1 - 1e-6)
+    return torch.sigmoid(a * torch.log(q / (1 - q)) + b)
 
 
 def save_value(path: str | Path, net: ValueNet, cal: Calibration, meta: dict) -> None:
@@ -164,4 +178,4 @@ def policy_value_net(model: PolyNet) -> ValueNet:
 
 
 __all__ = ["ValueNet", "Calibration", "STAGES", "STAGE_NAMES", "stage_of", "kind_of", "save_value", "load_value",
-           "calibrated_win", "policy_value_net", "mask_empty_slots", "extra_inputs", "KIND_VOCAB", "EXTRA_DIM", "S"]
+           "calibrated_win", "raw_win", "policy_value_net", "mask_empty_slots", "extra_inputs", "KIND_VOCAB", "EXTRA_DIM", "S"]

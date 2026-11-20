@@ -375,6 +375,11 @@ impl PyGame {
         Ok(game)
     }
 
+    /// The game as a polytopia-position file (`Engine::to_position`), the input of `from_position`.
+    fn position_json(&self) -> String {
+        self.0.lock().unwrap().e.to_position().to_string()
+    }
+
     /// Play the command whose `format!("{cmd:?}")` is `text` (see `from_line`). Raises `ValueError` when the player to
     /// move has no such command.
     fn play_text(&self, text: &str) -> PyResult<()> {

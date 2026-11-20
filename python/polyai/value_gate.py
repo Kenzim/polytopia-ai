@@ -36,7 +36,6 @@ SPLITS = {"train": 0, "fit": 1, "test": 2}
 MIN_GAMES = 100
 MAX_ECE = 0.05
 MAX_GAP = 0.10
-TEMPS = np.exp(np.linspace(math.log(0.25), math.log(4.0), 81))
 
 
 def split_of_key(key: str) -> int:
@@ -105,34 +104,58 @@ def concat(shards: list[dict], keys: tuple[str, ...] = ("winner", "turn", "kind"
     return {k: np.concatenate([a[k] for a in shards]) for k in keys}
 
 
-def win_prob(logits: np.ndarray, temps: np.ndarray | float = 1.0) -> np.ndarray:
-    z = logits / np.asarray(temps, np.float64).reshape(-1, 1)
+def win_prob(logits: np.ndarray) -> np.ndarray:
+    """Slot 0's softmax probability per row."""
+    z = logits.astype(np.float64)
     z = z - z.max(axis=1, keepdims=True)
     e = np.exp(z)
     return e[:, 0] / e.sum(axis=1)
 
 
-def fit_temperatures(logits: np.ndarray, rows: dict, min_rows: int = 500) -> dict[str, list[float | None]]:
-    """Per kind and stage, the temperature with the least log loss of "slot 0 wins" (None with fewer than
-    `min_rows` rows)."""
+def logit(q: np.ndarray) -> np.ndarray:
+    q = np.clip(q, 1e-6, 1 - 1e-6)
+    return np.log(q / (1 - q))
+
+
+def fit_logistic(x: np.ndarray, y: np.ndarray, l2: float = 1e-3, iters: int = 50) -> tuple[float, float]:
+    """(a, b) of the least log loss of y ~ sigmoid(a x + b), by Newton steps with a small pull towards (1, 0)."""
+    a, b = 1.0, 0.0
+    n = len(x)
+    for _ in range(iters):
+        p = 1 / (1 + np.exp(-(a * x + b)))
+        r = p - y
+        w = p * (1 - p)
+        g = np.array([(r * x).sum() / n + l2 * (a - 1), r.sum() / n + l2 * b])
+        h = np.array([[(w * x * x).sum() / n + l2, (w * x).sum() / n], [(w * x).sum() / n, w.sum() / n + l2]])
+        step = np.linalg.solve(h, g)
+        a, b = a - step[0], b - step[1]
+        if np.abs(step).max() < 1e-7:
+            break
+    return float(a), float(b)
+
+
+def fit_calibration(logits: np.ndarray, rows: dict, min_rows: int = 500) -> dict[str, list[tuple | None]]:
+    """Per kind and stage, the logistic map (a, b) of logit(q) to "slot 0 wins", for the viewer not to move and to
+    move (one shared map when either side has fewer than `min_rows` / 4 rows); None with fewer than `min_rows`."""
     y = (rows["winner"] == 0).astype(np.float64)
+    x = logit(win_prob(logits))
+    mv = rows["mover"].astype(bool)
     st = stage_of(rows["turn"])
-    out: dict[str, list[float | None]] = {}
+    out: dict[str, list[tuple | None]] = {}
     for kind in sorted(set(rows["kind"].tolist())):
-        temps: list[float | None] = []
+        params: list[tuple | None] = []
         for s in range(len(STAGES)):
             sel = (rows["kind"] == kind) & (st == s)
             if sel.sum() < min_rows:
-                temps.append(None)
+                params.append(None)
                 continue
-            best, best_t = math.inf, 1.0
-            for t in TEMPS:
-                p = np.clip(win_prob(logits[sel], t), 1e-6, 1 - 1e-6)
-                nll = float(-(y[sel] * np.log(p) + (1 - y[sel]) * np.log(1 - p)).mean())
-                if nll < best:
-                    best, best_t = nll, float(t)
-            temps.append(best_t)
-        out[kind] = temps
+            off, on = sel & ~mv, sel & mv
+            if min(off.sum(), on.sum()) < min_rows // 4:
+                ab = fit_logistic(x[sel], y[sel])
+                params.append(ab + ab)
+            else:
+                params.append(fit_logistic(x[off], y[off]) + fit_logistic(x[on], y[on]))
+        out[kind] = params
     return out
 
 
@@ -151,8 +174,9 @@ def gate(p: np.ndarray, rows: dict, given: np.ndarray | None = None) -> dict:
             stages.append(stage_report(name, p[sel & given], y[sel & given], rows["game_key"][sel & given], int(sel.sum())))
         overall = stage_report("all", p[ks & given], y[ks & given], rows["game_key"][ks & given], int(ks.sum()))
         checked = [x for x in stages if x["verdict"] not in ("too few games", "no number given")]
-        report[kind] = {"stages": stages, "overall": overall,
-                        "pass": bool(checked) and all(x["verdict"] == "pass" for x in checked)}
+        ok = bool(checked) and all(x["verdict"] == "pass" for x in checked)
+        report[kind] = {"stages": stages, "overall": overall, "pass": ok,
+                        "status": "passes" if ok else "fails" if checked else "gives no number"}
     return report
 
 
@@ -187,18 +211,26 @@ def stage_report(name: str, p: np.ndarray, y: np.ndarray, games: np.ndarray, row
     return r
 
 
-def calibrated(logits: np.ndarray, rows: dict, cal: Calibration) -> tuple[np.ndarray, np.ndarray]:
-    """(p, given) under a calibration layer: no number where it has no temperature."""
+def calibrated(logits: np.ndarray, rows: dict, cal: Calibration | None) -> tuple[np.ndarray, np.ndarray]:
+    """(p, given) under a calibration layer: no number where it has no map. `cal` None: the raw win chance."""
+    q = win_prob(logits)
+    if cal is None:
+        return q, np.ones(len(q), bool)
     st = stage_of(rows["turn"])
-    temps = np.array([cal.temperature(k, int(s)) or np.nan for k, s in zip(rows["kind"].tolist(), st.tolist())])
-    given = ~np.isnan(temps)
-    return win_prob(logits, np.where(given, temps, 1.0)), given
+    ab = np.full((len(q), 2), np.nan)
+    for i, (k, s, m) in enumerate(zip(rows["kind"].tolist(), st.tolist(), rows["mover"].tolist())):
+        got = cal.get(k, int(s), bool(m))
+        if got is not None:
+            ab[i] = got
+    given = ~np.isnan(ab[:, 0])
+    p = np.where(given, 1 / (1 + np.exp(-(np.nan_to_num(ab[:, 0]) * logit(q) + np.nan_to_num(ab[:, 1])))), q)
+    return p, given
 
 
 def format_table(name: str, report: dict) -> str:
     lines = [f"### {name}", ""]
     for kind, r in report.items():
-        lines += [f"**{kind}**: {'passes' if r['pass'] else 'fails'}", "",
+        lines += [f"**{kind}**: {r['status']}", "",
                   "| turns | rows | games | given | base rate | Brier | base Brier | skill | ECE | worst bucket | verdict |",
                   "|---|---|---|---|---|---|---|---|---|---|---|"]
         for s in r["stages"] + [r["overall"]]:
@@ -214,7 +246,7 @@ def format_table(name: str, report: dict) -> str:
 
 def strip_buckets(report: dict) -> dict:
     """The report without the per-bucket lists (the short JSON)."""
-    return {k: {"pass": r["pass"], "overall": {a: b for a, b in r["overall"].items() if a != "buckets"},
+    return {k: {"pass": r["pass"], "status": r["status"], "overall": {a: b for a, b in r["overall"].items() if a != "buckets"},
                 "stages": [{a: b for a, b in s.items() if a != "buckets"} for s in r["stages"]]} for k, r in report.items()}
 
 
