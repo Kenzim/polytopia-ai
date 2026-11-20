@@ -55,6 +55,7 @@ collect(steps):
         core.finish_round(results)       # store learner rows, start the engine steps
     drain()                              # settle the steps in flight (their finished games and roles), then cut()
     stores = core.take_stores()          # one finalised dict per board size, same keys as SizeStore.finalize()
+    opp = core.take_opp_stores()         # --value-opp only: the opponents' value rows of games that ended
 ```
 
 ## 3. What is recorded, and the equivalence contract
@@ -65,7 +66,10 @@ The rollout the trainer receives must have the same content as the Python collec
   the chosen index, the behaviour `logp`, the value, and (after GAE) `adv`, `ret` and whether it is trained
   (`SizeStore.finalize()` keys, dtypes and shapes, so `ppo_update` is unchanged);
 - per finished game: the `results` record (seed, players, learner seat, opponent entry and policy id, outcome, turns,
-  decisions) and the pool statistics it feeds.
+  decisions) and the pool statistics it feeds;
+- with `--value-opp` (docs/rl.md): the kept opponents' rows of every game that ended, with their seat's result
+  (`ValueStore.finalize()` keys), and the count of rows still held (`opp_pending`). The core holds them per slot across
+  rollouts; the choice of rows is a hash, not a random draw, so both collectors keep the same ones.
 
 Not the same, by nature: the order of rows inside a store and which decisions are in flight when the rollout stops.
 Both depend on how the worker threads finish, in either collector. With one arm and `max_lead` 0 the process is

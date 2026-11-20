@@ -43,7 +43,7 @@ import torch.nn.functional as F
 from . import schema as S
 from .belief import full_belief_loss
 from .model import (BELIEF_PREFIXES, ModelOutput, PolyNet, add_belief, add_features, critic_value, feature_inputs,
-                    make_critic)
+                    make_critic, masked_mean_max)
 from .policy import collate, collate_features, resolve_checkpoint
 from .rl_pool import (
     DEFAULT_POOL_WEIGHTS,
@@ -117,6 +117,12 @@ class RLConfig:
     # advantages; it is trained next to the policy and never used in play. Its learning rate is critic_lr (0: lr).
     priv_critic: bool = False
     critic_lr: float = 0.0
+    # Value rows from the opponents' side (docs/rl.md): in games against our own networks the opponents' positions are
+    # held until the game ends and then join the value loss only, with that seat's result as the target, each weighted
+    # value_opp against one of the learner's positions (0 = off). value_opp_frac of them are kept (chosen by a hash of
+    # the game, the seat and the decision, so both collectors keep the same ones), which bounds memory and update time.
+    value_opp: float = 0.0
+    value_opp_frac: float = 0.25
     vf_coef: float = 0.5
     ent_coef: float = 0.005
     target_kl: float = 0.05  # stop the epochs early when the mean approximate KL to the behaviour policy passes it
@@ -308,6 +314,44 @@ class SizeStore:
         }
 
 
+class ValueStore:
+    """Opponents' positions on boards of one size for the value loss only (`--value-opp`): `tiles`, `globals`, the
+    engine feature rows when present (no legal lists: the value reads the trunk only), `seat`, `turn` and `ret` (the
+    result of that seat's game for it: 1 win, 0 loss, 0.5 capped)."""
+
+    def __init__(self) -> None:
+        self.cols: dict[str, list[np.ndarray]] = defaultdict(list)
+        self.n = 0
+
+    def add(self, rows: dict[str, np.ndarray]) -> None:
+        for k, v in rows.items():
+            self.cols[k].append(v)
+        self.n += len(rows["ret"])
+
+    def finalize(self) -> dict:
+        return {k: np.concatenate(v) for k, v in self.cols.items()}
+
+
+_M64 = (1 << 64) - 1
+
+
+def _splitmix64(x: int) -> int:
+    z = (x + 0x9E3779B97F4A7C15) & _M64
+    z = ((z ^ (z >> 30)) * 0xBF58476D1CE4E5B9) & _M64
+    z = ((z ^ (z >> 27)) * 0x94D049BB133111EB) & _M64
+    return z ^ (z >> 31)
+
+
+def keep_value_row(seed: int, seat: int, k: int, frac: float) -> bool:
+    """Whether the `k`-th opponent decision (counted from 0 over all opponent seats) of the game with `seed`, made by
+    `seat`, is kept as a value row: a hash below `frac`. No random stream is used, and the Rust collector computes the
+    same (`keep_value_row` in collector.rs)."""
+    if frac >= 1.0:
+        return True
+    x = _splitmix64(_splitmix64(seed & _M64) ^ ((seat & 0xFF) << 56) ^ k)
+    return (x >> 11) / float(1 << 53) < frac
+
+
 # ---------------------------------------------------------------------------------------------------------------
 # The PPO loss and update
 # ---------------------------------------------------------------------------------------------------------------
@@ -442,6 +486,29 @@ def value_bce(winner_logits: torch.Tensor, ret: torch.Tensor) -> torch.Tensor:
     return -(ret * log_win + (1 - ret) * log_not).mean()
 
 
+def value_logits(model: PolyNet, tiles: torch.Tensor, globals_: torch.Tensor, f_tiles: torch.Tensor | None = None,
+                 f_globals: torch.Tensor | None = None) -> torch.Tensor:
+    """The winner logits [B, N_SLOTS] of `model` from its trunk alone (the value path of `forward`, no legal actions)."""
+    feat, mask = model.encode(tiles, globals_, None, f_tiles, f_globals)
+    return model.value_mlp(F.relu(model.pool_fc(masked_mean_max(feat, mask)))).float()
+
+
+def value_opp_chunks(opp: dict[tuple, dict], n_steps: int, rng: np.random.Generator) -> list[list[tuple]]:
+    """The opponents' value rows of one epoch spread over its `n_steps` optimiser steps: each board size shuffled and cut
+    into chunks of about rows / n_steps, the chunks shuffled and dealt round the steps. Returns per step a list of
+    (board size, row indices)."""
+    n = sum(len(d["ret"]) for d in opp.values())
+    size = max(1, math.ceil(n / max(n_steps, 1)))
+    chunks = []
+    for hw, d in opp.items():
+        perm = rng.permutation(len(d["ret"]))
+        chunks += [(hw, perm[i:i + size]) for i in range(0, len(perm), size)]
+    out: list[list[tuple]] = [[] for _ in range(n_steps)]
+    for j, ci in enumerate(rng.permutation(len(chunks))):
+        out[j % n_steps].append(chunks[ci])
+    return out
+
+
 def critic_inputs(d: dict, sel: np.ndarray, device: torch.device) -> dict:
     def tens(k: str) -> torch.Tensor:
         return torch.from_numpy(np.ascontiguousarray(d[k][sel])).to(device)
@@ -497,7 +564,8 @@ def critic_advantages(critic: PolyNet, data: dict, cfg: RLConfig, device: torch.
 def ppo_update(model: PolyNet, ref: PolyNet | None, opt: torch.optim.Optimizer, stores: dict[tuple, SizeStore],
                cfg: RLConfig, update: int, device: torch.device, rng: np.random.Generator,
                extra: list[dict] | None = None, ema: WeightEMA | None = None, ent_coef: float | None = None,
-               critic: PolyNet | None = None, critic_opt: torch.optim.Optimizer | None = None) -> dict:
+               critic: PolyNet | None = None, critic_opt: torch.optim.Optimizer | None = None,
+               opp: dict[tuple, dict] | None = None) -> dict:
     """Several epochs of minibatch PPO over everything the rollout stored. Returns the mean metrics.
 
     `ref` is the network of the KL penalty (the BC policy, or the moving anchor with `--anchor-every`). `ema` is updated
@@ -510,7 +578,13 @@ def ppo_update(model: PolyNet, ref: PolyNet | None, opt: torch.optim.Optimizer, 
     and the truncated importance ratio for such positions is not built.
 
     With `critic` (the privileged critic), the advantages and returns are first recomputed from its values
-    (`critic_advantages`), and it is trained on every minibatch against those returns with `critic_opt`."""
+    (`critic_advantages`), and it is trained on every minibatch against those returns with `critic_opt`.
+
+    `opp` (used with `cfg.value_opp` > 0) holds the opponents' value rows per board size (`ValueStore.finalize()`).
+    They enter the value loss only: every epoch spreads them over the optimiser steps (`value_opp_chunks`, with a random
+    stream of their own, so the learner's minibatches stay as they are), and each step adds the binary cross-entropy of
+    its rows against `ret`, summed and divided by the step's learner positions, times `vf_coef * value_opp`. They take
+    no part in the policy, entropy and KL terms, the advantage normalisation, `--adv-filter` or the privileged critic."""
     data = {hw: st.finalize() for hw, st in stores.items() if st.n}
     for i, d in enumerate(extra or []):
         data[("extra", i)] = d
@@ -528,6 +602,9 @@ def ppo_update(model: PolyNet, ref: PolyNet | None, opt: torch.optim.Optimizer, 
     ent_coef = cfg.ent_coef if ent_coef is None else ent_coef
     kl_coef = kl_coef_at(update, cfg)
     policy_scale = 0.0 if update < cfg.critic_warmup else 1.0
+    opp_data = {hw: d for hw, d in (opp or {}).items() if len(d["ret"])} if cfg.value_opp > 0 else {}
+    opp_rng = np.random.default_rng([cfg.seed, update, 1]) if opp_data else None
+    opp_loss, opp_seen = 0.0, 0
     sums: dict[str, float] = defaultdict(float)
     count = 0
     epochs_done = 0
@@ -538,8 +615,9 @@ def ppo_update(model: PolyNet, ref: PolyNet | None, opt: torch.optim.Optimizer, 
             perm = rng.permutation(d["train"])
             chunks += [(hw, perm[i:i + cfg.minibatch]) for i in range(0, len(perm), cfg.minibatch)]
         order = rng.permutation(len(chunks))
+        opp_steps = value_opp_chunks(opp_data, len(order), opp_rng) if opp_data else None
         ep_kl, ep_n = 0.0, 0
-        for ci in order:
+        for step, ci in enumerate(order):
             hw, sel = chunks[ci]
             if len(sel) < 2:
                 continue
@@ -566,6 +644,23 @@ def ppo_update(model: PolyNet, ref: PolyNet | None, opt: torch.optim.Optimizer, 
             losses = ppo_loss(out, ref_logits, mb, cfg, kl_coef, policy_scale, ent_coef)
             opt.zero_grad(set_to_none=True)
             losses["loss"].backward()
+            for ohw, osel in opp_steps[step] if opp_steps else ():
+                od = opp_data[ohw]
+
+                def otens(k: str) -> torch.Tensor:
+                    return torch.from_numpy(np.ascontiguousarray(od[k][osel])).to(device)
+
+                ofeats = {}
+                if model.cfg.features:
+                    if "f_tiles" not in od:
+                        raise ValueError("the learner reads the engine features, but the opponents' rows have none")
+                    ofeats = {"f_tiles": otens("f_tiles"), "f_globals": otens("f_globals")}
+                with torch.autocast(device.type, dtype=torch.bfloat16, enabled=cfg.bf16 and device.type == "cuda"):
+                    owl = value_logits(model, otens("tiles"), otens("globals"), **ofeats)
+                ol = value_bce(owl, otens("ret"))
+                (cfg.vf_coef * cfg.value_opp * len(osel) / len(sel) * ol).backward()
+                opp_loss += float(ol.detach()) * len(osel)
+                opp_seen += len(osel)
             gn = torch.nn.utils.clip_grad_norm_(model.parameters(), cfg.grad_clip)
             opt.step()
             if ema is not None:
@@ -593,6 +688,11 @@ def ppo_update(model: PolyNet, ref: PolyNet | None, opt: torch.optim.Optimizer, 
     res.update(positions=n_train, positions_kept=n_kept, minibatches=count, epochs_done=epochs_done, kl_coef=kl_coef,
                ent_coef=ent_coef, policy_scale=policy_scale, adv_mean=mean, adv_std=std,
                early_stop=bool(epochs_done < cfg.epochs), ret_mean=ret_mean, **crit_metrics)
+    if cfg.value_opp > 0:
+        res.update(value_opp_positions=sum(len(d["ret"]) for d in opp_data.values()), value_opp_trained=opp_seen,
+                   value_opp_loss=opp_loss / opp_seen if opp_seen else None,
+                   value_opp_ret_mean=float(np.concatenate([d["ret"] for d in opp_data.values()]).mean())
+                   if opp_data else None)
     return res
 
 
@@ -676,6 +776,10 @@ class Arm:
         self.choices: list[tuple[np.ndarray, np.ndarray]] = []
         self.future = None  # the engine step in flight on the executor, if any
         self.steps = 0  # engine steps in the current rollout (bounded lead over the slowest arm, see Collector.tick)
+        # --value-opp: per slot, the opponents' rows held until the game ends (across rollouts), and the count of the
+        # game's opponent decisions so far (the `k` of keep_value_row)
+        self.opp_rows: dict[int, list[dict]] = {}
+        self.opp_seen = np.zeros(cap, np.int64)
 
 
 class Collector:
@@ -702,6 +806,9 @@ class Collector:
         self.presets = [PRESET_IDS[s] for s in cfg.presets.split(",") if s] if cfg.presets else None
         self.t_infer = 0.0
         self.t_step = 0.0
+        self.opp_stores: dict[tuple, ValueStore] = {}  # --value-opp: rows of the games finished in this rollout
+        self.opp_data: dict[tuple, dict] = {}  # the same, finalized at the end of the rollout
+        self.opp_pending = 0  # rows held for games still in play at the end of the rollout
 
     # --- arms ---------------------------------------------------------------------------------------------
 
@@ -856,6 +963,8 @@ class Collector:
                     self.n_learner += b
                 else:
                     self.n_opp += b
+                    if cfg.value_opp > 0:
+                        self._hold_opp(arm, sub)
         self.t_infer += time.perf_counter() - t0
         for arm in go:
             games = np.concatenate([c[0] for c in arm.choices])
@@ -887,6 +996,31 @@ class Collector:
 
     # --- trajectories ------------------------------------------------------------------------------------
 
+    def _hold_opp(self, arm: Arm, sub: dict) -> None:
+        """Hold the kept rows of `sub` (opponents' decisions of a model arm) until their games end (--value-opp)."""
+        cols = [k for k in ("tiles", "globals", "f_tiles", "f_globals") if k in sub]
+        keys = (np.asarray(sub[k]).tolist() for k in ("game", "seat", "seed", "turn"))
+        for i, (slot, seat, seed, turn) in enumerate(zip(*keys)):
+            k = int(arm.opp_seen[slot])
+            arm.opp_seen[slot] += 1
+            if keep_value_row(seed, seat, k, self.cfg.value_opp_frac):
+                row = {c: np.asarray(sub[c])[i:i + 1].copy() for c in cols}
+                row["seat"], row["turn"] = np.array([seat], np.int8), np.array([turn], np.int16)
+                arm.opp_rows.setdefault(slot, []).append(row)
+
+    def _flush_opp(self, arm: Arm, slot: int, f: dict) -> None:
+        """The held opponents' rows of a finished game join this rollout's value rows, each with its seat's result."""
+        arm.opp_seen[slot] = 0
+        rows = arm.opp_rows.pop(slot, None)
+        capped = bool(f["capped"])
+        if not rows or (capped and self.cfg.drop_capped):
+            return
+        d = {k: np.concatenate([r[k] for r in rows]) for k in rows[0]}
+        winners = {int(w) for w in f["winners"]}
+        d["ret"] = np.array([0.5 if (capped or not winners) else float(int(s) in winners) for s in d["seat"]],
+                            np.float32)
+        self.opp_stores.setdefault(tuple(d["tiles"].shape[1:3]), ValueStore()).add(d)
+
     def _flush(self, arm: Arm, slot: int, outcome: float, terminal: bool) -> None:
         tr = arm.traj.pop(slot, None)
         if tr is None:
@@ -907,6 +1041,7 @@ class Collector:
         capped = bool(f["capped"])
         winners = [int(w) for w in f["winners"]]
         outcome = 0.5 if (capped or not winners) else (1.0 if seat in winners else 0.0)
+        self._flush_opp(arm, slot, f)
         if capped and self.cfg.drop_capped:
             arm.traj.pop(slot, None)
         else:
@@ -938,6 +1073,7 @@ class Collector:
     def collect(self, steps: int) -> None:
         """Play until the learner has made `steps` decisions."""
         self.stores = {}
+        self.opp_stores = {}
         self.results = []
         self.n_learner = self.n_opp = 0
         self.t_infer = self.t_step = 0.0
@@ -948,6 +1084,8 @@ class Collector:
         for arm in self.arms.values():  # games finishing in the steps still in flight end in this rollout
             self._settle(arm)
         self.cut()
+        self.opp_data = {hw: st.finalize() for hw, st in self.opp_stores.items()}
+        self.opp_pending = sum(len(r) for arm in self.arms.values() for r in arm.opp_rows.values())
 
 
 # ---------------------------------------------------------------------------------------------------------------
@@ -1210,6 +1348,7 @@ def train(cfg: RLConfig) -> dict:
     for update in range(update0, cfg.updates):
         # this update's rollout is complete and the collector idle: take its results before the next one starts
         stores, results = col.stores, col.results
+        opp_data, opp_pending = col.opp_data, col.opp_pending
         n_learner, n_opp, t_infer, t_step = col.n_learner, col.n_opp, col.t_infer, col.t_step
         site_data: list[dict] = []
         if site is not None:  # paused since the rollout ended: what it gathered is this update's
@@ -1226,7 +1365,10 @@ def train(cfg: RLConfig) -> dict:
             nxt = roll_ex.submit(run_rollout)
         t1 = time.perf_counter()
         res = ppo_update(model, anchor["net"], opt, stores, cfg, update, device, ppo_rng, extra=site_data, ema=ema,
-                         ent_coef=ent_coef_at(update, cfg, last_entropy), critic=critic, critic_opt=critic_opt)
+                         ent_coef=ent_coef_at(update, cfg, last_entropy), critic=critic, critic_opt=critic_opt,
+                         opp=opp_data)
+        if cfg.value_opp > 0:
+            res["value_opp_pending"] = opp_pending
         if site is not None:
             res["site_decisions"] = sum(len(d["chosen"]) for d in site_data)
             res["site_aborted"] = site.aborted
@@ -1267,7 +1409,9 @@ def train(cfg: RLConfig) -> dict:
         print(f"update {done}/{cfg.updates} games {rec['games_finished']} dec/s {rec['decisions_per_sec']:.0f} "
               f"roll {rec['rollout_secs']:.1f}s upd {rec['update_secs']:.1f}s | kl_bc {res.get('kl_bc', float('nan')):.4f} "
               f"ent {res.get('entropy', float('nan')):.3f} clip {res.get('clip_frac', float('nan')):.3f} "
-              f"vloss {res.get('value_loss', float('nan')):.3f} | {wr}", flush=True)
+              f"vloss {res.get('value_loss', float('nan')):.3f}"
+              + (f" vopp {res.get('value_opp_positions', 0)} held {opp_pending}" if cfg.value_opp > 0 else "")
+              + f" | {wr}", flush=True)
         if done % cfg.ckpt_every == 0 and done < cfg.updates:
             save_rl_checkpoint(run_dir / "ckpt_last.pt", model, done, opt, snapshot_state(done), ema)
             save_plain_checkpoint(run_dir / f"ckpt_u{done:05d}.pt", model, done, ema)
@@ -1326,6 +1470,8 @@ def parse_args(argv: list[str] | None = None) -> RLConfig:
     cfg = RLConfig(**vars(a))
     if cfg.mode not in MODES:
         raise SystemExit(f"--mode is one of {', '.join(MODES)}")
+    if cfg.value_opp < 0 or not 0 < cfg.value_opp_frac <= 1:
+        raise SystemExit("--value-opp must be >= 0 and --value-opp-frac in (0, 1]")
     if cfg.resume and not cfg.init:  # a resumed run needs its stored init / ref paths again
         stored = Path(cfg.runs_dir) / cfg.name / "config.json"
         if not stored.exists():

@@ -117,6 +117,44 @@ play as before; its own value head still trains, on the critic's returns. The cr
 `--resume`) and as `critic_final.pt`. Metrics add `critic_loss`, `critic_value_mean`, `policy_value_mean` and
 `critic_policy_value_corr`.
 
+### Value rows from the opponents' side (`--value-opp W`, off by default)
+
+The learner wins 65 to 75% of its training games and only its own positions are trained on, so the value head learns
+"the side to move usually wins" (see the calibration table below). With `--value-opp W` (> 0) the positions of the
+other seats join the value loss as well, in games against our own networks: pool snapshots `self:u<N>`, `bc` and the
+`--extra-opponents`. Those positions are already encoded for the opponents' own inference, from their seat, so they
+cost no extra engine work. The retail AI's seats are never encoded and are left out.
+
+- **Target.** The seat's own result, Monte Carlo: 1 win, 0 loss, 0.5 for a capped game (left out with
+  `--drop-capped`), as the learner's outcome. A game lasts several updates, so a slot's opponent rows are held across
+  rollouts until the game ends and then join the update of the rollout it ended in; a run that stops (or resumes)
+  loses the rows of the games in play. TD(lambda) was not used: it needs a value for the opponent's positions, and the
+  opponent network's own estimate is the miscalibrated one this option is meant to fix, while the learner's would
+  cost an extra forward pass over every held row.
+- **Which rows.** `--value-opp-frac F` (default 0.25) of the opponent decisions are kept, chosen by a hash of the
+  game seed, the seat and the decision's count in that game (`keep_value_row`), so both collectors keep the same rows
+  and no random stream changes. The decisions within a turn are strongly correlated, so a quarter keeps most of the
+  information at a quarter of the memory and update time. A row holds the tiles, the globals and the engine feature
+  rows (no legal lists: the value reads the trunk only), about 13 to 26 KB on Tiny to Normal maps.
+- **Loss.** The rows enter the value loss only, through `value_logits` (the value path of the network without the
+  policy head). Each epoch spreads them evenly over its optimiser steps, with a random stream of their own, so the
+  learner's minibatches are the same as without the option; a step adds `vf_coef * W * sum(BCE of its rows) / (its
+  learner positions)`, so `W` 1 weighs an opponent row like a learner row. They take no part in the policy, entropy and
+  KL terms, the advantage normalisation, `--adv-filter`, the critic warm-up's policy scale or `--priv-critic` (which
+  trains on the learner's rows only).
+- **Metrics.** `value_opp_positions` (rows in this update), `value_opp_trained` (row passes over the epochs),
+  `value_opp_loss` (their mean binary cross-entropy), `value_opp_ret_mean` and `value_opp_pending` (rows held for games
+  still in play); the stdout line adds `vopp <rows> held <pending>`.
+
+With the option off nothing is held and the update is unchanged (same samples, same random streams); the Rust
+collector is then built without the new arguments, so an older engine module still runs it.
+
+Cost, measured 2026-11-20 on the shared RTX 3060 (b6c96 with features): a value row costs about as much in the update as
+a learner row (the trunk dominates), so the update grows by the share of value rows. The live loop's rollout (32,768
+learner and about 29,700 model-opponent decisions per update, a game lasting about 10 updates) would give about
+7,400 value rows per update at the default fraction 0.25, and hold about 150,000 x F rows (about 20 KB each with the
+features, so 0.75 GB at 0.25 and 3 GB at 1) for the games in play. GPU memory does not change.
+
 ### Calibration on human games (`polyai.calibrate`)
 
 `python -m polyai.calibrate --shards DIR... --model NAME=CKPT...` runs the value head of policy checkpoints, and
@@ -163,7 +201,8 @@ Rollouts: `games` 128 in flight, `rollout_steps` 16384 learner decisions per upd
 `weight_floor`, `weight_cap`, `stats_decay`, `snapshot_every` 10, `max_snapshots` 6. PPO: `epochs` 2, `minibatch` 256,
 `lr` 3e-5, `grad_clip` 0.5, `clip`, `gamma`, `lam`, `vf_coef`, `ent_coef` 0.005, `target_kl` 0.05, `critic_warmup` 2,
 `kl_coef` 0.1 to `kl_coef_end` 0.01 over `kl_decay_updates` 200. Recipe options (see above): `ema`, `ent_schedule`,
-`ent_max`, `ent_coef_end`, `ent_decay_updates`, `anchor_every`, `adv_filter`. Run: `ckpt_every` 10, `threads` (default 8; VecEnv workers plus
+`ent_max`, `ent_coef_end`, `ent_decay_updates`, `anchor_every`, `adv_filter`. Value rows of the opponents: `value_opp`
+0 (off), `value_opp_frac` 0.25. Run: `ckpt_every` 10, `threads` (default 8; VecEnv workers plus
 torch threads), `torch_threads`, `bf16` (autocast in the update on CUDA; inference is bf16 on CUDA as in
 `ModelPolicy`), `max_batch`, `need_gb`, `device`, `seed`, `resume`.
 
