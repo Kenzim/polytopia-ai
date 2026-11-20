@@ -96,6 +96,7 @@ tournament play.
 | 20 Nov | A/B of 8 games at a time against the PolytopAI website's bot during training | Worse: 38.9% against its control, and no better against the site (5 wins in 200 against 4) |
 | 20 Nov | Faster collector code and a profile-guided build of the engine bindings | In the loop from round 99, which runs from its own checkout |
 | 20 Nov | A/Bs of sampling at temperature 0.5 in training, and of `--overlap` | Both worse than the features control; not adopted |
+| 20 Nov | A/B of value training on the opponents' positions too (`--value-opp`) | Worse, 37.0% against its control; not adopted |
 
 The champions in order, each measured against the one before it over 400 games:
 
@@ -134,6 +135,7 @@ Each row is a 300-update run compared with a control from the same starting mode
 | 8 games at a time against the PolytopAI website's bot (6.7% of the learner's decisions) | 38.9% | Worse; the learner lost 97% of those games, which teach little and may crowd the advantage filter |
 | Sampling at temperature 0.5 in training: the learner only, or learner and model opponents (with features) | 39.6% and 47.2% | Worse, and no better |
 | `--overlap`: play the next rollout during the update, with weights one update old (with features) | 44.6% | Worse; not adopted |
+| Value training on the opponents' positions too (`--value-opp 2.0`, a quarter of them, with features) | 37.0% | Worse; the value became timid and the policy weaker |
 
 Reports with the method and the full tables: `docs/arena.md`, `docs/rl.md`, `docs/belief.md`, `docs/features-ab.md`,
 `docs/search.md`, `docs/human-data.md`, `docs/loss_autopsy.md`, `docs/autoloop.md`, `docs/collector.md`.
@@ -164,7 +166,8 @@ training data: only the learner's own positions are trained on, and the learner 
 because half the pool is weaker than it. A value that means something between equals needs positions from both
 seats of self-play games. The lookahead planned for live play waits for that. Engine features help: a features model
 is calibrated from turn 6 (sides it gives 0.8 or more at turns 6 to 10 win 91%) and is rarely overconfident in the
-opening, and training the value on both seats (`--value-opp`) is under test.
+opening. Training the value on opponents' positions too (`--value-opp`) made the value timid and the policy weaker
+(37.0% against its control), so it is off.
 
 **Against BPolait** we win about a third of games. The autopsy points at the opening (growing cities and income more
 slowly through turns 4 to 8) and at an army of warriors with no archers or riders. Our imitation of BPolait is a weak
@@ -176,8 +179,8 @@ no search; the site offers nothing weaker. Training with 8 of those games always
 to head (38.9% against its control) and no better against the site. An opponent that wins 97% of games is too strong
 to learn from by reinforcement alone.
 
-Next, in order: the A/Bs running now (value training on both seats, no KL anchor, a pool without the weaker
-built-in AI levels, which cost about 60% of collection CPU), an exploiter
+Next, in order: the A/Bs running now (no KL anchor, a pool without the weaker built-in AI levels, which cost about
+60% of collection CPU), an exploiter
 trained to beat the champion and added to the pool (league training as in AlphaStar), then throughput (the GPU is
 about 40% busy during training).
 

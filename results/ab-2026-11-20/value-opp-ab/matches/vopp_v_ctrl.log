@@ -1,0 +1,42 @@
+model:abg_vopp: /kvm/polytopia-ai-data/ab/runs/abg_vopp/ckpt_final.pt (step 300)
+model:abg_ctrl: /kvm/polytopia-ai-data/ab/runs/abg_ctrl/ckpt_final.pt (step 300)
+  model:abg_vopp vs model:abg_ctrl: 0/400 games, 0s
+  model:abg_vopp vs model:abg_ctrl: 7/400 games, 31s
+  model:abg_vopp vs model:abg_ctrl: 19/400 games, 61s
+  model:abg_vopp vs model:abg_ctrl: 42/400 games, 91s
+  model:abg_vopp vs model:abg_ctrl: 64/400 games, 121s
+  model:abg_vopp vs model:abg_ctrl: 76/400 games, 151s
+  model:abg_vopp vs model:abg_ctrl: 100/400 games, 181s
+  model:abg_vopp vs model:abg_ctrl: 118/400 games, 211s
+  model:abg_vopp vs model:abg_ctrl: 130/400 games, 241s
+  model:abg_vopp vs model:abg_ctrl: 149/400 games, 271s
+  model:abg_vopp vs model:abg_ctrl: 165/400 games, 301s
+  model:abg_vopp vs model:abg_ctrl: 176/400 games, 331s
+  model:abg_vopp vs model:abg_ctrl: 190/400 games, 361s
+  model:abg_vopp vs model:abg_ctrl: 206/400 games, 391s
+  model:abg_vopp vs model:abg_ctrl: 226/400 games, 421s
+  model:abg_vopp vs model:abg_ctrl: 235/400 games, 451s
+  model:abg_vopp vs model:abg_ctrl: 248/400 games, 482s
+  model:abg_vopp vs model:abg_ctrl: 260/400 games, 512s
+  model:abg_vopp vs model:abg_ctrl: 277/400 games, 542s
+  model:abg_vopp vs model:abg_ctrl: 284/400 games, 572s
+  model:abg_vopp vs model:abg_ctrl: 295/400 games, 602s
+  model:abg_vopp vs model:abg_ctrl: 306/400 games, 632s
+  model:abg_vopp vs model:abg_ctrl: 321/400 games, 662s
+  model:abg_vopp vs model:abg_ctrl: 327/400 games, 692s
+  model:abg_vopp vs model:abg_ctrl: 331/400 games, 722s
+  model:abg_vopp vs model:abg_ctrl: 336/400 games, 752s
+  model:abg_vopp vs model:abg_ctrl: 344/400 games, 782s
+  model:abg_vopp vs model:abg_ctrl: 347/400 games, 812s
+  model:abg_vopp vs model:abg_ctrl: 353/400 games, 842s
+  model:abg_vopp vs model:abg_ctrl: 359/400 games, 872s
+  model:abg_vopp vs model:abg_ctrl: 362/400 games, 902s
+  model:abg_vopp vs model:abg_ctrl: 367/400 games, 932s
+  model:abg_vopp vs model:abg_ctrl: 371/400 games, 962s
+  model:abg_vopp vs model:abg_ctrl: 377/400 games, 993s
+  model:abg_vopp vs model:abg_ctrl: 383/400 games, 1023s
+  model:abg_vopp vs model:abg_ctrl: 386/400 games, 1053s
+  model:abg_vopp vs model:abg_ctrl: 389/400 games, 1083s
+  model:abg_vopp vs model:abg_ctrl: 395/400 games, 1113s
+  model:abg_vopp vs model:abg_ctrl: 397/400 games, 1143s
+model:abg_vopp vs model:abg_ctrl: W-L-D 145-249-6 of 400, score 37.0%, capped 6

@@ -153,7 +153,25 @@ Cost, measured 2026-11-20 on the shared RTX 3060 (b6c96 with features): a value 
 a learner row (the trunk dominates), so the update grows by the share of value rows. The live loop's rollout (32,768
 learner and about 29,700 model-opponent decisions per update, a game lasting about 10 updates) would give about
 7,400 value rows per update at the default fraction 0.25, and hold about 150,000 x F rows (about 20 KB each with the
-features, so 0.75 GB at 0.25 and 3 GB at 1) for the games in play. GPU memory does not change.
+features, so 0.75 GB at 0.25 and 3 GB at 1) for the games in play. GPU memory does not change. In the A/B run below
+(128 games, 16,384 steps) it held about 109,000 rows and used 4.7 GB more RAM than its control, far above that estimate.
+
+A/B of 20 November 2026 (300 updates from round 77 with `--features`, seed 900, the live loop's settings, ai 47167b5
+with engine 80a68d0; `--value-opp 2.0 --value-opp-frac 0.25` against the same run without it): **worse**. It scored
+37.0% against its control (145-249-6), 35.9% against round 77 and 85.5% against Crazy (control 45.5% and 90.0%).
+On the human games (`calib_f`) its value is better calibrated in the opening but worse from turn 6:
+
+| Turns | ECE: control, `--value-opp` | Share given >= 0.8, and won: control | `--value-opp` |
+|---|---|---|---|
+| 0 | 0.200, 0.183 | 2%, 59% | 0.5%, 56% |
+| 3-5 | 0.173, 0.153 | 6%, 77% | 2%, 76% |
+| 6-10 | 0.081, 0.100 | 19%, 92% | 9%, 89% |
+| 11-15 | 0.044, 0.074 | 24%, 97% | 15%, 97% |
+| 16-20 | 0.049, 0.084 | 29%, 98% | 20%, 99% |
+
+The value became timid everywhere (it rarely gives 0.8 or more even late, when such sides win 97 to 99%), and the
+policy, which shares the trunk, got weaker. The weight 2.0 on rows that are a quarter of all opponent decisions was
+probably too strong for a trunk shared with the policy. Not adopted; a lower weight would need a fresh A/B.
 
 ### Calibration on human games (`polyai.calibrate`)
 

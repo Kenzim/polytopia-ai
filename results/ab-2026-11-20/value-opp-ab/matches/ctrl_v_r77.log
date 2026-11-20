@@ -1,0 +1,39 @@
+model:abg_ctrl: /kvm/polytopia-ai-data/ab/runs/abg_ctrl/ckpt_final.pt (step 300)
+model:auto_r0077: /kvm/polytopia-ai-data/runs/auto_r0077/ckpt_final.pt (step 300)
+  model:abg_ctrl vs model:auto_r0077: 0/400 games, 0s
+  model:abg_ctrl vs model:auto_r0077: 4/400 games, 31s
+  model:abg_ctrl vs model:auto_r0077: 22/400 games, 61s
+  model:abg_ctrl vs model:auto_r0077: 40/400 games, 91s
+  model:abg_ctrl vs model:auto_r0077: 59/400 games, 121s
+  model:abg_ctrl vs model:auto_r0077: 66/400 games, 151s
+  model:abg_ctrl vs model:auto_r0077: 84/400 games, 181s
+  model:abg_ctrl vs model:auto_r0077: 106/400 games, 211s
+  model:abg_ctrl vs model:auto_r0077: 117/400 games, 241s
+  model:abg_ctrl vs model:auto_r0077: 139/400 games, 271s
+  model:abg_ctrl vs model:auto_r0077: 151/400 games, 301s
+  model:abg_ctrl vs model:auto_r0077: 168/400 games, 331s
+  model:abg_ctrl vs model:auto_r0077: 180/400 games, 361s
+  model:abg_ctrl vs model:auto_r0077: 201/400 games, 391s
+  model:abg_ctrl vs model:auto_r0077: 215/400 games, 421s
+  model:abg_ctrl vs model:auto_r0077: 221/400 games, 451s
+  model:abg_ctrl vs model:auto_r0077: 231/400 games, 481s
+  model:abg_ctrl vs model:auto_r0077: 246/400 games, 511s
+  model:abg_ctrl vs model:auto_r0077: 266/400 games, 542s
+  model:abg_ctrl vs model:auto_r0077: 274/400 games, 572s
+  model:abg_ctrl vs model:auto_r0077: 284/400 games, 602s
+  model:abg_ctrl vs model:auto_r0077: 298/400 games, 632s
+  model:abg_ctrl vs model:auto_r0077: 317/400 games, 662s
+  model:abg_ctrl vs model:auto_r0077: 326/400 games, 692s
+  model:abg_ctrl vs model:auto_r0077: 335/400 games, 722s
+  model:abg_ctrl vs model:auto_r0077: 349/400 games, 752s
+  model:abg_ctrl vs model:auto_r0077: 353/400 games, 782s
+  model:abg_ctrl vs model:auto_r0077: 359/400 games, 812s
+  model:abg_ctrl vs model:auto_r0077: 363/400 games, 842s
+  model:abg_ctrl vs model:auto_r0077: 366/400 games, 872s
+  model:abg_ctrl vs model:auto_r0077: 372/400 games, 902s
+  model:abg_ctrl vs model:auto_r0077: 377/400 games, 932s
+  model:abg_ctrl vs model:auto_r0077: 381/400 games, 962s
+  model:abg_ctrl vs model:auto_r0077: 389/400 games, 992s
+  model:abg_ctrl vs model:auto_r0077: 391/400 games, 1022s
+  model:abg_ctrl vs model:auto_r0077: 397/400 games, 1052s
+model:abg_ctrl vs model:auto_r0077: W-L-D 180-216-4 of 400, score 45.5%, capped 4

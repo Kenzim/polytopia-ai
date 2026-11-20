@@ -1,0 +1,18 @@
+model:abg_ctrl: /kvm/polytopia-ai-data/ab/runs/abg_ctrl/ckpt_final.pt (step 300), 1.43M params
+  model:abg_ctrl vs retail:crazy: 0/400 games, 1s
+  model:abg_ctrl vs retail:crazy: 20/400 games, 16s
+  model:abg_ctrl vs retail:crazy: 56/400 games, 31s
+  model:abg_ctrl vs retail:crazy: 100/400 games, 46s
+  model:abg_ctrl vs retail:crazy: 136/400 games, 61s
+  model:abg_ctrl vs retail:crazy: 188/400 games, 76s
+  model:abg_ctrl vs retail:crazy: 228/400 games, 91s
+  model:abg_ctrl vs retail:crazy: 273/400 games, 106s
+  model:abg_ctrl vs retail:crazy: 314/400 games, 121s
+  model:abg_ctrl vs retail:crazy: 351/400 games, 136s
+  model:abg_ctrl vs retail:crazy: 396/400 games, 151s
+retail:crazy: +400 games
+
+result (model against each opponent; a draw is half a win):
+  model:abg_ctrl vs retail:crazy: W-L-D 360-40-0 of 400, score 90.0%, capped 0, mean turns 24.4
+GPU peak allocated 37 MiB
+results: /kvm/polytopia-ai-data/ab/eval-abg/ctrl_crazy.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/ab/eval-abg/ctrl_crazy.jsonl

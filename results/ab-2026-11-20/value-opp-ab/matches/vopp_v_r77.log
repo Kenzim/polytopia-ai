@@ -1,0 +1,39 @@
+model:abg_vopp: /kvm/polytopia-ai-data/ab/runs/abg_vopp/ckpt_final.pt (step 300)
+model:auto_r0077: /kvm/polytopia-ai-data/runs/auto_r0077/ckpt_final.pt (step 300)
+  model:abg_vopp vs model:auto_r0077: 0/400 games, 0s
+  model:abg_vopp vs model:auto_r0077: 2/400 games, 31s
+  model:abg_vopp vs model:auto_r0077: 31/400 games, 61s
+  model:abg_vopp vs model:auto_r0077: 51/400 games, 91s
+  model:abg_vopp vs model:auto_r0077: 64/400 games, 121s
+  model:abg_vopp vs model:auto_r0077: 76/400 games, 151s
+  model:abg_vopp vs model:auto_r0077: 103/400 games, 181s
+  model:abg_vopp vs model:auto_r0077: 124/400 games, 211s
+  model:abg_vopp vs model:auto_r0077: 137/400 games, 241s
+  model:abg_vopp vs model:auto_r0077: 158/400 games, 271s
+  model:abg_vopp vs model:auto_r0077: 175/400 games, 301s
+  model:abg_vopp vs model:auto_r0077: 188/400 games, 331s
+  model:abg_vopp vs model:auto_r0077: 204/400 games, 361s
+  model:abg_vopp vs model:auto_r0077: 222/400 games, 391s
+  model:abg_vopp vs model:auto_r0077: 234/400 games, 421s
+  model:abg_vopp vs model:auto_r0077: 241/400 games, 451s
+  model:abg_vopp vs model:auto_r0077: 259/400 games, 482s
+  model:abg_vopp vs model:auto_r0077: 275/400 games, 512s
+  model:abg_vopp vs model:auto_r0077: 292/400 games, 542s
+  model:abg_vopp vs model:auto_r0077: 303/400 games, 572s
+  model:abg_vopp vs model:auto_r0077: 313/400 games, 602s
+  model:abg_vopp vs model:auto_r0077: 327/400 games, 632s
+  model:abg_vopp vs model:auto_r0077: 337/400 games, 662s
+  model:abg_vopp vs model:auto_r0077: 345/400 games, 692s
+  model:abg_vopp vs model:auto_r0077: 357/400 games, 722s
+  model:abg_vopp vs model:auto_r0077: 364/400 games, 752s
+  model:abg_vopp vs model:auto_r0077: 373/400 games, 782s
+  model:abg_vopp vs model:auto_r0077: 375/400 games, 812s
+  model:abg_vopp vs model:auto_r0077: 380/400 games, 842s
+  model:abg_vopp vs model:auto_r0077: 382/400 games, 872s
+  model:abg_vopp vs model:auto_r0077: 383/400 games, 902s
+  model:abg_vopp vs model:auto_r0077: 386/400 games, 932s
+  model:abg_vopp vs model:auto_r0077: 389/400 games, 962s
+  model:abg_vopp vs model:auto_r0077: 389/400 games, 992s
+  model:abg_vopp vs model:auto_r0077: 391/400 games, 1022s
+  model:abg_vopp vs model:auto_r0077: 397/400 games, 1052s
+model:abg_vopp vs model:auto_r0077: W-L-D 139-252-9 of 400, score 35.9%, capped 9

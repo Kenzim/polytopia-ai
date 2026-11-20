@@ -86,6 +86,16 @@ bindings as `abd_feat`, which is their control (48.4% against round 77, 88.2% ag
 | `abf_t05o` | `--temperature 0.5 --opp-temperature 0.5` | 47.2% (52.2% against `abf_t05`) | 43.5% | 87.5% |
 | `abf_ovl` | `--overlap` | 44.6% | 47.4% | 86.8% |
 
+## The value-opp A/B of 20 November
+
+Two 300-update runs from `auto_r0077` with `--features`, seed 900, the live loop's settings, on ai 47167b5 with the
+profile-guided bindings of engine 80a68d0. Round 77 scored 88.8% against Crazy in this set.
+
+| Folder | Option | Against `abg_ctrl` | Against round 77 | Against Crazy |
+|---|---|---|---|---|
+| `abg_ctrl` | none (the control) | | 45.5% | 90.0% |
+| `abg_vopp` | `--value-opp 2.0 --value-opp-frac 0.25` | 37.0% | 35.9% | 85.5% |
+
 ## Analysis value networks
 
 Not policies: win chance networks for the website's game analysis (`docs/analysis.md`), read from one player's own

@@ -1,0 +1,18 @@
+model:abg_vopp: /kvm/polytopia-ai-data/ab/runs/abg_vopp/ckpt_final.pt (step 300), 1.43M params
+  model:abg_vopp vs retail:crazy: 0/400 games, 0s
+  model:abg_vopp vs retail:crazy: 23/400 games, 15s
+  model:abg_vopp vs retail:crazy: 74/400 games, 30s
+  model:abg_vopp vs retail:crazy: 108/400 games, 46s
+  model:abg_vopp vs retail:crazy: 157/400 games, 61s
+  model:abg_vopp vs retail:crazy: 190/400 games, 76s
+  model:abg_vopp vs retail:crazy: 225/400 games, 91s
+  model:abg_vopp vs retail:crazy: 281/400 games, 106s
+  model:abg_vopp vs retail:crazy: 319/400 games, 121s
+  model:abg_vopp vs retail:crazy: 358/400 games, 136s
+  model:abg_vopp vs retail:crazy: 390/400 games, 151s
+retail:crazy: +400 games
+
+result (model against each opponent; a draw is half a win):
+  model:abg_vopp vs retail:crazy: W-L-D 342-58-0 of 400, score 85.5%, capped 0, mean turns 25.4
+GPU peak allocated 40 MiB
+results: /kvm/polytopia-ai-data/ab/eval-abg/vopp_crazy.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/ab/eval-abg/vopp_crazy.jsonl
