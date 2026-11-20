@@ -186,12 +186,12 @@ fn reach_view(e: &Engine, me: u8, explored: &[bool]) -> Engine {
 /// the mover's own techs unlock for that terrain (the real bonus for the mover's own units, the best visible guess
 /// for the others), with the city and wall bonus of the tile.
 pub fn visible_combat_unit(e: &Engine, me: u8, unit: &UnitState, at: Wc) -> CombatUnit {
-    visible_combat_unit_from(e, me, unit, at, e.combat_unit(unit), e.has_ability(unit, FORTIFY_ABILITY))
+    visible_combat_unit_from(e, unit, at, e.combat_unit(unit), e.has_ability(unit, FORTIFY_ABILITY), |terrain| e.t.unlocked_defence_bonus(e.techs(me), terrain))
 }
 
-/// [`visible_combat_unit`] given the unit's own figures (`Engine::combat_unit`) and whether it fortifies, which do
-/// not depend on the tile.
-fn visible_combat_unit_from(e: &Engine, me: u8, unit: &UnitState, at: Wc, mut cu: CombatUnit, has_fortify: bool) -> CombatUnit {
+/// [`visible_combat_unit`] given the unit's own figures (`Engine::combat_unit`), whether it fortifies, and the
+/// defence bonus the mover's techs unlock per terrain (`tech_bonus`); none of them depends on the tile.
+fn visible_combat_unit_from(e: &Engine, unit: &UnitState, at: Wc, mut cu: CombatUnit, has_fortify: bool, tech_bonus: impl FnOnce(i32) -> i32) -> CombatUnit {
     let tile = e.tile(at);
     let mut input = DefenceBonusInput {
         version: e.s.version,
@@ -207,11 +207,12 @@ fn visible_combat_unit_from(e: &Engine, me: u8, unit: &UnitState, at: Wc, mut cu
         has_city_wall: false,
     };
     if let Some(tile) = tile {
-        input.unlocked_defence_bonus = e.t.unlocked_defence_bonus(e.techs(me), tile.terrain);
+        input.unlocked_defence_bonus = tech_bonus(tile.terrain);
         input.improvement_known = tile.improvement != 0;
         input.is_city = tile.improvement == CITY_IMPROVEMENT;
         input.same_owner = tile.owner == unit.owner;
-        input.has_city_wall = e.improvement_rt(tile.coordinates).is_some_and(|r| r.rewards.contains(&CityReward::CityWall));
+        // `defence_bonus` reads the wall only for a fortifying unit in a city of its owner.
+        input.has_city_wall = input.is_city && input.same_owner && has_fortify && e.improvement_rt(tile.coordinates).is_some_and(|r| r.rewards.contains(&CityReward::CityWall));
     }
     let bonus = defence_bonus(&input);
     cu.defence = cu.raw_defence * bonus;
@@ -260,7 +261,11 @@ fn reference_defender() -> CombatUnit {
 /// (`get_battle_results` with the query `Engine::battle_damage_query` builds), with the defender's tech bonus as the
 /// mover can know it. Returns `(attack_damage, retaliation_damage)`; retaliation is 0 when the defender dies.
 pub fn attack_preview(e: &Engine, me: u8, attacker: &UnitState, defender: &UnitState) -> (i32, i32) {
-    let a = e.combat_unit(attacker);
+    attack_preview_from(e, me, attacker, &e.combat_unit(attacker), defender)
+}
+
+/// [`attack_preview`] given the attacker's own figures (`Engine::combat_unit`).
+fn attack_preview_from(e: &Engine, me: u8, attacker: &UnitState, a: &CombatUnit, defender: &UnitState) -> (i32, i32) {
     let d = visible_combat_unit(e, me, defender, defender.coordinates);
     let in_options = e.unit_info(defender).is_some_and(|info| {
         let mut probe = defender.clone();
@@ -276,7 +281,7 @@ pub fn attack_preview(e: &Engine, me: u8, attacker: &UnitState, defender: &UnitS
         attacker_in_attack_options: in_options,
         can_path_onto_defender: false,
     };
-    let r = get_battle_results(&a, &d, &q);
+    let r = get_battle_results(a, &d, &q);
     (r.attack_damage.max(0), r.retaliation_damage.max(0))
 }
 
@@ -291,6 +296,10 @@ struct Ctx<'a> {
     hostile_ref_dmg: Vec<i32>,
     /// Per tile: positions in `hostile` of the units that can attack the tile next turn.
     threats: Vec<Vec<u16>>,
+    /// Per tile: how many hostile units stand on it or next to it.
+    adjacent: Vec<u8>,
+    /// Per terrain asked for: the defence bonus the mover's techs unlock on it.
+    tech_bonus: std::cell::RefCell<Vec<(i32, i32)>>,
 }
 
 /// A unit of the mover's with the figures every one of its commands needs.
@@ -312,7 +321,7 @@ impl<'a> Ctx<'a> {
         if self.threats[k].is_empty() {
             return (0, 0, 0);
         }
-        let mut cu = visible_combat_unit_from(self.e, self.me, actor.unit, tile, actor.cu.clone(), actor.has_fortify);
+        let mut cu = visible_combat_unit_from(self.e, actor.unit, tile, actor.cu.clone(), actor.has_fortify, |terrain| self.tech_bonus(terrain));
         cu.health = health;
         let (mut n, mut max, mut sum) = (0, 0, 0);
         for &h in &self.threats[k] {
@@ -328,14 +337,27 @@ impl<'a> Ctx<'a> {
         (n, max, sum)
     }
 
+    /// `Tables::unlocked_defence_bonus` of the mover's techs for a terrain, looked up once per terrain.
+    fn tech_bonus(&self, terrain: i32) -> i32 {
+        let mut memo = self.tech_bonus.borrow_mut();
+        match memo.iter().find(|m| m.0 == terrain) {
+            Some(m) => m.1,
+            None => {
+                let bonus = self.e.t.unlocked_defence_bonus(self.e.techs(self.me), terrain);
+                memo.push((terrain, bonus));
+                bonus
+            }
+        }
+    }
+
+    /// The hostile units on `tile` or next to it, leaving out the unit with id `except`.
     fn adjacent_hostiles(&self, tile: Wc, except: Option<u32>) -> usize {
-        self.hostile
-            .iter()
-            .filter(|&&i| {
-                let u = &self.e.s.units[i];
-                Some(u.id) != except && Engine::chebyshev(u.coordinates, tile) <= 1
-            })
-            .count()
+        let near = |u: &UnitState| Engine::chebyshev(u.coordinates, tile) <= 1;
+        let Some(k) = self.idx(tile) else {
+            return self.hostile.iter().map(|&i| &self.e.s.units[i]).filter(|u| Some(u.id) != except && near(u)).count();
+        };
+        let left_out = except.is_some_and(|id| self.hostile.iter().map(|&i| &self.e.s.units[i]).any(|u| u.id == id && near(u)));
+        usize::from(self.adjacent[k]) - usize::from(left_out)
     }
 }
 
@@ -390,8 +412,17 @@ pub fn features(e: &Engine, me: u8, slots: &SlotMap, legal: &[Command]) -> Featu
             }
         }
     }
+    let mut adjacent = vec![0u8; n];
+    for &i in &hostile {
+        let at = e.s.units[i].coordinates;
+        for (dx, dy) in (-1..=1).flat_map(|dx| (-1..=1).map(move |dy| (dx, dy))) {
+            if let Some(k) = e.tile_index(Wc { x: at.x + dx, y: at.y + dy }) {
+                adjacent[k] += 1;
+            }
+        }
+    }
     let _shared = e.query_scope();
-    let ctx = Ctx { e, me, explored, hostile, hostile_cu, hostile_ref_dmg, threats };
+    let ctx = Ctx { e, me, explored, hostile, hostile_cu, hostile_ref_dmg, threats, adjacent, tech_bonus: Default::default() };
 
     // Our reach: the tiles our units can move onto, and the tiles they can attack after moving.
     let mut reach = vec![0i16; n];
@@ -513,7 +544,7 @@ pub fn features(e: &Engine, me: u8, slots: &SlotMap, legal: &[Command]) -> Featu
                 if let Some(d) = e.unit_at(target) {
                     let cu_a = &actor.cu;
                     if !cu_a.has_infiltrate && !cu_a.has_convert {
-                        let (dealt, taken) = attack_preview(e, me, u, d);
+                        let (dealt, taken) = attack_preview_from(e, me, u, cu_a, d);
                         let dh = i32::from(d.health);
                         let kills = dealt >= dh;
                         let dies = taken >= i32::from(u.health);
