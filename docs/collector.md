@@ -134,7 +134,7 @@ this branch on engine `0a60918`; "PGO" is "after" built by `tools/pgo_build.sh`.
 
 | Part | before | after | PGO |
 |---|---|---|---|
-| legal list | 23.3 | 23.3 (unchanged; runs vary 22 to 27) | 19.7 |
+| legal list (not changed; same instruction count before and after) | 23.3 | 27.1 | 19.7 |
 | observation (`encode`) | 34.7 | 20.9 | 18.5 |
 | action encoding | 5.1 | 4.3 | 3.5 |
 | engine features | 122.5 | 76.2 | 53.2 |
@@ -161,8 +161,9 @@ over the map. `ai_pick` checks the retail AI's pick with `Engine::is_legal` inst
 The rest is in the engine (copy of the game, the retail AI's position ratings).
 
 Tried and left out: mimalloc as the extension's allocator. Game stepping gets about 10% faster, but a collector run
-then spends 8 to 15 s in the kernel instead of about 1 s and 5 to 8 s more outside game stepping (the large per-rollout
-buffers are returned to the system and faulted in again), so the reps took 22 to 27 s instead of 20 to 21 s.
+then spends 8 to 15 s in the kernel instead of about 1 s and 5 to 8 s more outside game stepping, so the reps took
+22 to 27 s instead of 20 to 21 s. The cause was not tracked down; the large per-rollout buffers going back to the
+system and being faulted in again is the likely one.
 
 Not done: a legal list kept across decisions. The list is 23 of the 140 microseconds, every command changes the
 position it was made for, and an incremental update would need to know what each command can change for every other
