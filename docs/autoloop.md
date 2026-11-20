@@ -38,7 +38,12 @@ is 152-48-0 of 200, 76.0%, so a candidate needs at least 68% to pass the guard.
 From round 49 (16 Nov 2026) the loop runs on the training node **poly4090** (Ryzen 9 7945HX, RTX 4090 Laptop
 16 GB, `root@poly4090.local`; the IP comes from DHCP), not on epyc. Same paths as epyc. The unit there has the
 drop-in `deploy/systemd/poly4090.conf` (no shared-host throttling), and `config.json` sets `train_threads` 20,
-`need_gb` 4, `eval_threads` 24 and `extra_train_args` `--tf32 --collector rust`. On epyc the unit is stopped and
+`need_gb` 4, `eval_threads` 24 and `extra_train_args` `--tf32 --collector rust`. From round 99 (20 Nov 2026) the
+unit runs the loop from its own checkout, `/kvm/loop/ai`, with the profile-guided extension (`tools/pgo_build.sh`)
+in `/kvm/loop/ext`, which `config.json`'s `ext_dir` puts first on `PYTHONPATH` (drop-in
+`deploy/systemd/poly4090-loop.conf`). So the shared checkout and
+virtualenv, which `polyai.serve` also uses for live play, are not touched by loop updates; update the loop by
+replacing that checkout and extension between rounds. On epyc the unit is stopped and
 disabled. Epyc's `polyai-node-sync.timer` (`deploy/systemd/polyai-node-sync.*`) pulls the node's
 `/kvm/polytopia-ai-data` (except `human/`, without overwriting newer files) every 15 minutes, so epyc's copy,
 including a promoted champion for `polyai.serve`, is at most 15 minutes behind. Live status:

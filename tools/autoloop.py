@@ -51,7 +51,7 @@ class Config:
     ref: str = str(DATA / "runs/bc3_b6c96_v11/ckpt_final.pt")
     prefix: str = "auto_r"
     # Training recipe: the might1 config plus the advantage filter (rec_advf, the best recipe A/B). Engine features
-    # and the belief auxiliary are off: no features or belief model has beaten rl3 u480 head to head.
+    # and the belief auxiliary default to off here; the live config.json turns features on (from round 98).
     updates: int = 300
     games: int = 384
     rollout_steps: int = 32768
@@ -77,6 +77,9 @@ class Config:
     crazy_drop: float = 0.08
     eval_threads: int = 8
     keep_failed_runs: bool = False  # prune a candidate that was not promoted down to ckpt_final.pt
+    # A directory holding a separately built polyai_engine extension (tools/pgo_build.sh with OUT=), put first on
+    # PYTHONPATH for every phase; empty uses the one installed in the virtualenv.
+    ext_dir: str = ""
 
 
 DRY = dict(prefix="dry_r", updates=2, games=16, rollout_steps=512, need_gb=1.0, gate_seeds=4, crazy_seeds=4)
@@ -209,7 +212,8 @@ class Loop:
         self.phase = phase
         self.status()
         delay, fails = 600, 0
-        env = dict(os.environ, TMPDIR="/kvm/tmp/tmp", PYTHONPATH=str(AI / "python"),
+        path = ([self.cfg.ext_dir] if self.cfg.ext_dir else []) + [str(AI / "python")]
+        env = dict(os.environ, TMPDIR="/kvm/tmp/tmp", PYTHONPATH=os.pathsep.join(path),
                    OMP_NUM_THREADS=str(self.cfg.torch_threads), MKL_NUM_THREADS=str(self.cfg.torch_threads))
         while True:
             self.log(f"{phase}: start")
