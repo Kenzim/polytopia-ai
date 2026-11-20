@@ -93,6 +93,8 @@ tournament play.
 | 19 to 20 Nov | A/B of per-turn credit and of a critic that sees under the fog | Neither beats the control |
 | 20 Nov | Calibration check on 8,859 human games | Value head sound from turn 11, meaningless in the first five turns |
 | 20 Nov | A/B of engine features, and of the advantage filter switched off | Features beat the control 55.4% and are on in the loop from round 98; the filter stays on |
+| 20 Nov | A/B of 8 games at a time against the PolytopAI website's bot during training | Worse: 38.9% against its control, and no better against the site (5 wins in 200 against 4) |
+| 20 Nov | Faster collector code and a profile-guided build of the engine bindings | In the loop from round 99, which runs from its own checkout |
 
 The champions in order, each measured against the one before it over 400 games:
 
@@ -128,6 +130,7 @@ Each row is a 300-update run compared with a control from the same starting mode
 | Weight averaging of champions | 46.0% to 53.4% | None passes the gate |
 | Credit that fades once per game turn, not per command | 45.9% | Not adopted |
 | Per-turn credit plus a critic that sees under the fog | 41.8% | Not adopted; its value estimates are also the worst calibrated |
+| 8 games at a time against the PolytopAI website's bot (6.7% of the learner's decisions) | 38.9% | Worse; the learner lost 97% of those games, which teach little and may crowd the advantage filter |
 
 Reports with the method and the full tables: `docs/arena.md`, `docs/rl.md`, `docs/belief.md`, `docs/features-ab.md`,
 `docs/search.md`, `docs/human-data.md`, `docs/loss_autopsy.md`, `docs/autoloop.md`, `docs/collector.md`.
@@ -159,10 +162,12 @@ slowly through turns 4 to 8) and at an army of warriors with no archers or rider
 stand-in for it: the model beats the imitation 67 to 84% of the time in training.
 
 **Against the PolytopAI website's bot** (played through the site's own browser game, `docs/polytopai.md`) round 77
-won 9 of 199 games at the site's easier setting. The bridge can run about 950 such games an hour and feed them into
-training (`--polytopai-games`), which has not yet been tested as an A/B.
+won 17 of 399 games (4.3%) at the site's easier setting, which is the site's network choosing its first thought with
+no search; the site offers nothing weaker. Training with 8 of those games always in flight made the model worse head
+to head (38.9% against its control) and no better against the site. An opponent that wins 97% of games is too strong
+to learn from by reinforcement alone.
 
-Next, in order: training against the PolytopAI website as an A/B (running), value training on both seats, an exploiter
+Next, in order: the temperature and overlap A/Bs (running), value training on both seats, an exploiter
 trained to beat the champion and added to the pool (league training as in AlphaStar), then throughput (the GPU is
 about 40% busy during training).
 

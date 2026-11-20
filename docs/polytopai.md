@@ -83,6 +83,28 @@ Off by default. Like every change it needs an A/B from the same starting model b
 * **Speed.** At level 1 with 8 games in flight: 950 games an hour from one machine, 24 seconds a game, of which 19 are
   the site's answers (about 215 calls a game). At level 3 the bot searches: its turn takes 0.1 s at the start, 4 s by
   turn 9 with one game in flight, and several games at once slow each other down on the site's side.
+* **Levels.** The site's page offers Easier (1: its network's first choice, no search), PolytopAI Jr (5: a weaker
+  network looking 2 turns ahead) and Standard (3: 4 turns ahead), plus Cheat (4: Standard seeing through the fog).
+  Nothing is weaker than level 1.
+
+## The training A/B (20 November 2026)
+
+Two runs of 300 updates from round 77 with the live loop's settings and seed 900, on poly4090 with the bindings of
+ai 3735b8f: `abe_ctrl` (as the loop) and `abe_site` (`--polytopai-games 8 --polytopai-level 1`). The site run played
+3,374 games against the site while training, of which it won about 86 (2.6%, sampling its moves); their 703,780
+decisions were 6.7% of the learner's. 400 games per match, 200 against the site:
+
+| Match | Score |
+|---|---|
+| `abe_site` against `abe_ctrl` | 38.9% (150-239-11) |
+| `abe_site` against round 77 | 34.8% (132-254-14) |
+| `abe_ctrl` against round 77 | 43.9% (172-221-7) |
+| Against retail Crazy: `abe_site`, `abe_ctrl`, round 77 | 86.0%, 88.8%, 88.5% |
+| Against the site at level 1: `abe_site`, `abe_ctrl`, round 77 | 5, 4 and 8 wins in 200 |
+
+Not adopted. Games that are lost 97% of the time carry almost only one message ("this went badly"), and with
+`--adv-filter 0.5` their large negative advantages are likely to take more than their 6.7% share of the positions
+kept. Results: `results/polytopai/ab-2026-11-20/`.
 
 ## Building the bindings
 

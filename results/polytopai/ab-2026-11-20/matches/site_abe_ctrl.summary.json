@@ -1,0 +1,56 @@
+{
+  "policy": "abe_ctrl@300",
+  "opponent": "site:polytopai1",
+  "games": 200,
+  "wins": 4,
+  "draws": 0,
+  "losses": 196,
+  "score": 0.02,
+  "score_se": 0.0099,
+  "mean_turns": 17.9,
+  "by_size": {
+    "11": {
+      "games": 64,
+      "score": 0.0469
+    },
+    "14": {
+      "games": 61,
+      "score": 0.0164
+    },
+    "16": {
+      "games": 75,
+      "score": 0.0
+    }
+  },
+  "aborted": 0,
+  "decisions": 48206,
+  "seconds": 756.1,
+  "games_per_hour": 952.2,
+  "seconds_per_game": 28.5,
+  "site_seconds_per_game": {
+    "bot": 7.07,
+    "move": 15.76,
+    "new": 0.14
+  },
+  "legal_lists": {
+    "bridge moves": 2,
+    "engine actions": 2457671,
+    "engine only: Attack": 9,
+    "engine only: Build": 90,
+    "engine only: CityReward": 4,
+    "engine only: EstablishEmbassy": 117,
+    "engine only: Move": 766,
+    "engine only: PeaceTreaty": 4017,
+    "engine only: Recover": 80,
+    "positions": 48208,
+    "positions with the same legal list": 42569,
+    "site moves": 2282199,
+    "site only: move type 1": 39,
+    "site only: move type 3 ability 102": 243,
+    "site only: move type 3 ability 15": 111,
+    "site only: move type 3 ability 20": 132,
+    "site only: move type 6": 1745,
+    "site only: move type 9": 18
+  },
+  "errors": []
+}

@@ -65,6 +65,16 @@ against round 77 and 86.8% against Crazy, and round 77 scored 87.8% against Craz
 | `abd_feat` | `--features` (1.43 million parameters) | 55.4% | 48.4% | 88.2% |
 | `abd_noadv` | `--adv-filter 1.0` (the filter off) | 47.5% (45.8% against `abd_feat`) | 42.1% | 89.8% |
 
+## The website A/B of 20 November
+
+Two 300-update runs from `auto_r0077`, seed 900, the live loop's settings, on the bindings with `Game.from_position`
+(`docs/polytopai.md`). Round 77 scored 88.5% against Crazy in this set.
+
+| Folder | Option | Against `abe_ctrl` | Against round 77 | Against Crazy | Against the site (level 1) |
+|---|---|---|---|---|---|
+| `abe_ctrl` | none (the control) | | 43.9% | 88.8% | 4 of 200 |
+| `abe_site` | `--polytopai-games 8 --polytopai-level 1` | 38.9% | 34.8% | 86.0% | 5 of 200 |
+
 ## Analysis value networks
 
 Not policies: win chance networks for the website's game analysis (`docs/analysis.md`), read from one player's own

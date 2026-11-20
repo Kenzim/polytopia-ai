@@ -1,0 +1,18 @@
+model:abe_ctrl: /kvm/polytopia-ai-data/ptai/runs/abe_ctrl/ckpt_final.pt (step 300), 1.42M params
+  model:abe_ctrl vs retail:crazy: 0/400 games, 1s
+  model:abe_ctrl vs retail:crazy: 19/400 games, 16s
+  model:abe_ctrl vs retail:crazy: 61/400 games, 31s
+  model:abe_ctrl vs retail:crazy: 114/400 games, 46s
+  model:abe_ctrl vs retail:crazy: 156/400 games, 61s
+  model:abe_ctrl vs retail:crazy: 206/400 games, 76s
+  model:abe_ctrl vs retail:crazy: 243/400 games, 91s
+  model:abe_ctrl vs retail:crazy: 282/400 games, 106s
+  model:abe_ctrl vs retail:crazy: 328/400 games, 121s
+  model:abe_ctrl vs retail:crazy: 362/400 games, 136s
+  model:abe_ctrl vs retail:crazy: 396/400 games, 151s
+retail:crazy: +400 games
+
+result (model against each opponent; a draw is half a win):
+  model:abe_ctrl vs retail:crazy: W-L-D 355-45-0 of 400, score 88.8%, capped 0, mean turns 24.0
+GPU peak allocated 35 MiB
+results: /kvm/polytopia-ai-data/ptai/eval/ctrl_crazy.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/ptai/eval/ctrl_crazy.jsonl
