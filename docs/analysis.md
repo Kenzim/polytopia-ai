@@ -74,7 +74,6 @@ the service uses there and the number of held-out games (P passes, F fails, - to
 
 - **live**: the champion auto_r0077's own value head, raw.
 - **v0b**: the same head with the calibration layer (`--steps 0`).
-
 - **v1**: fine-tuned 30,000 steps on the human rows and the first two generated batches (`models/analysis_v1`).
 - **v2**: v1 fine-tuned 15,000 more steps with the third batch, weighted to two-player Domination and Might
   (`models/analysis_v2`).
