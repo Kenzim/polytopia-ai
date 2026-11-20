@@ -51,6 +51,7 @@ class _ValueJob:
     ab: tuple[float, float]
     out: dict
     key: str
+    net: int = 0
 
 
 @dataclass
@@ -71,7 +72,7 @@ class Evaluator:
     """The policy's moves and the analysis value's win chances. `value_path` is an analysis value checkpoint
     (`polyai.train_value`); without one every win chance is null."""
 
-    def __init__(self, policy, value_path: str | Path | None = None, device: torch.device | str | None = None):
+    def __init__(self, policy, value_path: str | Path | list | None = None, device: torch.device | str | None = None):
         import polyai_engine as pe
 
         self.pe = pe
@@ -80,9 +81,18 @@ class Evaluator:
         self.value: ValueNet | None = None
         self.cal = Calibration()
         self.value_id = None
-        if value_path is not None:
-            self.value, self.cal, meta = load_value(value_path, self.device)
-            self.value_id = meta.get("name") or Path(value_path).stem
+        # Several checkpoints in order of preference: a (kind, stage) is scored by the first whose calibration
+        # layer passed the gate there.
+        self.values: list[tuple[ValueNet, Calibration]] = []
+        paths = [] if value_path is None else [value_path] if isinstance(value_path, (str, Path)) else list(value_path)
+        names = []
+        for path in paths:
+            net, cal, meta = load_value(path, self.device)
+            self.values.append((net, cal))
+            names.append(meta.get("name") or Path(path).stem)
+        if self.values:
+            self.value, self.cal = self.values[0]
+            self.value_id = "+".join(names)
 
     # -- request ----------------------------------------------------------------------------------------------------
 
@@ -217,14 +227,15 @@ class Evaluator:
         kind = kind_of(info["mode"], info["n_players"], kinds)
         stage = int(stage_of(int(g.turn)))
         mover = int(g.mover_id) == pid
-        ab = self.cal.get(kind, stage, mover)
+        which, ab = next(((i, c.get(kind, stage, mover)) for i, (_, c) in enumerate(self.values)
+                          if c.get(kind, stage, mover) is not None), (None, None))
         if ab is None:
             win[key] = None
             why[key] = self.cal.reason(kind, stage)
             return
         tiles, globals_ = g.encode_for(pid)
         win[key] = None
-        jobs.append(_ValueJob(tiles, globals_, kinds, mover, ab, win, key))
+        jobs.append(_ValueJob(tiles, globals_, kinds, mover, ab, win, key, which))
 
     def _after_value(self, p: _Point, m: dict, info: dict, jobs: list) -> None:
         c = p.game.clone()
@@ -251,13 +262,13 @@ class Evaluator:
             return
         by_shape: dict[tuple, list[_ValueJob]] = {}
         for j in jobs:
-            by_shape.setdefault(j.tiles.shape, []).append(j)
+            by_shape.setdefault((j.net, j.tiles.shape), []).append(j)
         for group in by_shape.values():
             for s in range(0, len(group), VALUE_BATCH):
                 chunk = group[s:s + VALUE_BATCH]
                 put = lambda a: torch.from_numpy(np.ascontiguousarray(np.stack(a))).to(self.device)  # noqa: E731
                 with torch.autocast(self.device.type, dtype=torch.bfloat16, enabled=self.device.type == "cuda"):
-                    logits = self.value(put([j.tiles for j in chunk]), put([j.globals_ for j in chunk]),
+                    logits = self.values[chunk[0].net][0](put([j.tiles for j in chunk]), put([j.globals_ for j in chunk]),
                                         put([j.kinds for j in chunk]), put([np.int8(j.mover) for j in chunk]))
                 ab = torch.tensor([j.ab for j in chunk], dtype=torch.float32, device=self.device)
                 p = calibrated_win(logits.float(), ab[:, 0], ab[:, 1]).cpu().numpy()

@@ -308,3 +308,14 @@ def test_search_gives_no_number_where_the_gate_gives_none(line):
         ev = Evaluator(ModelPolicy(MODEL, "cpu"), value_file(Path(d) / "v.pt", kinds=["human2"]), "cpu")
         r = ev.search({"line": {"position": json.loads(pos), "steps": steps_of(texts)}, "at": 10, "k": 2, "playouts": 2})
     assert r["win"] is None and "domination-3-4p" in r["why"] and r["candidates"] == []
+
+
+def test_a_second_value_checkpoint_fills_the_first_ones_gaps(line):
+    pos, texts = line
+    with tempfile.TemporaryDirectory() as d:
+        first = value_file(Path(d) / "a.pt", kinds=["human2"])
+        second = value_file(Path(d) / "b.pt")
+        ev = Evaluator(ModelPolicy(MODEL, "cpu"), [first, second], "cpu")
+        r = ev.evaluate({"line": {"position": json.loads(pos), "steps": steps_of(texts)}, "at": [0, 50]})
+    assert r["value_id"] == "test-value+test-value"
+    assert all(w is not None for e in r["evals"] for w in e["win"].values())

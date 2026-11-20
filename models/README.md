@@ -64,3 +64,15 @@ against round 77 and 86.8% against Crazy, and round 77 scored 87.8% against Craz
 |---|---|---|---|---|
 | `abd_feat` | `--features` (1.43 million parameters) | 55.4% | 48.4% | 88.2% |
 | `abd_noadv` | `--adv-filter 1.0` (the filter off) | 47.5% (45.8% against `abd_feat`) | 42.1% | 89.8% |
+
+## Analysis value networks
+
+Not policies: win chance networks for the website's game analysis (`docs/analysis.md`), read from one player's own
+view. Each folder holds `value.pt` (`polyai.analysis.load_value`: the weights, the calibration layer per game kind and
+stage, and the training record) and `gate.json` (its gate on held-out games). Serve them with
+`python -m polyai.serve ... --value models/analysis_v2/value.pt models/analysis_v1/value.pt`.
+
+| Folder | What it is | Measured |
+|---|---|---|
+| `analysis_v1` | `auto_r0077`'s trunk and value head fine-tuned 30,000 steps on value rows of both sides of 8,906 human games and 48,000 generated website-style games | Passes the gate at most stages of every kind; the service's fallback |
+| `analysis_v2` | `analysis_v1` fine-tuned 15,000 more steps with 30,000 more games weighted to two-player Domination and Might | Passes every stage of two-player Domination; the service's first choice |

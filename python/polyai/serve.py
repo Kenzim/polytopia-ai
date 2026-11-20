@@ -654,7 +654,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--max-batch", type=int, default=32, help="most requests in one batch")
     ap.add_argument("--seed", type=int, default=0, help="seed of the sampling generator")
     ap.add_argument("--tta", action="store_true", help="average the policy over the board symmetries (8x the inference)")
-    ap.add_argument("--value", help="analysis value checkpoint (polyai.train_value) for 'evaluate'; without it win chances are null")
+    ap.add_argument("--value", nargs="+", help="analysis value checkpoints (polyai.train_value) for evaluate and search, in order of preference: each (game kind, stage) uses the first that passed the gate there; without one win chances are null")
     ap.add_argument("--no-evaluate", action="store_true", help="do not answer 'evaluate' requests")
     ap.add_argument("-v", "--verbose", action="store_true", help="log every request")
     a = ap.parse_args(argv)

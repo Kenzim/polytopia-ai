@@ -1,0 +1,1858 @@
+{
+ "v0b": {
+  "domination-2p": {
+   "status": "gives no number",
+   "stages": {
+    "0-2": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 104
+    },
+    "3-5": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 146
+    },
+    "6-10": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 406
+    },
+    "11-20": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 1398
+    },
+    "21-30": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 1578
+    },
+    "31-50": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 2203
+    },
+    "51+": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 1258
+    }
+   }
+  },
+  "domination-3-4p": {
+   "status": "passes",
+   "stages": {
+    "0-2": {
+     "verdict": "pass",
+     "games": 170,
+     "rows": 740,
+     "brier": 0.1956,
+     "base_brier": 0.2038,
+     "ece": 0.0206,
+     "worst_gap": 0.0101,
+     "base_rate": 0.2851
+    },
+    "3-5": {
+     "verdict": "pass",
+     "games": 170,
+     "rows": 980,
+     "brier": 0.193,
+     "base_brier": 0.2032,
+     "ece": 0.0425,
+     "worst_gap": 0.0663,
+     "base_rate": 0.2837
+    },
+    "6-10": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 2494
+    },
+    "11-20": {
+     "verdict": "pass",
+     "games": 170,
+     "rows": 7483,
+     "brier": 0.1476,
+     "base_brier": 0.2075,
+     "ece": 0.0193,
+     "worst_gap": 0.0479,
+     "base_rate": 0.2937
+    },
+    "21-30": {
+     "verdict": "pass",
+     "games": 165,
+     "rows": 8474,
+     "brier": 0.1126,
+     "base_brier": 0.2123,
+     "ece": 0.0262,
+     "worst_gap": 0.0776,
+     "base_rate": 0.3059
+    },
+    "31-50": {
+     "verdict": "pass",
+     "games": 149,
+     "rows": 13873,
+     "brier": 0.074,
+     "base_brier": 0.222,
+     "ece": 0.0263,
+     "worst_gap": 0.0754,
+     "base_rate": 0.3326
+    },
+    "51+": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 11534
+    }
+   }
+  },
+  "domination-5-8p": {
+   "status": "gives no number",
+   "stages": {
+    "0-2": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 1088
+    },
+    "3-5": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 1324
+    },
+    "6-10": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 2865
+    },
+    "11-20": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 6865
+    },
+    "21-30": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 6479
+    },
+    "31-50": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 8824
+    },
+    "51+": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 6861
+    }
+   }
+  },
+  "human2": {
+   "status": "passes",
+   "stages": {
+    "0-2": {
+     "verdict": "pass",
+     "games": 918,
+     "rows": 5214,
+     "brier": 0.2491,
+     "base_brier": 0.25,
+     "ece": 0.01,
+     "worst_gap": 0.0118,
+     "base_rate": 0.5
+    },
+    "3-5": {
+     "verdict": "pass",
+     "games": 912,
+     "rows": 9186,
+     "brier": 0.2369,
+     "base_brier": 0.25,
+     "ece": 0.0068,
+     "worst_gap": 0.0274,
+     "base_rate": 0.5
+    },
+    "6-10": {
+     "verdict": "pass",
+     "games": 898,
+     "rows": 25746,
+     "brier": 0.1918,
+     "base_brier": 0.25,
+     "ece": 0.0201,
+     "worst_gap": 0.044,
+     "base_rate": 0.5
+    },
+    "11-20": {
+     "verdict": "pass",
+     "games": 731,
+     "rows": 44326,
+     "brier": 0.1475,
+     "base_brier": 0.25,
+     "ece": 0.0037,
+     "worst_gap": 0.0108,
+     "base_rate": 0.5
+    },
+    "21-30": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 6288
+    },
+    "31-50": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 1502
+    },
+    "51+": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 158
+    }
+   }
+  },
+  "might-2p": {
+   "status": "gives no number",
+   "stages": {
+    "0-2": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 68
+    },
+    "3-5": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 110
+    },
+    "6-10": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 308
+    },
+    "11-20": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 1050
+    },
+    "21-30": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 1064
+    },
+    "31-50": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 1232
+    },
+    "51+": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 476
+    }
+   }
+  },
+  "might-3-4p": {
+   "status": "passes",
+   "stages": {
+    "0-2": {
+     "verdict": "pass",
+     "games": 107,
+     "rows": 489,
+     "brier": 0.1995,
+     "base_brier": 0.2026,
+     "ece": 0.0256,
+     "worst_gap": 0.0146,
+     "base_rate": 0.2822
+    },
+    "3-5": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 663
+    },
+    "6-10": {
+     "verdict": "pass",
+     "games": 107,
+     "rows": 1712,
+     "brier": 0.1858,
+     "base_brier": 0.2025,
+     "ece": 0.0381,
+     "worst_gap": 0.0524,
+     "base_rate": 0.2821
+    },
+    "11-20": {
+     "verdict": "pass",
+     "games": 107,
+     "rows": 5191,
+     "brier": 0.1535,
+     "base_brier": 0.204,
+     "ece": 0.0364,
+     "worst_gap": 0.066,
+     "base_rate": 0.2855
+    },
+    "21-30": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 5846
+    },
+    "31-50": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 8559
+    },
+    "51+": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 4596
+    }
+   }
+  },
+  "might-5-8p": {
+   "status": "gives no number",
+   "stages": {
+    "0-2": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 813
+    },
+    "3-5": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 1071
+    },
+    "6-10": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 2234
+    },
+    "11-20": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 5466
+    },
+    "21-30": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 5153
+    },
+    "31-50": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 7054
+    },
+    "51+": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 4095
+    }
+   }
+  },
+  "perfection-2p": {
+   "status": "passes",
+   "stages": {
+    "0-2": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 166
+    },
+    "3-5": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 246
+    },
+    "6-10": {
+     "verdict": "pass",
+     "games": 134,
+     "rows": 710,
+     "brier": 0.1881,
+     "base_brier": 0.25,
+     "ece": 0.0396,
+     "worst_gap": 0.0,
+     "base_rate": 0.5
+    },
+    "11-20": {
+     "verdict": "pass",
+     "games": 134,
+     "rows": 2394,
+     "brier": 0.0936,
+     "base_brier": 0.25,
+     "ece": 0.0362,
+     "worst_gap": 0.022,
+     "base_rate": 0.5038
+    },
+    "21-30": {
+     "verdict": "pass",
+     "games": 125,
+     "rows": 2437,
+     "brier": 0.0547,
+     "base_brier": 0.2497,
+     "ece": 0.0225,
+     "worst_gap": 0.0102,
+     "base_rate": 0.5183
+    },
+    "31-50": {
+     "verdict": "too few games",
+     "games": 0,
+     "rows": 0
+    },
+    "51+": {
+     "verdict": "too few games",
+     "games": 0,
+     "rows": 0
+    }
+   }
+  },
+  "perfection-3-4p": {
+   "status": "passes",
+   "stages": {
+    "0-2": {
+     "verdict": "pass",
+     "games": 278,
+     "rows": 1306,
+     "brier": 0.1918,
+     "base_brier": 0.2,
+     "ece": 0.0442,
+     "worst_gap": 0.0579,
+     "base_rate": 0.2764
+    },
+    "3-5": {
+     "verdict": "pass",
+     "games": 284,
+     "rows": 1776,
+     "brier": 0.1851,
+     "base_brier": 0.2003,
+     "ece": 0.0447,
+     "worst_gap": 0.0714,
+     "base_rate": 0.277
+    },
+    "6-10": {
+     "verdict": "pass",
+     "games": 284,
+     "rows": 4527,
+     "brier": 0.1734,
+     "base_brier": 0.2014,
+     "ece": 0.0201,
+     "worst_gap": 0.0552,
+     "base_rate": 0.2794
+    },
+    "11-20": {
+     "verdict": "pass",
+     "games": 284,
+     "rows": 13623,
+     "brier": 0.131,
+     "base_brier": 0.205,
+     "ece": 0.0306,
+     "worst_gap": 0.0783,
+     "base_rate": 0.2879
+    },
+    "21-30": {
+     "verdict": "pass",
+     "games": 277,
+     "rows": 13753,
+     "brier": 0.097,
+     "base_brier": 0.2114,
+     "ece": 0.0252,
+     "worst_gap": 0.0843,
+     "base_rate": 0.3036
+    },
+    "31-50": {
+     "verdict": "too few games",
+     "games": 0,
+     "rows": 0
+    },
+    "51+": {
+     "verdict": "too few games",
+     "games": 0,
+     "rows": 0
+    }
+   }
+  },
+  "perfection-5-8p": {
+   "status": "passes",
+   "stages": {
+    "0-2": {
+     "verdict": "pass",
+     "games": 183,
+     "rows": 2117,
+     "brier": 0.146,
+     "base_brier": 0.1506,
+     "ece": 0.0132,
+     "worst_gap": 0.0169,
+     "base_rate": 0.1847
+    },
+    "3-5": {
+     "verdict": "pass",
+     "games": 183,
+     "rows": 2654,
+     "brier": 0.1436,
+     "base_brier": 0.1517,
+     "ece": 0.005,
+     "worst_gap": 0.0073,
+     "base_rate": 0.1865
+    },
+    "6-10": {
+     "verdict": "pass",
+     "games": 183,
+     "rows": 5545,
+     "brier": 0.14,
+     "base_brier": 0.1556,
+     "ece": 0.0146,
+     "worst_gap": 0.0227,
+     "base_rate": 0.1928
+    },
+    "11-20": {
+     "verdict": "pass",
+     "games": 183,
+     "rows": 13902,
+     "brier": 0.121,
+     "base_brier": 0.1642,
+     "ece": 0.0127,
+     "worst_gap": 0.0505,
+     "base_rate": 0.2072
+    },
+    "21-30": {
+     "verdict": "pass",
+     "games": 182,
+     "rows": 12100,
+     "brier": 0.0991,
+     "base_brier": 0.1795,
+     "ece": 0.0111,
+     "worst_gap": 0.0745,
+     "base_rate": 0.2345
+    },
+    "31-50": {
+     "verdict": "too few games",
+     "games": 0,
+     "rows": 0
+    },
+    "51+": {
+     "verdict": "too few games",
+     "games": 0,
+     "rows": 0
+    }
+   }
+  }
+ },
+ "v1": {
+  "domination-2p": {
+   "status": "passes",
+   "stages": {
+    "0-2": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 213
+    },
+    "3-5": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 311
+    },
+    "6-10": {
+     "verdict": "pass",
+     "games": 287,
+     "rows": 806,
+     "brier": 0.1425,
+     "base_brier": 0.25,
+     "ece": 0.047,
+     "worst_gap": 0.0,
+     "base_rate": 0.5062
+    },
+    "11-20": {
+     "verdict": "pass",
+     "games": 292,
+     "rows": 2672,
+     "brier": 0.089,
+     "base_brier": 0.25,
+     "ece": 0.0197,
+     "worst_gap": 0.009,
+     "base_rate": 0.4933
+    },
+    "21-30": {
+     "verdict": "pass",
+     "games": 257,
+     "rows": 3075,
+     "brier": 0.0598,
+     "base_brier": 0.25,
+     "ece": 0.0196,
+     "worst_gap": 0.0137,
+     "base_rate": 0.506
+    },
+    "31-50": {
+     "verdict": "pass",
+     "games": 183,
+     "rows": 3986,
+     "brier": 0.0299,
+     "base_brier": 0.25,
+     "ece": 0.0071,
+     "worst_gap": 0.003,
+     "base_rate": 0.5023
+    },
+    "51+": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 2198
+    }
+   }
+  },
+  "domination-3-4p": {
+   "status": "passes",
+   "stages": {
+    "0-2": {
+     "verdict": "pass",
+     "games": 607,
+     "rows": 1508,
+     "brier": 0.1556,
+     "base_brier": 0.2075,
+     "ece": 0.0244,
+     "worst_gap": 0.0348,
+     "base_rate": 0.2938
+    },
+    "3-5": {
+     "verdict": "pass",
+     "games": 627,
+     "rows": 2023,
+     "brier": 0.1514,
+     "base_brier": 0.2,
+     "ece": 0.0212,
+     "worst_gap": 0.0355,
+     "base_rate": 0.2763
+    },
+    "6-10": {
+     "verdict": "pass",
+     "games": 662,
+     "rows": 4966,
+     "brier": 0.1466,
+     "base_brier": 0.2021,
+     "ece": 0.0162,
+     "worst_gap": 0.0338,
+     "base_rate": 0.2811
+    },
+    "11-20": {
+     "verdict": "pass",
+     "games": 664,
+     "rows": 14706,
+     "brier": 0.1195,
+     "base_brier": 0.2068,
+     "ece": 0.0085,
+     "worst_gap": 0.0554,
+     "base_rate": 0.2921
+    },
+    "21-30": {
+     "verdict": "pass",
+     "games": 647,
+     "rows": 16505,
+     "brier": 0.082,
+     "base_brier": 0.2118,
+     "ece": 0.0177,
+     "worst_gap": 0.0484,
+     "base_rate": 0.3045
+    },
+    "31-50": {
+     "verdict": "pass",
+     "games": 580,
+     "rows": 25689,
+     "brier": 0.0582,
+     "base_brier": 0.2237,
+     "ece": 0.0082,
+     "worst_gap": 0.0427,
+     "base_rate": 0.3378
+    },
+    "51+": {
+     "verdict": "pass",
+     "games": 322,
+     "rows": 21744,
+     "brier": 0.0583,
+     "base_brier": 0.237,
+     "ece": 0.016,
+     "worst_gap": 0.0891,
+     "base_rate": 0.3859
+    }
+   }
+  },
+  "domination-5-8p": {
+   "status": "passes",
+   "stages": {
+    "0-2": {
+     "verdict": "pass",
+     "games": 417,
+     "rows": 2466,
+     "brier": 0.1219,
+     "base_brier": 0.1507,
+     "ece": 0.0132,
+     "worst_gap": 0.0162,
+     "base_rate": 0.1849
+    },
+    "3-5": {
+     "verdict": "pass",
+     "games": 417,
+     "rows": 3054,
+     "brier": 0.12,
+     "base_brier": 0.1547,
+     "ece": 0.0255,
+     "worst_gap": 0.0663,
+     "base_rate": 0.1912
+    },
+    "6-10": {
+     "verdict": "pass",
+     "games": 417,
+     "rows": 6432,
+     "brier": 0.1125,
+     "base_brier": 0.1531,
+     "ece": 0.0188,
+     "worst_gap": 0.0772,
+     "base_rate": 0.1887
+    },
+    "11-20": {
+     "verdict": "pass",
+     "games": 417,
+     "rows": 15991,
+     "brier": 0.0991,
+     "base_brier": 0.1665,
+     "ece": 0.0143,
+     "worst_gap": 0.074,
+     "base_rate": 0.2111
+    },
+    "21-30": {
+     "verdict": "pass",
+     "games": 412,
+     "rows": 15501,
+     "brier": 0.0836,
+     "base_brier": 0.1794,
+     "ece": 0.0087,
+     "worst_gap": 0.0279,
+     "base_rate": 0.2344
+    },
+    "31-50": {
+     "verdict": "pass",
+     "games": 373,
+     "rows": 21365,
+     "brier": 0.066,
+     "base_brier": 0.2039,
+     "ece": 0.01,
+     "worst_gap": 0.0574,
+     "base_rate": 0.2853
+    },
+    "51+": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 15171
+    }
+   }
+  },
+  "human2": {
+   "status": "passes",
+   "stages": {
+    "0-2": {
+     "verdict": "pass",
+     "games": 918,
+     "rows": 5214,
+     "brier": 0.236,
+     "base_brier": 0.25,
+     "ece": 0.0211,
+     "worst_gap": 0.0408,
+     "base_rate": 0.5
+    },
+    "3-5": {
+     "verdict": "pass",
+     "games": 912,
+     "rows": 9186,
+     "brier": 0.2182,
+     "base_brier": 0.25,
+     "ece": 0.0168,
+     "worst_gap": 0.062,
+     "base_rate": 0.5
+    },
+    "6-10": {
+     "verdict": "pass",
+     "games": 898,
+     "rows": 25746,
+     "brier": 0.1599,
+     "base_brier": 0.25,
+     "ece": 0.008,
+     "worst_gap": 0.0256,
+     "base_rate": 0.5
+    },
+    "11-20": {
+     "verdict": "pass",
+     "games": 731,
+     "rows": 44326,
+     "brier": 0.1163,
+     "base_brier": 0.25,
+     "ece": 0.0073,
+     "worst_gap": 0.0185,
+     "base_rate": 0.5
+    },
+    "21-30": {
+     "verdict": "pass",
+     "games": 131,
+     "rows": 6288,
+     "brier": 0.1375,
+     "base_brier": 0.25,
+     "ece": 0.0395,
+     "worst_gap": 0.0746,
+     "base_rate": 0.5
+    },
+    "31-50": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 1502
+    },
+    "51+": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 158
+    }
+   }
+  },
+  "might-2p": {
+   "status": "passes",
+   "stages": {
+    "0-2": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 129
+    },
+    "3-5": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 181
+    },
+    "6-10": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 518
+    },
+    "11-20": {
+     "verdict": "pass",
+     "games": 187,
+     "rows": 1721,
+     "brier": 0.1081,
+     "base_brier": 0.2499,
+     "ece": 0.035,
+     "worst_gap": 0.0214,
+     "base_rate": 0.5107
+    },
+    "21-30": {
+     "verdict": "pass",
+     "games": 161,
+     "rows": 1850,
+     "brier": 0.0716,
+     "base_brier": 0.2499,
+     "ece": 0.0298,
+     "worst_gap": 0.0073,
+     "base_rate": 0.4924
+    },
+    "31-50": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 2100
+    },
+    "51+": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 764
+    }
+   }
+  },
+  "might-3-4p": {
+   "status": "passes",
+   "stages": {
+    "0-2": {
+     "verdict": "pass",
+     "games": 436,
+     "rows": 1028,
+     "brier": 0.1566,
+     "base_brier": 0.2042,
+     "ece": 0.0189,
+     "worst_gap": 0.0168,
+     "base_rate": 0.286
+    },
+    "3-5": {
+     "verdict": "pass",
+     "games": 444,
+     "rows": 1439,
+     "brier": 0.1512,
+     "base_brier": 0.2034,
+     "ece": 0.0248,
+     "worst_gap": 0.0221,
+     "base_rate": 0.2842
+    },
+    "6-10": {
+     "verdict": "pass",
+     "games": 471,
+     "rows": 3604,
+     "brier": 0.14,
+     "base_brier": 0.2007,
+     "ece": 0.0217,
+     "worst_gap": 0.0864,
+     "base_rate": 0.278
+    },
+    "11-20": {
+     "verdict": "pass",
+     "games": 470,
+     "rows": 11196,
+     "brier": 0.1209,
+     "base_brier": 0.2053,
+     "ece": 0.0187,
+     "worst_gap": 0.0669,
+     "base_rate": 0.2885
+    },
+    "21-30": {
+     "verdict": "pass",
+     "games": 462,
+     "rows": 12732,
+     "brier": 0.0892,
+     "base_brier": 0.2129,
+     "ece": 0.0115,
+     "worst_gap": 0.0635,
+     "base_rate": 0.3074
+    },
+    "31-50": {
+     "verdict": "pass",
+     "games": 405,
+     "rows": 19031,
+     "brier": 0.0611,
+     "base_brier": 0.2202,
+     "ece": 0.0107,
+     "worst_gap": 0.0628,
+     "base_rate": 0.3275
+    },
+    "51+": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 12540
+    }
+   }
+  },
+  "might-5-8p": {
+   "status": "passes",
+   "stages": {
+    "0-2": {
+     "verdict": "pass",
+     "games": 274,
+     "rows": 1531,
+     "brier": 0.1237,
+     "base_brier": 0.1474,
+     "ece": 0.0221,
+     "worst_gap": 0.0271,
+     "base_rate": 0.1796
+    },
+    "3-5": {
+     "verdict": "pass",
+     "games": 274,
+     "rows": 1897,
+     "brier": 0.1288,
+     "base_brier": 0.1596,
+     "ece": 0.01,
+     "worst_gap": 0.0123,
+     "base_rate": 0.1993
+    },
+    "6-10": {
+     "verdict": "pass",
+     "games": 274,
+     "rows": 4235,
+     "brier": 0.1233,
+     "base_brier": 0.1608,
+     "ece": 0.0179,
+     "worst_gap": 0.0333,
+     "base_rate": 0.2014
+    },
+    "11-20": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 10063
+    },
+    "21-30": {
+     "verdict": "pass",
+     "games": 270,
+     "rows": 9742,
+     "brier": 0.0844,
+     "base_brier": 0.1808,
+     "ece": 0.0157,
+     "worst_gap": 0.0822,
+     "base_rate": 0.2369
+    },
+    "31-50": {
+     "verdict": "pass",
+     "games": 246,
+     "rows": 14432,
+     "brier": 0.0633,
+     "base_brier": 0.2046,
+     "ece": 0.0116,
+     "worst_gap": 0.0713,
+     "base_rate": 0.2869
+    },
+    "51+": {
+     "verdict": "pass",
+     "games": 141,
+     "rows": 8603,
+     "brier": 0.0601,
+     "base_brier": 0.2271,
+     "ece": 0.0243,
+     "worst_gap": 0.0468,
+     "base_rate": 0.3487
+    }
+   }
+  },
+  "perfection-2p": {
+   "status": "passes",
+   "stages": {
+    "0-2": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 363
+    },
+    "3-5": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 459
+    },
+    "6-10": {
+     "verdict": "pass",
+     "games": 486,
+     "rows": 1372,
+     "brier": 0.1311,
+     "base_brier": 0.2498,
+     "ece": 0.0373,
+     "worst_gap": 0.0491,
+     "base_rate": 0.4876
+    },
+    "11-20": {
+     "verdict": "pass",
+     "games": 513,
+     "rows": 4746,
+     "brier": 0.0808,
+     "base_brier": 0.25,
+     "ece": 0.013,
+     "worst_gap": 0.0646,
+     "base_rate": 0.4992
+    },
+    "21-30": {
+     "verdict": "pass",
+     "games": 483,
+     "rows": 4987,
+     "brier": 0.045,
+     "base_brier": 0.2499,
+     "ece": 0.0132,
+     "worst_gap": 0.007,
+     "base_rate": 0.5105
+    },
+    "31-50": {
+     "verdict": "too few games",
+     "games": 0,
+     "rows": 0
+    },
+    "51+": {
+     "verdict": "too few games",
+     "games": 0,
+     "rows": 0
+    }
+   }
+  },
+  "perfection-3-4p": {
+   "status": "passes",
+   "stages": {
+    "0-2": {
+     "verdict": "pass",
+     "games": 1103,
+     "rows": 2740,
+     "brier": 0.1612,
+     "base_brier": 0.206,
+     "ece": 0.0164,
+     "worst_gap": 0.0293,
+     "base_rate": 0.2901
+    },
+    "3-5": {
+     "verdict": "pass",
+     "games": 1154,
+     "rows": 3749,
+     "brier": 0.157,
+     "base_brier": 0.1994,
+     "ece": 0.0114,
+     "worst_gap": 0.0423,
+     "base_rate": 0.275
+    },
+    "6-10": {
+     "verdict": "pass",
+     "games": 1199,
+     "rows": 9164,
+     "brier": 0.1398,
+     "base_brier": 0.2027,
+     "ece": 0.0157,
+     "worst_gap": 0.0392,
+     "base_rate": 0.2825
+    },
+    "11-20": {
+     "verdict": "pass",
+     "games": 1203,
+     "rows": 27560,
+     "brier": 0.1073,
+     "base_brier": 0.2058,
+     "ece": 0.0073,
+     "worst_gap": 0.0214,
+     "base_rate": 0.2898
+    },
+    "21-30": {
+     "verdict": "pass",
+     "games": 1186,
+     "rows": 28176,
+     "brier": 0.0662,
+     "base_brier": 0.212,
+     "ece": 0.0117,
+     "worst_gap": 0.0426,
+     "base_rate": 0.3049
+    },
+    "31-50": {
+     "verdict": "too few games",
+     "games": 0,
+     "rows": 0
+    },
+    "51+": {
+     "verdict": "too few games",
+     "games": 0,
+     "rows": 0
+    }
+   }
+  },
+  "perfection-5-8p": {
+   "status": "passes",
+   "stages": {
+    "0-2": {
+     "verdict": "pass",
+     "games": 690,
+     "rows": 3929,
+     "brier": 0.1175,
+     "base_brier": 0.1476,
+     "ece": 0.015,
+     "worst_gap": 0.0196,
+     "base_rate": 0.1799
+    },
+    "3-5": {
+     "verdict": "pass",
+     "games": 693,
+     "rows": 4864,
+     "brier": 0.1205,
+     "base_brier": 0.1526,
+     "ece": 0.012,
+     "worst_gap": 0.0285,
+     "base_rate": 0.1879
+    },
+    "6-10": {
+     "verdict": "pass",
+     "games": 693,
+     "rows": 10368,
+     "brier": 0.1144,
+     "base_brier": 0.1586,
+     "ece": 0.012,
+     "worst_gap": 0.0781,
+     "base_rate": 0.1976
+    },
+    "11-20": {
+     "verdict": "pass",
+     "games": 693,
+     "rows": 26058,
+     "brier": 0.0919,
+     "base_brier": 0.1634,
+     "ece": 0.0086,
+     "worst_gap": 0.0433,
+     "base_rate": 0.2057
+    },
+    "21-30": {
+     "verdict": "pass",
+     "games": 686,
+     "rows": 23123,
+     "brier": 0.0646,
+     "base_brier": 0.181,
+     "ece": 0.0104,
+     "worst_gap": 0.0477,
+     "base_rate": 0.2373
+    },
+    "31-50": {
+     "verdict": "too few games",
+     "games": 0,
+     "rows": 0
+    },
+    "51+": {
+     "verdict": "too few games",
+     "games": 0,
+     "rows": 0
+    }
+   }
+  }
+ },
+ "v2": {
+  "domination-2p": {
+   "status": "passes",
+   "stages": {
+    "0-2": {
+     "verdict": "pass",
+     "games": 783,
+     "rows": 1416,
+     "brier": 0.1426,
+     "base_brier": 0.25,
+     "ece": 0.0335,
+     "worst_gap": 0.0254,
+     "base_rate": 0.5014
+    },
+    "3-5": {
+     "verdict": "pass",
+     "games": 1000,
+     "rows": 1916,
+     "brier": 0.1367,
+     "base_brier": 0.25,
+     "ece": 0.0184,
+     "worst_gap": 0.0249,
+     "base_rate": 0.5
+    },
+    "6-10": {
+     "verdict": "pass",
+     "games": 1104,
+     "rows": 5241,
+     "brier": 0.1192,
+     "base_brier": 0.25,
+     "ece": 0.0214,
+     "worst_gap": 0.0509,
+     "base_rate": 0.5009
+    },
+    "11-20": {
+     "verdict": "pass",
+     "games": 1099,
+     "rows": 18443,
+     "brier": 0.0743,
+     "base_brier": 0.25,
+     "ece": 0.0114,
+     "worst_gap": 0.0575,
+     "base_rate": 0.4982
+    },
+    "21-30": {
+     "verdict": "pass",
+     "games": 980,
+     "rows": 20610,
+     "brier": 0.0437,
+     "base_brier": 0.25,
+     "ece": 0.0053,
+     "worst_gap": 0.0383,
+     "base_rate": 0.4989
+    },
+    "31-50": {
+     "verdict": "pass",
+     "games": 696,
+     "rows": 25146,
+     "brier": 0.0286,
+     "base_brier": 0.25,
+     "ece": 0.0037,
+     "worst_gap": 0.026,
+     "base_rate": 0.5013
+    },
+    "51+": {
+     "verdict": "pass",
+     "games": 230,
+     "rows": 13624,
+     "brier": 0.02,
+     "base_brier": 0.25,
+     "ece": 0.0045,
+     "worst_gap": 0.0026,
+     "base_rate": 0.5023
+    }
+   }
+  },
+  "domination-3-4p": {
+   "status": "passes",
+   "stages": {
+    "0-2": {
+     "verdict": "pass",
+     "games": 1111,
+     "rows": 4604,
+     "brier": 0.1537,
+     "base_brier": 0.2019,
+     "ece": 0.0096,
+     "worst_gap": 0.0335,
+     "base_rate": 0.2806
+    },
+    "3-5": {
+     "verdict": "pass",
+     "games": 1118,
+     "rows": 6160,
+     "brier": 0.1534,
+     "base_brier": 0.201,
+     "ece": 0.0143,
+     "worst_gap": 0.0383,
+     "base_rate": 0.2786
+    },
+    "6-10": {
+     "verdict": "pass",
+     "games": 1120,
+     "rows": 15361,
+     "brier": 0.1436,
+     "base_brier": 0.2027,
+     "ece": 0.0093,
+     "worst_gap": 0.0205,
+     "base_rate": 0.2824
+    },
+    "11-20": {
+     "verdict": "pass",
+     "games": 1120,
+     "rows": 45390,
+     "brier": 0.1183,
+     "base_brier": 0.2056,
+     "ece": 0.0047,
+     "worst_gap": 0.0225,
+     "base_rate": 0.2894
+    },
+    "21-30": {
+     "verdict": "pass",
+     "games": 1092,
+     "rows": 51619,
+     "brier": 0.0879,
+     "base_brier": 0.2117,
+     "ece": 0.0068,
+     "worst_gap": 0.0292,
+     "base_rate": 0.3044
+    },
+    "31-50": {
+     "verdict": "pass",
+     "games": 984,
+     "rows": 81414,
+     "brier": 0.0637,
+     "base_brier": 0.2231,
+     "ece": 0.0131,
+     "worst_gap": 0.05,
+     "base_rate": 0.3361
+    },
+    "51+": {
+     "verdict": "pass",
+     "games": 569,
+     "rows": 72137,
+     "brier": 0.0518,
+     "base_brier": 0.2361,
+     "ece": 0.0151,
+     "worst_gap": 0.0638,
+     "base_rate": 0.382
+    }
+   }
+  },
+  "domination-5-8p": {
+   "status": "passes",
+   "stages": {
+    "0-2": {
+     "verdict": "pass",
+     "games": 590,
+     "rows": 5840,
+     "brier": 0.1221,
+     "base_brier": 0.1527,
+     "ece": 0.0122,
+     "worst_gap": 0.0585,
+     "base_rate": 0.188
+    },
+    "3-5": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 7253
+    },
+    "6-10": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 15649
+    },
+    "11-20": {
+     "verdict": "pass",
+     "games": 590,
+     "rows": 39161,
+     "brier": 0.098,
+     "base_brier": 0.1671,
+     "ece": 0.0147,
+     "worst_gap": 0.0527,
+     "base_rate": 0.212
+    },
+    "21-30": {
+     "verdict": "pass",
+     "games": 584,
+     "rows": 38351,
+     "brier": 0.0845,
+     "base_brier": 0.1828,
+     "ece": 0.0074,
+     "worst_gap": 0.0302,
+     "base_rate": 0.2408
+    },
+    "31-50": {
+     "verdict": "pass",
+     "games": 530,
+     "rows": 53294,
+     "brier": 0.0662,
+     "base_brier": 0.2073,
+     "ece": 0.007,
+     "worst_gap": 0.0519,
+     "base_rate": 0.2933
+    },
+    "51+": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 38617
+    }
+   }
+  },
+  "human2": {
+   "status": "passes",
+   "stages": {
+    "0-2": {
+     "verdict": "pass",
+     "games": 918,
+     "rows": 5214,
+     "brier": 0.2358,
+     "base_brier": 0.25,
+     "ece": 0.02,
+     "worst_gap": 0.0593,
+     "base_rate": 0.5
+    },
+    "3-5": {
+     "verdict": "pass",
+     "games": 912,
+     "rows": 9186,
+     "brier": 0.218,
+     "base_brier": 0.25,
+     "ece": 0.0141,
+     "worst_gap": 0.0542,
+     "base_rate": 0.5
+    },
+    "6-10": {
+     "verdict": "pass",
+     "games": 898,
+     "rows": 25746,
+     "brier": 0.1614,
+     "base_brier": 0.25,
+     "ece": 0.0125,
+     "worst_gap": 0.0242,
+     "base_rate": 0.5
+    },
+    "11-20": {
+     "verdict": "pass",
+     "games": 731,
+     "rows": 44326,
+     "brier": 0.1163,
+     "base_brier": 0.25,
+     "ece": 0.008,
+     "worst_gap": 0.0217,
+     "base_rate": 0.5
+    },
+    "21-30": {
+     "verdict": "pass",
+     "games": 131,
+     "rows": 6288,
+     "brier": 0.1395,
+     "base_brier": 0.25,
+     "ece": 0.0402,
+     "worst_gap": 0.0874,
+     "base_rate": 0.5
+    },
+    "31-50": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 1502
+    },
+    "51+": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 158
+    }
+   }
+  },
+  "might-2p": {
+   "status": "passes",
+   "stages": {
+    "0-2": {
+     "verdict": "pass",
+     "games": 684,
+     "rows": 1251,
+     "brier": 0.1436,
+     "base_brier": 0.25,
+     "ece": 0.0312,
+     "worst_gap": 0.0144,
+     "base_rate": 0.5044
+    },
+    "3-5": {
+     "verdict": "pass",
+     "games": 885,
+     "rows": 1702,
+     "brier": 0.1388,
+     "base_brier": 0.2499,
+     "ece": 0.0253,
+     "worst_gap": 0.0246,
+     "base_rate": 0.4906
+    },
+    "6-10": {
+     "verdict": "pass",
+     "games": 997,
+     "rows": 4837,
+     "brier": 0.1239,
+     "base_brier": 0.25,
+     "ece": 0.0203,
+     "worst_gap": 0.0774,
+     "base_rate": 0.5005
+    },
+    "11-20": {
+     "verdict": "pass",
+     "games": 980,
+     "rows": 16310,
+     "brier": 0.0868,
+     "base_brier": 0.25,
+     "ece": 0.0125,
+     "worst_gap": 0.0425,
+     "base_rate": 0.5025
+    },
+    "21-30": {
+     "verdict": "pass",
+     "games": 822,
+     "rows": 16585,
+     "brier": 0.0674,
+     "base_brier": 0.25,
+     "ece": 0.0168,
+     "worst_gap": 0.0916,
+     "base_rate": 0.4997
+    },
+    "31-50": {
+     "verdict": "pass",
+     "games": 508,
+     "rows": 17942,
+     "brier": 0.0485,
+     "base_brier": 0.25,
+     "ece": 0.0065,
+     "worst_gap": 0.0386,
+     "base_rate": 0.4992
+    },
+    "51+": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 8689
+    }
+   }
+  },
+  "might-3-4p": {
+   "status": "passes",
+   "stages": {
+    "0-2": {
+     "verdict": "pass",
+     "games": 972,
+     "rows": 4013,
+     "brier": 0.1576,
+     "base_brier": 0.2015,
+     "ece": 0.0142,
+     "worst_gap": 0.0476,
+     "base_rate": 0.2798
+    },
+    "3-5": {
+     "verdict": "pass",
+     "games": 982,
+     "rows": 5425,
+     "brier": 0.1506,
+     "base_brier": 0.2014,
+     "ece": 0.0124,
+     "worst_gap": 0.0466,
+     "base_rate": 0.2796
+    },
+    "6-10": {
+     "verdict": "pass",
+     "games": 984,
+     "rows": 13542,
+     "brier": 0.1419,
+     "base_brier": 0.203,
+     "ece": 0.008,
+     "worst_gap": 0.0368,
+     "base_rate": 0.2831
+    },
+    "11-20": {
+     "verdict": "pass",
+     "games": 983,
+     "rows": 40854,
+     "brier": 0.1208,
+     "base_brier": 0.2057,
+     "ece": 0.006,
+     "worst_gap": 0.0268,
+     "base_rate": 0.2895
+    },
+    "21-30": {
+     "verdict": "pass",
+     "games": 968,
+     "rows": 46119,
+     "brier": 0.0891,
+     "base_brier": 0.2119,
+     "ece": 0.008,
+     "worst_gap": 0.0284,
+     "base_rate": 0.3047
+    },
+    "31-50": {
+     "verdict": "pass",
+     "games": 839,
+     "rows": 69373,
+     "brier": 0.0663,
+     "base_brier": 0.221,
+     "ece": 0.0071,
+     "worst_gap": 0.0281,
+     "base_rate": 0.3296
+    },
+    "51+": {
+     "verdict": "pass",
+     "games": 432,
+     "rows": 51494,
+     "brier": 0.065,
+     "base_brier": 0.2315,
+     "ece": 0.0257,
+     "worst_gap": 0.0937,
+     "base_rate": 0.3639
+    }
+   }
+  },
+  "might-5-8p": {
+   "status": "passes",
+   "stages": {
+    "0-2": {
+     "verdict": "pass",
+     "games": 432,
+     "rows": 4069,
+     "brier": 0.1278,
+     "base_brier": 0.1536,
+     "ece": 0.0174,
+     "worst_gap": 0.0466,
+     "base_rate": 0.1895
+    },
+    "3-5": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 5159
+    },
+    "6-10": {
+     "verdict": "pass",
+     "games": 432,
+     "rows": 11524,
+     "brier": 0.1194,
+     "base_brier": 0.1594,
+     "ece": 0.0138,
+     "worst_gap": 0.0637,
+     "base_rate": 0.199
+    },
+    "11-20": {
+     "verdict": "pass",
+     "games": 432,
+     "rows": 27999,
+     "brier": 0.1076,
+     "base_brier": 0.1696,
+     "ece": 0.0144,
+     "worst_gap": 0.0866,
+     "base_rate": 0.2164
+    },
+    "21-30": {
+     "verdict": "pass",
+     "games": 427,
+     "rows": 27466,
+     "brier": 0.0859,
+     "base_brier": 0.1845,
+     "ece": 0.0107,
+     "worst_gap": 0.0334,
+     "base_rate": 0.2441
+    },
+    "31-50": {
+     "verdict": "pass",
+     "games": 389,
+     "rows": 39723,
+     "brier": 0.0611,
+     "base_brier": 0.2058,
+     "ece": 0.0136,
+     "worst_gap": 0.069,
+     "base_rate": 0.2898
+    },
+    "51+": {
+     "verdict": "no number given",
+     "games": 0,
+     "rows": 24357
+    }
+   }
+  },
+  "perfection-2p": {
+   "status": "passes",
+   "stages": {
+    "0-2": {
+     "verdict": "pass",
+     "games": 354,
+     "rows": 640,
+     "brier": 0.1411,
+     "base_brier": 0.25,
+     "ece": 0.0296,
+     "worst_gap": 0.0,
+     "base_rate": 0.4969
+    },
+    "3-5": {
+     "verdict": "pass",
+     "games": 460,
+     "rows": 879,
+     "brier": 0.1379,
+     "base_brier": 0.25,
+     "ece": 0.0219,
+     "worst_gap": 0.0,
+     "base_rate": 0.504
+    },
+    "6-10": {
+     "verdict": "pass",
+     "games": 517,
+     "rows": 2495,
+     "brier": 0.1244,
+     "base_brier": 0.25,
+     "ece": 0.0241,
+     "worst_gap": 0.027,
+     "base_rate": 0.4994
+    },
+    "11-20": {
+     "verdict": "pass",
+     "games": 515,
+     "rows": 8565,
+     "brier": 0.0785,
+     "base_brier": 0.25,
+     "ece": 0.0089,
+     "worst_gap": 0.0783,
+     "base_rate": 0.5019
+    },
+    "21-30": {
+     "verdict": "pass",
+     "games": 486,
+     "rows": 9119,
+     "brier": 0.0442,
+     "base_brier": 0.2498,
+     "ece": 0.0119,
+     "worst_gap": 0.0342,
+     "base_rate": 0.5123
+    },
+    "31-50": {
+     "verdict": "too few games",
+     "games": 0,
+     "rows": 0
+    },
+    "51+": {
+     "verdict": "too few games",
+     "games": 0,
+     "rows": 0
+    }
+   }
+  },
+  "perfection-3-4p": {
+   "status": "passes",
+   "stages": {
+    "0-2": {
+     "verdict": "pass",
+     "games": 1185,
+     "rows": 4907,
+     "brier": 0.1588,
+     "base_brier": 0.2027,
+     "ece": 0.0092,
+     "worst_gap": 0.018,
+     "base_rate": 0.2825
+    },
+    "3-5": {
+     "verdict": "pass",
+     "games": 1202,
+     "rows": 6587,
+     "brier": 0.1528,
+     "base_brier": 0.2017,
+     "ece": 0.0099,
+     "worst_gap": 0.0758,
+     "base_rate": 0.2802
+    },
+    "6-10": {
+     "verdict": "pass",
+     "games": 1203,
+     "rows": 16578,
+     "brier": 0.1398,
+     "base_brier": 0.2019,
+     "ece": 0.0093,
+     "worst_gap": 0.0467,
+     "base_rate": 0.2806
+    },
+    "11-20": {
+     "verdict": "pass",
+     "games": 1203,
+     "rows": 49769,
+     "brier": 0.1074,
+     "base_brier": 0.206,
+     "ece": 0.0067,
+     "worst_gap": 0.0123,
+     "base_rate": 0.2902
+    },
+    "21-30": {
+     "verdict": "pass",
+     "games": 1190,
+     "rows": 50477,
+     "brier": 0.0659,
+     "base_brier": 0.2124,
+     "ece": 0.0106,
+     "worst_gap": 0.0462,
+     "base_rate": 0.306
+    },
+    "31-50": {
+     "verdict": "too few games",
+     "games": 0,
+     "rows": 0
+    },
+    "51+": {
+     "verdict": "too few games",
+     "games": 0,
+     "rows": 0
+    }
+   }
+  },
+  "perfection-5-8p": {
+   "status": "passes",
+   "stages": {
+    "0-2": {
+     "verdict": "pass",
+     "games": 693,
+     "rows": 7092,
+     "brier": 0.1205,
+     "base_brier": 0.1523,
+     "ece": 0.0121,
+     "worst_gap": 0.0492,
+     "base_rate": 0.1874
+    },
+    "3-5": {
+     "verdict": "pass",
+     "games": 693,
+     "rows": 8730,
+     "brier": 0.1206,
+     "base_brier": 0.1536,
+     "ece": 0.0069,
+     "worst_gap": 0.0333,
+     "base_rate": 0.1896
+    },
+    "6-10": {
+     "verdict": "pass",
+     "games": 693,
+     "rows": 18735,
+     "brier": 0.1131,
+     "base_brier": 0.1557,
+     "ece": 0.0098,
+     "worst_gap": 0.0418,
+     "base_rate": 0.193
+    },
+    "11-20": {
+     "verdict": "pass",
+     "games": 693,
+     "rows": 47149,
+     "brier": 0.092,
+     "base_brier": 0.1646,
+     "ece": 0.0069,
+     "worst_gap": 0.0303,
+     "base_rate": 0.2077
+    },
+    "21-30": {
+     "verdict": "pass",
+     "games": 687,
+     "rows": 41557,
+     "brier": 0.0636,
+     "base_brier": 0.1795,
+     "ece": 0.0096,
+     "worst_gap": 0.0655,
+     "base_rate": 0.2345
+    },
+    "31-50": {
+     "verdict": "too few games",
+     "games": 0,
+     "rows": 0
+    },
+    "51+": {
+     "verdict": "too few games",
+     "games": 0,
+     "rows": 0
+    }
+   }
+  }
+ }
+}

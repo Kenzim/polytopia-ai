@@ -65,7 +65,61 @@ Then a calibration layer: per (kind, stage, viewer to move or not) a logistic ma
 network's win chance q, fitted on the `fit` games. A (kind, stage) keeps its map only when it passes the gate on the
 `fit` games and on the `test` games; elsewhere the checkpoint records the reason and the service gives null.
 
-RESULTS
+## 4.1 Gate results (2026-11-20)
+
+Held-out `test` games (one game in ten): 1,365,378 rows. Full tables (Brier score, expected calibration error and the
+base rate's Brier score per kind, stage and checkpoint, raw and calibrated): `results/calibration/
+analysis-gate-2026-11-20.md`; the short JSON next to it. Each cell below is live / v0b / v1 / v2, then the checkpoint
+the service uses there and the number of held-out games (P passes, F fails, - too few games or no number):
+
+- **live**: the champion auto_r0077's own value head, raw.
+- **v0b**: the same head with the calibration layer (`--steps 0`).
+
+- **v1**: fine-tuned 30,000 steps on the human rows and the first two generated batches (`models/analysis_v1`).
+- **v2**: v1 fine-tuned 15,000 more steps with the third batch, weighted to two-player Domination and Might
+  (`models/analysis_v2`).
+
+live and v0b were gated on the earlier test set (the human rows and the first 12,000 generated games), so for them
+"-" mostly means fewer than 100 held-out games; the game counts shown are v2's.
+
+| kind | 0-2 | 3-5 | 6-10 | 11-20 | 21-30 | 31-50 | 51+ |
+|---|---|---|---|---|---|---|---|
+| domination-2p | -/-/-/P: **v2** (783) | -/-/-/P: **v2** (1000) | -/-/P/P: **v2** (1104) | -/-/P/P: **v2** (1099) | -/-/P/P: **v2** (980) | -/-/P/P: **v2** (696) | -/-/-/P: **v2** (230) |
+| domination-3-4p | F/P/P/P: **v2** (1111) | F/P/P/P: **v2** (1118) | F/-/P/P: **v2** (1120) | F/P/P/P: **v2** (1120) | F/P/P/P: **v2** (1092) | F/P/P/P: **v2** (984) | -/-/P/P: **v2** (569) |
+| domination-5-8p | -/-/P/P: **v2** (590) | -/-/P/-: **v1** (590) | -/-/P/-: **v1** (590) | -/-/P/P: **v2** (590) | -/-/P/P: **v2** (584) | -/-/P/P: **v2** (530) | -/-/-/-: **null** (302) |
+| human2 | F/P/P/P: **v2** (918) | F/P/P/P: **v2** (912) | F/P/P/P: **v2** (898) | F/P/P/P: **v2** (731) | F/-/P/P: **v2** (131) | -/-/-/-: **null** (11) | -/-/-/-: **null** (1) |
+| might-2p | -/-/-/P: **v2** (684) | -/-/-/P: **v2** (885) | -/-/-/P: **v2** (997) | -/-/P/P: **v2** (980) | -/-/P/P: **v2** (822) | -/-/-/P: **v2** (508) | -/-/-/-: **null** (154) |
+| might-3-4p | F/P/P/P: **v2** (972) | F/-/P/P: **v2** (982) | F/P/P/P: **v2** (984) | F/P/P/P: **v2** (983) | F/-/P/P: **v2** (968) | -/-/P/P: **v2** (839) | -/-/-/P: **v2** (432) |
+| might-5-8p | -/-/P/P: **v2** (432) | -/-/P/-: **v1** (432) | -/-/P/P: **v2** (432) | -/-/-/P: **v2** (432) | -/-/P/P: **v2** (427) | -/-/P/P: **v2** (389) | -/-/P/-: **v1** (219) |
+| perfection-2p | -/-/-/P: **v2** (354) | F/-/-/P: **v2** (460) | F/P/P/P: **v2** (517) | F/P/P/P: **v2** (515) | P/P/P/P: **v2** (486) | -/-/-/-: **null** (0) | -/-/-/-: **null** (0) |
+| perfection-3-4p | F/P/P/P: **v2** (1185) | F/P/P/P: **v2** (1202) | F/P/P/P: **v2** (1203) | F/P/P/P: **v2** (1203) | F/P/P/P: **v2** (1190) | -/-/-/-: **null** (0) | -/-/-/-: **null** (0) |
+| perfection-5-8p | F/P/P/P: **v2** (693) | F/P/P/P: **v2** (693) | F/P/P/P: **v2** (693) | F/P/P/P: **v2** (693) | F/P/P/P: **v2** (687) | -/-/-/-: **null** (0) | -/-/-/-: **null** (0) |
+
+The service loads v2 then v1 (`--value models/analysis_v2/value.pt models/analysis_v1/value.pt`). Each (kind,
+stage) is scored by the first checkpoint whose calibration passed the gate there; elsewhere the answer is null with
+the reason. Every kind the website hosts gets a number at every stage it reaches, except:
+
+- turns 51 and later of five- to eight-player Domination and of two-player Might (neither checkpoint passed: a
+  bucket is off by more than 0.10, or the fit split failed);
+- human two-player games after turn 30 (too few held-out games);
+- solo games, games with more than one person and no bot except `human2`, and any kind not in the table;
+- Perfection games have no turns after 30.
+
+What the gate shows: the live head's opening numbers mean nothing (two-player Domination at turns 0 to 2: Brier
+0.305 against 0.25 for always saying the base rate), and a calibration layer alone does not fix that (v0b passes only
+where the head already ranked positions). Training on both sides of every game fixes the opening: v2's two-player
+Domination at turns 0 to 2 has Brier 0.143 and ECE 0.033.
+
+Caveat: website-style games are gated on generated games in which the retail AI, at a level drawn per game, stands
+in for the person. The website has only two games so far; both get a number at every point for every living player
+(below). A person much stronger or weaker than the stand-ins could see
+numbers that are off for them; recheck once there are a few hundred real website games.
+
+Real dev games (`/kvm/tmp/analysis/data/web.sqlite3`, CPU, 8 threads, every turn start and every person move in one
+request, with the stored turn positions): the finished five-player game (one person, four Normal bots, 2,767
+commands, 210 points) answers in 1.4 s (1.7 s with the top 3 moves), and every living player gets a number at every
+point (the person was eliminated at turn 10, after 85 points); the four-player game in progress (156 commands, 57
+points) answers in 0.3 s, numbers everywhere.
 
 ## 5. The deeper check (`search`, built 2026-11-20)
 
