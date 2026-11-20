@@ -285,6 +285,130 @@ fn attack_preview_from(e: &Engine, me: u8, attacker: &UnitState, a: &CombatUnit,
     (r.attack_damage.max(0), r.retaliation_damage.max(0))
 }
 
+/// Per tile, the hostile units that can attack it next turn, as positions in `Ctx::hostile` in rising order.
+struct Threats {
+    /// The list of tile `k` is `ids[start[k]..start[k + 1]]`.
+    start: Vec<u32>,
+    ids: Vec<u16>,
+}
+
+impl Threats {
+    /// From `(tile, hostile)` pairs listed hostile by hostile, each pair once.
+    fn new(n: usize, pairs: &[(u32, u16)]) -> Self {
+        let mut start = vec![0u32; n + 1];
+        for &(k, _) in pairs {
+            start[k as usize + 1] += 1;
+        }
+        for k in 0..n {
+            start[k + 1] += start[k];
+        }
+        let mut next = start.clone();
+        let mut ids = vec![0u16; pairs.len()];
+        for &(k, h) in pairs {
+            ids[next[k as usize] as usize] = h;
+            next[k as usize] += 1;
+        }
+        Self { start, ids }
+    }
+
+    fn at(&self, k: usize) -> &[u16] {
+        &self.ids[self.start[k] as usize..self.start[k + 1] as usize]
+    }
+}
+
+/// Finds the explored tiles a unit can attack from a set of tiles it can stand on: the tiles `area_iter` lists
+/// around each of them (the square of the range, without its centre), every tile once. On a board at most 64 wide
+/// the set is kept as one bit mask per row, and the squares are spread with shifts.
+struct Spread<'a> {
+    e: &'a Engine,
+    w: usize,
+    h: usize,
+    explored: &'a [bool],
+    explored_rows: Vec<u64>,
+    from_rows: Vec<u64>,
+    side_rows: Vec<u64>,
+    wide_rows: Vec<u64>,
+    seen: Vec<u32>,
+    stamp: u32,
+}
+
+impl<'a> Spread<'a> {
+    fn new(e: &'a Engine, w: usize, h: usize, explored: &'a [bool]) -> Self {
+        let mut explored_rows = vec![0u64; h];
+        if w <= 64 {
+            for (k, _) in explored.iter().enumerate().filter(|(_, &x)| x) {
+                explored_rows[k / w] |= 1 << (k % w);
+            }
+        }
+        Self { e, w, h, explored, explored_rows, from_rows: vec![0; h], side_rows: vec![0; h], wide_rows: vec![0; h], seen: Vec::new(), stamp: 0 }
+    }
+
+    /// Call `f` with the index of every explored tile within `range` of another tile of `from`, each index once.
+    fn each(&mut self, from: &[Wc], range: i32, mut f: impl FnMut(usize)) {
+        let (w, h) = (self.w, self.h);
+        let on_board = |c: &Wc| c.x >= 0 && c.y >= 0 && (c.x as usize) < w && (c.y as usize) < h;
+        if w == 0 || w > 64 || range < 0 || range > 63 || !from.iter().all(on_board) {
+            // The plain walk, for a board too wide for the masks and for a tile off the board.
+            if self.seen.is_empty() {
+                self.seen = vec![0; self.explored.len()];
+            }
+            self.stamp += 1;
+            for &d in from {
+                for c in self.e.area_iter(d, range) {
+                    let Some(k) = self.e.tile_index(c) else { continue };
+                    if self.explored[k] && self.seen[k] != self.stamp {
+                        self.seen[k] = self.stamp;
+                        f(k);
+                    }
+                }
+            }
+            return;
+        }
+        let Some(first) = from.first() else { return };
+        let r = range as usize;
+        let board = u64::MAX >> (64 - w);
+        // The rows that hold tiles of the set; every other row of the three mask lists is 0, here and on return.
+        let (mut top, mut bottom) = (first.y as usize, first.y as usize);
+        for c in from {
+            let y = c.y as usize;
+            self.from_rows[y] |= 1 << c.x;
+            top = top.min(y);
+            bottom = bottom.max(y);
+        }
+        // Per row: the tiles within range of a tile of the set in that row, other than the tile itself (`side`), and
+        // with it (`wide`).
+        for y in top..=bottom {
+            let row = self.from_rows[y];
+            let mut side = 0;
+            for s in 1..=r {
+                side |= row << s | row >> s;
+            }
+            self.side_rows[y] = side & board;
+            self.wide_rows[y] = (side | row) & board;
+        }
+        for y in top.saturating_sub(r)..=(bottom + r).min(h - 1) {
+            // A tile is hit from its own row by another tile only, and from the rows around it by any tile.
+            let mut hit = self.side_rows[y];
+            for near in y.saturating_sub(r).max(top)..=(y + r).min(bottom) {
+                if near != y {
+                    hit |= self.wide_rows[near];
+                }
+            }
+            hit &= self.explored_rows[y];
+            while hit != 0 {
+                let x = hit.trailing_zeros() as usize;
+                hit &= hit - 1;
+                f(y * w + x);
+            }
+        }
+        for y in top..=bottom {
+            self.from_rows[y] = 0;
+            self.side_rows[y] = 0;
+            self.wide_rows[y] = 0;
+        }
+    }
+}
+
 struct Ctx<'a> {
     e: &'a Engine,
     me: u8,
@@ -294,8 +418,7 @@ struct Ctx<'a> {
     /// Per hostile unit (parallel to `hostile`): combat figures and the damage it does to the reference defender.
     hostile_cu: Vec<CombatUnit>,
     hostile_ref_dmg: Vec<i32>,
-    /// Per tile: positions in `hostile` of the units that can attack the tile next turn.
-    threats: Vec<Vec<u16>>,
+    threats: Threats,
     /// Per tile: how many hostile units stand on it or next to it.
     adjacent: Vec<u8>,
     /// Per terrain asked for: the defence bonus the mover's techs unlock on it.
@@ -318,13 +441,14 @@ impl<'a> Ctx<'a> {
     /// leaving out the unit with id `except`.
     fn end_threat(&self, actor: &Actor, health: i32, tile: Wc, except: Option<u32>) -> (usize, i32, i32) {
         let Some(k) = self.idx(tile) else { return (0, 0, 0) };
-        if self.threats[k].is_empty() {
+        let threats = self.threats.at(k);
+        if threats.is_empty() {
             return (0, 0, 0);
         }
         let mut cu = visible_combat_unit_from(self.e, actor.unit, tile, actor.cu, actor.has_fortify, |terrain| self.tech_bonus(terrain));
         cu.health = health;
         let (mut n, mut max, mut sum) = (0, 0, 0);
-        for &h in &self.threats[k] {
+        for &h in threats {
             let u = &self.e.s.units[self.hostile[h as usize]];
             if Some(u.id) == except {
                 continue;
@@ -382,13 +506,13 @@ pub fn features(e: &Engine, me: u8, slots: &SlotMap, legal: &[Command]) -> Featu
     let reference = reference_defender();
     let hostile_cu: Vec<CombatUnit> = hostile.iter().map(|&i| e.combat_unit(&e.s.units[i])).collect();
     let hostile_ref_dmg: Vec<i32> = hostile_cu.iter().map(|c| damage(e, c, &reference)).collect();
-    let mut threats: Vec<Vec<u16>> = vec![Vec::new(); n];
+    let mut spread = Spread::new(e, w, h, &explored);
+    let mut from = Vec::new();
+    let mut threat_pairs: Vec<(u32, u16)> = Vec::new();
     let attackers: Vec<usize> = (0..hostile.len()).filter(|&hi| hostile_cu[hi].attack > 0 && e.s.units[hostile[hi]].leader == 0).collect();
     if !attackers.is_empty() {
         let view = reach_view(e, me, &explored);
         let _shared = view.query_scope();
-        let mut seen = vec![u16::MAX; n];
-        let mut from = Vec::new();
         for hi in attackers {
             let u = &e.s.units[hostile[hi]];
             let range = e.unit_range(u).max(1);
@@ -401,17 +525,10 @@ pub fn features(e: &Engine, me: u8, slots: &SlotMap, legal: &[Command]) -> Featu
                     }
                 }
             }
-            for &d in &from {
-                for c in e.area_iter(d, range) {
-                    let Some(k) = e.tile_index(c) else { continue };
-                    if explored[k] && seen[k] != hi as u16 {
-                        seen[k] = hi as u16;
-                        threats[k].push(hi as u16);
-                    }
-                }
-            }
+            spread.each(&from, range, |k| threat_pairs.push((k as u32, hi as u16)));
         }
     }
+    let threats = Threats::new(n, &threat_pairs);
     let mut adjacent = vec![0u8; n];
     for &i in &hostile {
         let at = e.s.units[i].coordinates;
@@ -422,7 +539,6 @@ pub fn features(e: &Engine, me: u8, slots: &SlotMap, legal: &[Command]) -> Featu
         }
     }
     let _shared = e.query_scope();
-    let ctx = Ctx { e, me, explored, hostile, hostile_cu, hostile_ref_dmg, threats, adjacent, tech_bonus: Default::default() };
 
     // Our reach: the tiles our units can move onto, and the tiles they can attack after moving.
     let mut reach = vec![0i16; n];
@@ -437,27 +553,21 @@ pub fn features(e: &Engine, me: u8, slots: &SlotMap, legal: &[Command]) -> Featu
                 }
             }
         }
-        let mut seen = vec![u32::MAX; n];
         for u in e.s.units.iter().filter(|u| u.owner == me) {
             if e.unit_attack(u) <= 0 || u.leader != 0 || !e.can_attack(u) {
                 continue;
             }
             let range = e.unit_range(u).max(1);
-            let mut from = vec![u.coordinates];
+            from.clear();
+            from.push(u.coordinates);
             if let Some(m) = moves.get(&u.id) {
                 from.extend(m.iter().copied());
             }
-            for d in from {
-                for c in e.area_iter(d, range) {
-                    let Some(k) = e.tile_index(c) else { continue };
-                    if ctx.explored[k] && seen[k] != u.id {
-                        seen[k] = u.id;
-                        atk_reach[k] += 1;
-                    }
-                }
-            }
+            spread.each(&from, range, |k| atk_reach[k] += 1);
         }
     }
+    drop(spread);
+    let ctx = Ctx { e, me, explored, hostile, hostile_cu, hostile_ref_dmg, threats, adjacent, tech_bonus: Default::default() };
 
     // Known enemy capitals and cities.
     let mut capitals = Vec::new();
@@ -488,7 +598,7 @@ pub fn features(e: &Engine, me: u8, slots: &SlotMap, legal: &[Command]) -> Featu
         if !ctx.explored[k] {
             continue;
         }
-        let th = &ctx.threats[k];
+        let th = ctx.threats.at(k);
         row[TF_THREAT_N] = cap(th.len());
         row[TF_THREAT_DMG] = th.iter().map(|&x| ctx.hostile_ref_dmg[x as usize]).max().unwrap_or(0).clamp(0, 1000) as i16;
         row[TF_REACH_N] = reach[k].min(COUNT_CAP);
@@ -626,6 +736,42 @@ mod tests {
             });
         }
         out
+    }
+
+    /// The row masks find the tiles the plain walk around every tile finds, each once: sets of tiles drawn at
+    /// random on a real board, with ranges 1 to 4, and sets with a tile off the board (which take the plain walk).
+    #[test]
+    fn spread_finds_the_tiles_of_the_plain_walk() {
+        let (e, _) = positions().swap_remove(0);
+        let (w, h) = (e.width() as usize, e.height() as usize);
+        let mut state = 0x2545_F491_4F6C_DD1Du64;
+        let mut next = move |below: u64| {
+            state = state.wrapping_mul(6_364_136_223_846_793_005).wrapping_add(1_442_695_040_888_963_407);
+            (state >> 33) % below
+        };
+        let mut hits = 0;
+        for round in 0..4000 {
+            let explored: Vec<bool> = (0..w * h).map(|_| next(4) != 0).collect();
+            let mut spread = Spread::new(&e, w, h, &explored);
+            // Several sets through one `Spread`, so that what one call leaves behind would show in the next.
+            for _ in 0..3 {
+                let range = 1 + next(4) as i32;
+                let mut from: Vec<Wc> = (0..next(12)).map(|_| Wc { x: next(w as u64) as i32, y: next(h as u64) as i32 }).collect();
+                if round % 5 == 0 {
+                    from.push(Wc { x: next(3) as i32 - 1, y: h as i32 });
+                }
+                let mut want: Vec<usize> =
+                    from.iter().flat_map(|&d| e.area_iter(d, range)).filter_map(|c| e.tile_index(c)).filter(|&k| explored[k]).collect();
+                want.sort_unstable();
+                want.dedup();
+                let mut got = Vec::new();
+                spread.each(&from, range, |k| got.push(k));
+                got.sort_unstable();
+                assert_eq!(got, want, "from {from:?} range {range}");
+                hits += got.len();
+            }
+        }
+        assert!(hits > 100_000, "{hits}");
     }
 
     fn feats(e: &Engine, me: u8) -> (Vec<Command>, Features) {
