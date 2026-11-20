@@ -1,0 +1,62 @@
+model:rl3_b6c96/ckpt_u00280: /kvm/polytopia-ai-data/runs/rl3_b6c96/ckpt_u00280.pt (step 280), 1.42M params
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 0/400 games, 0s
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 1/400 games, 16s
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 2/400 games, 31s
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 5/400 games, 46s
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 7/400 games, 61s
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 15/400 games, 76s
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 22/400 games, 91s
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 26/400 games, 107s
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 30/400 games, 122s
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 34/400 games, 137s
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 40/400 games, 153s
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 52/400 games, 168s
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 62/400 games, 183s
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 70/400 games, 198s
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 77/400 games, 213s
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 83/400 games, 228s
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 93/400 games, 244s
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 101/400 games, 259s
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 107/400 games, 274s
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 114/400 games, 289s
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 124/400 games, 305s
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 132/400 games, 320s
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 138/400 games, 335s
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 150/400 games, 350s
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 157/400 games, 365s
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 164/400 games, 381s
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 168/400 games, 396s
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 173/400 games, 411s
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 185/400 games, 427s
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 193/400 games, 442s
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 201/400 games, 457s
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 207/400 games, 472s
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 215/400 games, 487s
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 225/400 games, 503s
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 231/400 games, 518s
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 238/400 games, 533s
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 242/400 games, 548s
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 247/400 games, 563s
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 261/400 games, 578s
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 270/400 games, 593s
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 276/400 games, 609s
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 282/400 games, 624s
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 287/400 games, 639s
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 294/400 games, 654s
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 307/400 games, 669s
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 320/400 games, 684s
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 329/400 games, 700s
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 344/400 games, 715s
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 355/400 games, 730s
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 360/400 games, 745s
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 373/400 games, 760s
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 383/400 games, 775s
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 395/400 games, 790s
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 396/400 games, 805s
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 396/400 games, 820s
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: 397/400 games, 835s
+retail:hard: +400 games
+
+result (model against each opponent; a draw is half a win):
+  model:rl3_b6c96/ckpt_u00280 vs retail:hard: W-L-D 349-49-2 of 400, score 87.5%, capped 2, mean turns 32.9
+results: /kvm/polytopia-ai-data/arena/rl3/retail_hard_u00280.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/arena/rl3/retail_hard_u00280.jsonl

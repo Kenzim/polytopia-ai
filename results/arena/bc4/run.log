@@ -1,0 +1,74 @@
+model:bc4_b10c128_v2: /kvm/polytopia-ai-data/runs/bc4_b10c128_v2/ckpt_final.pt (step 100000), 3.44M params
+  model:bc4_b10c128_v2 vs retail:easy: 0/400 games, 0s
+  model:bc4_b10c128_v2 vs retail:easy: 24/400 games, 16s
+  model:bc4_b10c128_v2 vs retail:easy: 77/400 games, 31s
+  model:bc4_b10c128_v2 vs retail:easy: 124/400 games, 46s
+  model:bc4_b10c128_v2 vs retail:easy: 166/400 games, 61s
+  model:bc4_b10c128_v2 vs retail:easy: 206/400 games, 76s
+  model:bc4_b10c128_v2 vs retail:easy: 237/400 games, 91s
+  model:bc4_b10c128_v2 vs retail:easy: 283/400 games, 106s
+  model:bc4_b10c128_v2 vs retail:easy: 328/400 games, 121s
+  model:bc4_b10c128_v2 vs retail:easy: 360/400 games, 136s
+  model:bc4_b10c128_v2 vs retail:easy: 380/400 games, 151s
+  model:bc4_b10c128_v2 vs retail:easy: 392/400 games, 166s
+  model:bc4_b10c128_v2 vs retail:easy: 395/400 games, 181s
+  model:bc4_b10c128_v2 vs retail:easy: 396/400 games, 196s
+  model:bc4_b10c128_v2 vs retail:easy: 398/400 games, 211s
+  model:bc4_b10c128_v2 vs retail:easy: 399/400 games, 226s
+retail:easy: +400 games
+  model:bc4_b10c128_v2 vs retail:normal: 0/400 games, 0s
+  model:bc4_b10c128_v2 vs retail:normal: 19/400 games, 15s
+  model:bc4_b10c128_v2 vs retail:normal: 59/400 games, 30s
+  model:bc4_b10c128_v2 vs retail:normal: 94/400 games, 45s
+  model:bc4_b10c128_v2 vs retail:normal: 131/400 games, 60s
+  model:bc4_b10c128_v2 vs retail:normal: 161/400 games, 75s
+  model:bc4_b10c128_v2 vs retail:normal: 194/400 games, 90s
+  model:bc4_b10c128_v2 vs retail:normal: 231/400 games, 106s
+  model:bc4_b10c128_v2 vs retail:normal: 263/400 games, 121s
+  model:bc4_b10c128_v2 vs retail:normal: 295/400 games, 136s
+  model:bc4_b10c128_v2 vs retail:normal: 323/400 games, 151s
+  model:bc4_b10c128_v2 vs retail:normal: 355/400 games, 166s
+  model:bc4_b10c128_v2 vs retail:normal: 378/400 games, 181s
+  model:bc4_b10c128_v2 vs retail:normal: 388/400 games, 196s
+  model:bc4_b10c128_v2 vs retail:normal: 394/400 games, 211s
+  model:bc4_b10c128_v2 vs retail:normal: 397/400 games, 226s
+  model:bc4_b10c128_v2 vs retail:normal: 398/400 games, 241s
+retail:normal: +400 games
+  model:bc4_b10c128_v2 vs retail:hard: 0/400 games, 0s
+  model:bc4_b10c128_v2 vs retail:hard: 40/400 games, 15s
+  model:bc4_b10c128_v2 vs retail:hard: 83/400 games, 30s
+  model:bc4_b10c128_v2 vs retail:hard: 127/400 games, 45s
+  model:bc4_b10c128_v2 vs retail:hard: 161/400 games, 60s
+  model:bc4_b10c128_v2 vs retail:hard: 189/400 games, 75s
+  model:bc4_b10c128_v2 vs retail:hard: 233/400 games, 91s
+  model:bc4_b10c128_v2 vs retail:hard: 264/400 games, 106s
+  model:bc4_b10c128_v2 vs retail:hard: 290/400 games, 121s
+  model:bc4_b10c128_v2 vs retail:hard: 318/400 games, 136s
+  model:bc4_b10c128_v2 vs retail:hard: 348/400 games, 151s
+  model:bc4_b10c128_v2 vs retail:hard: 368/400 games, 166s
+  model:bc4_b10c128_v2 vs retail:hard: 384/400 games, 181s
+  model:bc4_b10c128_v2 vs retail:hard: 389/400 games, 196s
+  model:bc4_b10c128_v2 vs retail:hard: 392/400 games, 211s
+  model:bc4_b10c128_v2 vs retail:hard: 397/400 games, 226s
+  model:bc4_b10c128_v2 vs retail:hard: 398/400 games, 241s
+retail:hard: +400 games
+  model:bc4_b10c128_v2 vs retail:crazy: 0/400 games, 0s
+  model:bc4_b10c128_v2 vs retail:crazy: 54/400 games, 15s
+  model:bc4_b10c128_v2 vs retail:crazy: 110/400 games, 30s
+  model:bc4_b10c128_v2 vs retail:crazy: 162/400 games, 45s
+  model:bc4_b10c128_v2 vs retail:crazy: 206/400 games, 60s
+  model:bc4_b10c128_v2 vs retail:crazy: 252/400 games, 75s
+  model:bc4_b10c128_v2 vs retail:crazy: 294/400 games, 90s
+  model:bc4_b10c128_v2 vs retail:crazy: 334/400 games, 106s
+  model:bc4_b10c128_v2 vs retail:crazy: 364/400 games, 121s
+  model:bc4_b10c128_v2 vs retail:crazy: 382/400 games, 136s
+  model:bc4_b10c128_v2 vs retail:crazy: 395/400 games, 151s
+retail:crazy: +400 games
+
+result (model against each opponent; a draw is half a win):
+  model:bc4_b10c128_v2 vs retail:easy: W-L-D 351-45-4 of 400, score 88.2%, capped 4, mean turns 36.5
+  model:bc4_b10c128_v2 vs retail:normal: W-L-D 230-167-3 of 400, score 57.9%, capped 3, mean turns 41.4
+  model:bc4_b10c128_v2 vs retail:hard: W-L-D 95-295-10 of 400, score 25.0%, capped 10, mean turns 38.1
+  model:bc4_b10c128_v2 vs retail:crazy: W-L-D 46-349-5 of 400, score 12.1%, capped 5, mean turns 31.5
+GPU peak allocated 50 MiB
+results: /kvm/polytopia-ai-data/arena/bc4/bc4_vs_retail.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/arena/bc4/bc4_vs_retail.jsonl

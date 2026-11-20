@@ -1,0 +1,459 @@
+model:blend_w50_b6c96: /kvm/polytopia-ai-data/runs/blend_w50_b6c96/ckpt_final.pt (step 0)
+model:blend_w25_b6c96: /kvm/polytopia-ai-data/runs/blend_w25_b6c96/ckpt_final.pt (step 0)
+model:blend_w25_b6c96: /kvm/polytopia-ai-data/runs/blend_w25_b6c96/ckpt_final.pt (step 0), 1.42M params
+model:wrl1_water_b6c96: /kvm/polytopia-ai-data/runs/wrl1_water_b6c96/ckpt_final.pt (step 300)
+model:wrl1_water_b6c96: /kvm/polytopia-ai-data/runs/wrl1_water_b6c96/ckpt_final.pt (step 300)
+  model:blend_w25_b6c96 vs retail:crazy: 0/200 games, 0s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 0/400 games, 0s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 0/400 games, 0s
+  model:blend_w25_b6c96 vs retail:crazy: 0/200 games, 16s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 2/400 games, 30s
+  model:blend_w25_b6c96 vs retail:crazy: 1/200 games, 31s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 1/400 games, 31s
+  model:blend_w25_b6c96 vs retail:crazy: 7/200 games, 46s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 3/400 games, 61s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 4/400 games, 61s
+  model:blend_w25_b6c96 vs retail:crazy: 19/200 games, 61s
+  model:blend_w25_b6c96 vs retail:crazy: 25/200 games, 76s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 9/400 games, 91s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 13/400 games, 91s
+  model:blend_w25_b6c96 vs retail:crazy: 30/200 games, 91s
+  model:blend_w25_b6c96 vs retail:crazy: 36/200 games, 107s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 19/400 games, 121s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 15/400 games, 121s
+  model:blend_w25_b6c96 vs retail:crazy: 52/200 games, 122s
+  model:blend_w25_b6c96 vs retail:crazy: 60/200 games, 137s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 27/400 games, 151s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 23/400 games, 151s
+  model:blend_w25_b6c96 vs retail:crazy: 70/200 games, 152s
+  model:blend_w25_b6c96 vs retail:crazy: 83/200 games, 167s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 42/400 games, 181s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 30/400 games, 181s
+  model:blend_w25_b6c96 vs retail:crazy: 98/200 games, 182s
+  model:blend_w25_b6c96 vs retail:crazy: 116/200 games, 198s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 58/400 games, 211s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 40/400 games, 212s
+  model:blend_w25_b6c96 vs retail:crazy: 130/200 games, 213s
+  model:blend_w25_b6c96 vs retail:crazy: 145/200 games, 228s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 71/400 games, 241s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 56/400 games, 242s
+  model:blend_w25_b6c96 vs retail:crazy: 155/200 games, 243s
+  model:blend_w25_b6c96 vs retail:crazy: 179/200 games, 258s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 83/400 games, 271s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 63/400 games, 272s
+  model:blend_w25_b6c96 vs retail:crazy: 198/200 games, 273s
+retail:crazy: +200 games
+
+result (model against each opponent; a draw is half a win):
+  model:blend_w25_b6c96 vs retail:crazy: W-L-D 162-38-0 of 200, score 81.0%, capped 0, mean turns 24.3
+results: /kvm/polytopia-ai-data/arena/blend/blend_w25_b6c96_crazy.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/arena/blend/blend_w25_b6c96_crazy.jsonl
+model:blend_w50_b6c96: /kvm/polytopia-ai-data/runs/blend_w50_b6c96/ckpt_final.pt (step 0), 1.42M params
+  model:blend_w50_b6c96 vs retail:crazy: 0/200 games, 0s
+  model:blend_w50_b6c96 vs retail:crazy: 0/200 games, 16s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 90/400 games, 302s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 76/400 games, 302s
+  model:blend_w50_b6c96 vs retail:crazy: 2/200 games, 31s
+  model:blend_w50_b6c96 vs retail:crazy: 8/200 games, 46s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 97/400 games, 332s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 86/400 games, 332s
+  model:blend_w50_b6c96 vs retail:crazy: 18/200 games, 61s
+  model:blend_w50_b6c96 vs retail:crazy: 27/200 games, 76s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 104/400 games, 362s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 97/400 games, 362s
+  model:blend_w50_b6c96 vs retail:crazy: 38/200 games, 92s
+  model:blend_w50_b6c96 vs retail:crazy: 47/200 games, 107s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 106/400 games, 392s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 113/400 games, 392s
+  model:blend_w50_b6c96 vs retail:crazy: 58/200 games, 122s
+  model:blend_w50_b6c96 vs retail:crazy: 69/200 games, 137s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 113/400 games, 422s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 121/400 games, 422s
+  model:blend_w50_b6c96 vs retail:crazy: 77/200 games, 152s
+  model:blend_w50_b6c96 vs retail:crazy: 89/200 games, 167s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 124/400 games, 452s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 122/400 games, 452s
+  model:blend_w50_b6c96 vs retail:crazy: 106/200 games, 182s
+  model:blend_w50_b6c96 vs retail:crazy: 124/200 games, 197s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 135/400 games, 483s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 128/400 games, 483s
+  model:blend_w50_b6c96 vs retail:crazy: 141/200 games, 212s
+  model:blend_w50_b6c96 vs retail:crazy: 159/200 games, 227s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 134/400 games, 513s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 139/400 games, 513s
+  model:blend_w50_b6c96 vs retail:crazy: 178/200 games, 242s
+  model:blend_w50_b6c96 vs retail:crazy: 198/200 games, 257s
+retail:crazy: +200 games
+
+result (model against each opponent; a draw is half a win):
+  model:blend_w50_b6c96 vs retail:crazy: W-L-D 166-34-0 of 200, score 83.0%, capped 0, mean turns 24.3
+results: /kvm/polytopia-ai-data/arena/blend/blend_w50_b6c96_crazy.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/arena/blend/blend_w50_b6c96_crazy.jsonl
+model:blend_w75_b6c96: /kvm/polytopia-ai-data/runs/blend_w75_b6c96/ckpt_final.pt (step 0)
+model:wrl1_water_b6c96: /kvm/polytopia-ai-data/runs/wrl1_water_b6c96/ckpt_final.pt (step 300)
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 137/400 games, 543s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 150/400 games, 543s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 0/400 games, 0s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 146/400 games, 573s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 0/400 games, 31s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 156/400 games, 573s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 153/400 games, 603s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 166/400 games, 603s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 2/400 games, 61s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 157/400 games, 633s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 172/400 games, 633s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 2/400 games, 91s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 163/400 games, 664s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 177/400 games, 664s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 7/400 games, 121s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 171/400 games, 694s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 15/400 games, 151s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 184/400 games, 694s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 180/400 games, 724s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 21/400 games, 181s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 196/400 games, 724s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 186/400 games, 754s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 27/400 games, 212s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 201/400 games, 755s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 195/400 games, 784s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 32/400 games, 242s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 207/400 games, 785s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 196/400 games, 814s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 38/400 games, 273s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 210/400 games, 816s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 198/400 games, 845s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 41/400 games, 303s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 211/400 games, 846s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 202/400 games, 875s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 47/400 games, 333s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 213/400 games, 876s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 205/400 games, 905s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 59/400 games, 363s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 217/400 games, 907s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 215/400 games, 935s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 67/400 games, 394s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 220/400 games, 937s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 219/400 games, 965s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 72/400 games, 424s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 225/400 games, 968s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 221/400 games, 996s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 82/400 games, 454s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 227/400 games, 998s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 224/400 games, 1026s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 88/400 games, 484s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 229/400 games, 1028s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 228/400 games, 1056s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 91/400 games, 515s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 231/400 games, 1058s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 232/400 games, 1086s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 98/400 games, 545s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 233/400 games, 1088s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 234/400 games, 1117s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 98/400 games, 575s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 233/400 games, 1119s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 237/400 games, 1147s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 104/400 games, 605s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 237/400 games, 1149s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 240/400 games, 1177s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 106/400 games, 636s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 242/400 games, 1179s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 244/400 games, 1208s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 113/400 games, 666s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 245/400 games, 1209s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 250/400 games, 1238s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 119/400 games, 696s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 250/400 games, 1239s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 255/400 games, 1268s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 124/400 games, 727s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 252/400 games, 1269s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 258/400 games, 1299s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 255/400 games, 1300s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 132/400 games, 757s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 262/400 games, 1329s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 259/400 games, 1330s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 138/400 games, 787s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 267/400 games, 1359s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 262/400 games, 1360s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 141/400 games, 817s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 273/400 games, 1389s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 264/400 games, 1390s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 148/400 games, 848s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 275/400 games, 1419s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 266/400 games, 1420s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 152/400 games, 878s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 279/400 games, 1450s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 272/400 games, 1451s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 157/400 games, 908s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 281/400 games, 1480s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 276/400 games, 1481s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 164/400 games, 938s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 283/400 games, 1510s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 283/400 games, 1511s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 173/400 games, 969s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 292/400 games, 1541s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 283/400 games, 1541s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 179/400 games, 999s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 300/400 games, 1571s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 285/400 games, 1571s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 189/400 games, 1029s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 303/400 games, 1601s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 289/400 games, 1602s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 194/400 games, 1059s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 308/400 games, 1631s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 296/400 games, 1632s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 201/400 games, 1090s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 311/400 games, 1662s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 301/400 games, 1662s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 203/400 games, 1120s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 317/400 games, 1692s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 311/400 games, 1692s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 203/400 games, 1150s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 321/400 games, 1722s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 317/400 games, 1722s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 210/400 games, 1180s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 323/400 games, 1752s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 320/400 games, 1753s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 216/400 games, 1210s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 325/400 games, 1783s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 325/400 games, 1783s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 221/400 games, 1240s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 326/400 games, 1813s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 325/400 games, 1813s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 228/400 games, 1270s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 328/400 games, 1843s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 327/400 games, 1843s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 232/400 games, 1301s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 331/400 games, 1873s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 327/400 games, 1873s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 236/400 games, 1331s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 332/400 games, 1903s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 328/400 games, 1904s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 237/400 games, 1361s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 332/400 games, 1934s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 329/400 games, 1934s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 238/400 games, 1391s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 333/400 games, 1964s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 240/400 games, 1421s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 331/400 games, 1964s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 335/400 games, 1994s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 332/400 games, 1994s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 242/400 games, 1452s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 338/400 games, 2024s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 332/400 games, 2024s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 246/400 games, 1482s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 338/400 games, 2054s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 334/400 games, 2055s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 255/400 games, 1512s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 341/400 games, 2084s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 335/400 games, 2085s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 259/400 games, 1543s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 344/400 games, 2115s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 338/400 games, 2115s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 266/400 games, 1573s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 345/400 games, 2145s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 338/400 games, 2145s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 272/400 games, 1603s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 345/400 games, 2175s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 339/400 games, 2175s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 279/400 games, 1633s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 348/400 games, 2205s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 341/400 games, 2206s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 284/400 games, 1664s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 349/400 games, 2236s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 341/400 games, 2236s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 288/400 games, 1694s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 343/400 games, 2266s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 352/400 games, 2266s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 290/400 games, 1724s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 355/400 games, 2296s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 344/400 games, 2296s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 293/400 games, 1754s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 356/400 games, 2326s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 347/400 games, 2326s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 295/400 games, 1784s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 347/400 games, 2356s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 358/400 games, 2356s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 301/400 games, 1814s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 351/400 games, 2386s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 358/400 games, 2386s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 306/400 games, 1845s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 360/400 games, 2416s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 355/400 games, 2416s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 313/400 games, 1875s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 364/400 games, 2446s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 357/400 games, 2446s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 320/400 games, 1905s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 366/400 games, 2477s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 358/400 games, 2477s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 321/400 games, 1935s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 368/400 games, 2507s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 362/400 games, 2507s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 324/400 games, 1965s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 370/400 games, 2537s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 364/400 games, 2537s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 327/400 games, 1995s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 370/400 games, 2567s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 364/400 games, 2567s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 327/400 games, 2025s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 371/400 games, 2597s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 366/400 games, 2597s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 329/400 games, 2056s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 373/400 games, 2627s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 368/400 games, 2627s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 330/400 games, 2086s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 376/400 games, 2657s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 369/400 games, 2657s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 331/400 games, 2116s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 379/400 games, 2687s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 369/400 games, 2687s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 334/400 games, 2146s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 381/400 games, 2717s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 369/400 games, 2717s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 336/400 games, 2176s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 384/400 games, 2747s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 371/400 games, 2748s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 337/400 games, 2207s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 387/400 games, 2777s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 373/400 games, 2778s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 342/400 games, 2237s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 387/400 games, 2807s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 379/400 games, 2808s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 346/400 games, 2267s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 393/400 games, 2837s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 381/400 games, 2838s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 347/400 games, 2297s
+  model:blend_w50_b6c96 vs model:wrl1_water_b6c96: 396/400 games, 2867s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 387/400 games, 2868s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 347/400 games, 2327s
+model:blend_w50_b6c96 vs model:wrl1_water_b6c96: W-L-D 176-163-61 of 400, score 51.6%, capped 61
+model:blend_w75_b6c96: /kvm/polytopia-ai-data/runs/blend_w75_b6c96/ckpt_final.pt (step 0), 1.42M params
+  model:blend_w75_b6c96 vs retail:crazy: 0/200 games, 1s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 392/400 games, 2898s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 352/400 games, 2357s
+  model:blend_w75_b6c96 vs retail:crazy: 0/200 games, 16s
+  model:blend_w75_b6c96 vs retail:crazy: 0/200 games, 31s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 395/400 games, 2928s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 356/400 games, 2387s
+  model:blend_w75_b6c96 vs retail:crazy: 2/200 games, 46s
+  model:blend_w25_b6c96 vs model:wrl1_water_b6c96: 397/400 games, 2958s
+  model:blend_w75_b6c96 vs retail:crazy: 6/200 games, 61s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 358/400 games, 2417s
+model:blend_w25_b6c96 vs model:wrl1_water_b6c96: W-L-D 177-168-55 of 400, score 51.1%, capped 55
+model:blend_w25_b6c96: /kvm/polytopia-ai-data/runs/blend_w25_b6c96/ckpt_final.pt (step 0), 1.42M params
+  model:blend_w25_b6c96 vs retail:crazy: 0/200 games, 1s
+  model:blend_w75_b6c96 vs retail:crazy: 10/200 games, 76s
+  model:blend_w25_b6c96 vs retail:crazy: 2/200 games, 16s
+  model:blend_w75_b6c96 vs retail:crazy: 14/200 games, 91s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 358/400 games, 2448s
+  model:blend_w25_b6c96 vs retail:crazy: 5/200 games, 31s
+  model:blend_w75_b6c96 vs retail:crazy: 16/200 games, 107s
+  model:blend_w25_b6c96 vs retail:crazy: 18/200 games, 46s
+  model:blend_w75_b6c96 vs retail:crazy: 27/200 games, 122s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 361/400 games, 2478s
+  model:blend_w25_b6c96 vs retail:crazy: 49/200 games, 61s
+  model:blend_w75_b6c96 vs retail:crazy: 33/200 games, 137s
+  model:blend_w25_b6c96 vs retail:crazy: 63/200 games, 76s
+  model:blend_w75_b6c96 vs retail:crazy: 42/200 games, 152s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 361/400 games, 2508s
+  model:blend_w25_b6c96 vs retail:crazy: 74/200 games, 92s
+  model:blend_w75_b6c96 vs retail:crazy: 49/200 games, 168s
+  model:blend_w25_b6c96 vs retail:crazy: 93/200 games, 107s
+  model:blend_w75_b6c96 vs retail:crazy: 56/200 games, 183s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 362/400 games, 2538s
+  model:blend_w25_b6c96 vs retail:crazy: 115/200 games, 122s
+  model:blend_w75_b6c96 vs retail:crazy: 64/200 games, 198s
+  model:blend_w25_b6c96 vs retail:crazy: 129/200 games, 137s
+  model:blend_w75_b6c96 vs retail:crazy: 65/200 games, 214s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 365/400 games, 2568s
+  model:blend_w25_b6c96 vs retail:crazy: 146/200 games, 152s
+  model:blend_w75_b6c96 vs retail:crazy: 69/200 games, 229s
+  model:blend_w25_b6c96 vs retail:crazy: 171/200 games, 167s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 367/400 games, 2598s
+  model:blend_w75_b6c96 vs retail:crazy: 74/200 games, 244s
+  model:blend_w25_b6c96 vs retail:crazy: 183/200 games, 182s
+  model:blend_w75_b6c96 vs retail:crazy: 85/200 games, 259s
+  model:blend_w25_b6c96 vs retail:crazy: 186/200 games, 197s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 370/400 games, 2628s
+  model:blend_w75_b6c96 vs retail:crazy: 97/200 games, 274s
+  model:blend_w25_b6c96 vs retail:crazy: 189/200 games, 213s
+  model:blend_w75_b6c96 vs retail:crazy: 106/200 games, 290s
+  model:blend_w25_b6c96 vs retail:crazy: 193/200 games, 228s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 370/400 games, 2658s
+  model:blend_w75_b6c96 vs retail:crazy: 118/200 games, 305s
+  model:blend_w25_b6c96 vs retail:crazy: 198/200 games, 243s
+retail:crazy: +200 games
+
+result (model against each opponent; a draw is half a win):
+  model:blend_w25_b6c96 vs retail:crazy: W-L-D 29-160-11 of 200, score 17.2%, capped 11, mean turns 30.5
+results: /kvm/polytopia-ai-data/arena/blend/blend_w25_b6c96_water.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/arena/blend/blend_w25_b6c96_water.jsonl
+model:blend_w50_b6c96: /kvm/polytopia-ai-data/runs/blend_w50_b6c96/ckpt_final.pt (step 0), 1.42M params
+  model:blend_w50_b6c96 vs retail:crazy: 0/200 games, 0s
+  model:blend_w75_b6c96 vs retail:crazy: 126/200 games, 320s
+  model:blend_w50_b6c96 vs retail:crazy: 1/200 games, 15s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 370/400 games, 2689s
+  model:blend_w75_b6c96 vs retail:crazy: 139/200 games, 335s
+  model:blend_w50_b6c96 vs retail:crazy: 5/200 games, 31s
+  model:blend_w75_b6c96 vs retail:crazy: 149/200 games, 350s
+  model:blend_w50_b6c96 vs retail:crazy: 26/200 games, 46s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 373/400 games, 2719s
+  model:blend_w75_b6c96 vs retail:crazy: 159/200 games, 365s
+  model:blend_w50_b6c96 vs retail:crazy: 44/200 games, 62s
+  model:blend_w75_b6c96 vs retail:crazy: 171/200 games, 380s
+  model:blend_w50_b6c96 vs retail:crazy: 60/200 games, 77s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 376/400 games, 2749s
+  model:blend_w75_b6c96 vs retail:crazy: 180/200 games, 395s
+  model:blend_w50_b6c96 vs retail:crazy: 73/200 games, 92s
+  model:blend_w75_b6c96 vs retail:crazy: 193/200 games, 410s
+retail:crazy: +200 games
+
+result (model against each opponent; a draw is half a win):
+  model:blend_w75_b6c96 vs retail:crazy: W-L-D 169-31-0 of 200, score 84.5%, capped 0, mean turns 24.6
+results: /kvm/polytopia-ai-data/arena/blend/blend_w75_b6c96_crazy.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/arena/blend/blend_w75_b6c96_crazy.jsonl
+model:blend_w75_b6c96: /kvm/polytopia-ai-data/runs/blend_w75_b6c96/ckpt_final.pt (step 0), 1.42M params
+  model:blend_w75_b6c96 vs retail:crazy: 0/200 games, 0s
+  model:blend_w50_b6c96 vs retail:crazy: 86/200 games, 108s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 381/400 games, 2779s
+  model:blend_w75_b6c96 vs retail:crazy: 1/200 games, 16s
+  model:blend_w50_b6c96 vs retail:crazy: 112/200 games, 123s
+  model:blend_w75_b6c96 vs retail:crazy: 6/200 games, 31s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 384/400 games, 2809s
+  model:blend_w50_b6c96 vs retail:crazy: 134/200 games, 138s
+  model:blend_w75_b6c96 vs retail:crazy: 17/200 games, 46s
+  model:blend_w50_b6c96 vs retail:crazy: 156/200 games, 153s
+  model:blend_w75_b6c96 vs retail:crazy: 37/200 games, 62s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 390/400 games, 2839s
+  model:blend_w50_b6c96 vs retail:crazy: 165/200 games, 168s
+  model:blend_w75_b6c96 vs retail:crazy: 50/200 games, 77s
+  model:blend_w50_b6c96 vs retail:crazy: 176/200 games, 183s
+  model:blend_w75_b6c96 vs retail:crazy: 62/200 games, 92s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 392/400 games, 2869s
+  model:blend_w50_b6c96 vs retail:crazy: 182/200 games, 198s
+  model:blend_w75_b6c96 vs retail:crazy: 77/200 games, 107s
+  model:blend_w50_b6c96 vs retail:crazy: 192/200 games, 213s
+  model:blend_w75_b6c96 vs retail:crazy: 97/200 games, 122s
+  model:blend_w75_b6c96 vs model:wrl1_water_b6c96: 395/400 games, 2899s
+  model:blend_w50_b6c96 vs retail:crazy: 194/200 games, 228s
+  model:blend_w75_b6c96 vs retail:crazy: 116/200 games, 138s
+  model:blend_w50_b6c96 vs retail:crazy: 197/200 games, 243s
+model:blend_w75_b6c96 vs model:wrl1_water_b6c96: W-L-D 188-162-50 of 400, score 53.2%, capped 50
+model:wrl1_water_b6c96: /kvm/polytopia-ai-data/runs/wrl1_water_b6c96/ckpt_final.pt (step 300), 1.42M params
+retail:crazy: +0 games
+
+result (model against each opponent; a draw is half a win):
+  model:wrl1_water_b6c96 vs retail:crazy: W-L-D 82-115-3 of 200, score 41.8%, capped 3, mean turns 29.4
+results: /kvm/polytopia-ai-data/arena/blend/wrl1_water_b6c96_water.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/arena/blend/wrl1_water_b6c96_water.jsonl
+retail:crazy: +200 games
+
+result (model against each opponent; a draw is half a win):
+  model:blend_w50_b6c96 vs retail:crazy: W-L-D 39-157-4 of 200, score 20.5%, capped 4, mean turns 28.9
+results: /kvm/polytopia-ai-data/arena/blend/blend_w50_b6c96_water.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/arena/blend/blend_w50_b6c96_water.jsonl
+  model:blend_w75_b6c96 vs retail:crazy: 137/200 games, 153s
+  model:blend_w75_b6c96 vs retail:crazy: 151/200 games, 168s
+  model:blend_w75_b6c96 vs retail:crazy: 168/200 games, 183s
+  model:blend_w75_b6c96 vs retail:crazy: 179/200 games, 198s
+  model:blend_w75_b6c96 vs retail:crazy: 194/200 games, 213s
+  model:blend_w75_b6c96 vs retail:crazy: 199/200 games, 228s
+retail:crazy: +200 games
+
+result (model against each opponent; a draw is half a win):
+  model:blend_w75_b6c96 vs retail:crazy: W-L-D 61-138-1 of 200, score 30.8%, capped 1, mean turns 26.7
+results: /kvm/polytopia-ai-data/arena/blend/blend_w75_b6c96_water.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/arena/blend/blend_w75_b6c96_water.jsonl
+2026-11-15T22:08:14+00:00 done

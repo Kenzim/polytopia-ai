@@ -1,0 +1,20 @@
+model:rl4_4090_b6c96: D:\polytopia\data\runs\rl4_4090_b6c96\ckpt_final.pt (step 800), 1.42M params
+  model:rl4_4090_b6c96 vs retail:hard: 0/400 games, 0s
+  model:rl4_4090_b6c96 vs retail:hard: 21/400 games, 15s
+  model:rl4_4090_b6c96 vs retail:hard: 61/400 games, 30s
+  model:rl4_4090_b6c96 vs retail:hard: 118/400 games, 45s
+  model:rl4_4090_b6c96 vs retail:hard: 167/400 games, 60s
+  model:rl4_4090_b6c96 vs retail:hard: 207/400 games, 75s
+  model:rl4_4090_b6c96 vs retail:hard: 255/400 games, 90s
+  model:rl4_4090_b6c96 vs retail:hard: 297/400 games, 106s
+  model:rl4_4090_b6c96 vs retail:hard: 344/400 games, 121s
+  model:rl4_4090_b6c96 vs retail:hard: 378/400 games, 136s
+  model:rl4_4090_b6c96 vs retail:hard: 394/400 games, 151s
+  model:rl4_4090_b6c96 vs retail:hard: 399/400 games, 166s
+  model:rl4_4090_b6c96 vs retail:hard: 399/400 games, 181s
+retail:hard: +400 games
+
+result (model against each opponent; a draw is half a win):
+  model:rl4_4090_b6c96 vs retail:hard: W-L-D 367-32-1 of 400, score 91.9%, capped 1, mean turns 30.3
+GPU peak allocated 37 MiB
+results: D:\polytopia\data\arena\rl4\retail_hard_u00800.jsonl   report: python tools/elo.py D:\polytopia\data\arena\rl4\retail_hard_u00800.jsonl

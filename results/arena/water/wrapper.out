@@ -1,0 +1,4 @@
+2026-11-14T17:18:27+00:00 loop inactive; training wrl1_water_b6c96 from /kvm/polytopia-ai-data/runs/hrl1_human_b6c96/ckpt_final.pt
+2026-11-14T19:44:44+00:00 trained; gate vs champion
+2026-11-14T20:22:42+00:00 done: gate 188-140-72 of 400, 56.0% (95% CI 51.1 to 60.8); crazy 172-27-1 of 200, 86.2% (95% CI 80.8 to 90.3) (champion 77.8%); PROMOTED
+2026-11-14T20:22:42+00:00 autoloop restarted

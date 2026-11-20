@@ -1,0 +1,3 @@
+2026-11-15T21:23:29+00:00 corpus: 24 finished BPolait games (5 held out in /kvm/polytopia-ai-data/human/bpolait/val), 8766 BPolait positions; training shards in /kvm/polytopia-ai-data/human/bpolait/shards
+2026-11-15T21:31:53+00:00 held-out BPolait top-1: hbc1 / bpbc_g0024 = 0.446 0.464
+2026-11-15T21:31:53+00:00 DRY=1: stopping before the self-play round

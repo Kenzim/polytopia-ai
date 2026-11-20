@@ -1,0 +1,37 @@
+/kvm/polytopia-ai-data/runs/bc3_b6c96_v11/ckpt_final.pt: SearchConfig(k=4, w=1.0, skip=0.9, budget=200, turns=4, plan=True)
+  model:bc3_b6c96_v11:search=4 vs retail:normal: 4/100 games, 98s
+  model:bc3_b6c96_v11:search=4 vs retail:normal: 16/100 games, 117s
+  model:bc3_b6c96_v11:search=4 vs retail:normal: 20/100 games, 137s
+  model:bc3_b6c96_v11:search=4 vs retail:normal: 24/100 games, 154s
+  model:bc3_b6c96_v11:search=4 vs retail:normal: 28/100 games, 195s
+  model:bc3_b6c96_v11:search=4 vs retail:normal: 32/100 games, 211s
+  model:bc3_b6c96_v11:search=4 vs retail:normal: 36/100 games, 243s
+  model:bc3_b6c96_v11:search=4 vs retail:normal: 40/100 games, 270s
+  model:bc3_b6c96_v11:search=4 vs retail:normal: 44/100 games, 335s
+  model:bc3_b6c96_v11:search=4 vs retail:normal: 52/100 games, 352s
+  model:bc3_b6c96_v11:search=4 vs retail:normal: 60/100 games, 381s
+  model:bc3_b6c96_v11:search=4 vs retail:normal: 64/100 games, 429s
+  model:bc3_b6c96_v11:search=4 vs retail:normal: 76/100 games, 467s
+  model:bc3_b6c96_v11:search=4 vs retail:normal: 84/100 games, 554s
+  model:bc3_b6c96_v11:search=4 vs retail:normal: 100/100 games, 915s
+retail:normal: +100 games; 100 games, 69003 decisions: 64.7 ms each (15/s), searched 16642 (24%), plan steps 52281, network rows 16722 root + 920594 rollout; 44.7 s of policy per game, wall 915s
+  model:bc3_b6c96_v11:search=4 vs retail:hard: 4/100 games, 49s
+  model:bc3_b6c96_v11:search=4 vs retail:hard: 8/100 games, 85s
+  model:bc3_b6c96_v11:search=4 vs retail:hard: 20/100 games, 103s
+  model:bc3_b6c96_v11:search=4 vs retail:hard: 24/100 games, 137s
+  model:bc3_b6c96_v11:search=4 vs retail:hard: 28/100 games, 165s
+  model:bc3_b6c96_v11:search=4 vs retail:hard: 36/100 games, 195s
+  model:bc3_b6c96_v11:search=4 vs retail:hard: 48/100 games, 236s
+  model:bc3_b6c96_v11:search=4 vs retail:hard: 52/100 games, 284s
+  model:bc3_b6c96_v11:search=4 vs retail:hard: 68/100 games, 321s
+  model:bc3_b6c96_v11:search=4 vs retail:hard: 72/100 games, 344s
+  model:bc3_b6c96_v11:search=4 vs retail:hard: 88/100 games, 368s
+  model:bc3_b6c96_v11:search=4 vs retail:hard: 92/100 games, 419s
+  model:bc3_b6c96_v11:search=4 vs retail:hard: 96/100 games, 435s
+  model:bc3_b6c96_v11:search=4 vs retail:hard: 100/100 games, 503s
+retail:hard: +100 games; 100 games, 48882 decisions: 62.7 ms each (16/s), searched 14479 (30%), plan steps 34272, network rows 14610 root + 616191 rollout; 30.6 s of policy per game, wall 503s
+
+result (model against each opponent; a draw is half a win):
+  model:bc3_b6c96_v11:search=4 vs retail:normal: W-L-D 66-32-2 of 100, score 67.0%, capped 2, mean turns 43.3
+  model:bc3_b6c96_v11:search=4 vs retail:hard: W-L-D 37-61-2 of 100, score 38.0%, capped 2, mean turns 39.3
+results: /kvm/polytopia-ai-data/arena/search/k4.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/arena/search/k4.jsonl

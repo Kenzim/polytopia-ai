@@ -1,0 +1,24 @@
+model:rl4_4090_b6c96/ckpt_u00440: D:\polytopia\data\runs\rl4_4090_b6c96\ckpt_u00440.pt (step 440), 1.42M params
+  model:rl4_4090_b6c96/ckpt_u00440 vs retail:crazy: 0/400 games, 0s
+  model:rl4_4090_b6c96/ckpt_u00440 vs retail:crazy: 27/400 games, 15s
+  model:rl4_4090_b6c96/ckpt_u00440 vs retail:crazy: 50/400 games, 30s
+  model:rl4_4090_b6c96/ckpt_u00440 vs retail:crazy: 87/400 games, 45s
+  model:rl4_4090_b6c96/ckpt_u00440 vs retail:crazy: 130/400 games, 61s
+  model:rl4_4090_b6c96/ckpt_u00440 vs retail:crazy: 174/400 games, 76s
+  model:rl4_4090_b6c96/ckpt_u00440 vs retail:crazy: 200/400 games, 91s
+  model:rl4_4090_b6c96/ckpt_u00440 vs retail:crazy: 249/400 games, 106s
+  model:rl4_4090_b6c96/ckpt_u00440 vs retail:crazy: 278/400 games, 121s
+  model:rl4_4090_b6c96/ckpt_u00440 vs retail:crazy: 316/400 games, 136s
+  model:rl4_4090_b6c96/ckpt_u00440 vs retail:crazy: 347/400 games, 151s
+  model:rl4_4090_b6c96/ckpt_u00440 vs retail:crazy: 376/400 games, 166s
+  model:rl4_4090_b6c96/ckpt_u00440 vs retail:crazy: 388/400 games, 181s
+  model:rl4_4090_b6c96/ckpt_u00440 vs retail:crazy: 393/400 games, 196s
+  model:rl4_4090_b6c96/ckpt_u00440 vs retail:crazy: 395/400 games, 211s
+  model:rl4_4090_b6c96/ckpt_u00440 vs retail:crazy: 396/400 games, 226s
+  model:rl4_4090_b6c96/ckpt_u00440 vs retail:crazy: 398/400 games, 241s
+retail:crazy: +400 games
+
+result (model against each opponent; a draw is half a win):
+  model:rl4_4090_b6c96/ckpt_u00440 vs retail:crazy: W-L-D 311-87-2 of 400, score 78.0%, capped 2, mean turns 35.1
+GPU peak allocated 37 MiB
+results: D:\polytopia\data\arena\rl4\retail_crazy_u00440.jsonl   report: python tools/elo.py D:\polytopia\data\arena\rl4\retail_crazy_u00440.jsonl

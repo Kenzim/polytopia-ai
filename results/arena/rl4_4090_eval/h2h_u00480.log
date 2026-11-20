@@ -1,0 +1,23 @@
+model:rl4_4090_b6c96/ckpt_u00480: D:\polytopia\data\runs\rl4_4090_b6c96\ckpt_u00480.pt (step 480)
+model:rl1_b6c96_cpu: D:\polytopia\data\runs\rl1_b6c96_cpu\ckpt_final.pt (step 200)
+  model:rl4_4090_b6c96/ckpt_u00480 vs model:rl1_b6c96_cpu: 0/400 games, 0s
+  model:rl4_4090_b6c96/ckpt_u00480 vs model:rl1_b6c96_cpu: 10/400 games, 30s
+  model:rl4_4090_b6c96/ckpt_u00480 vs model:rl1_b6c96_cpu: 26/400 games, 60s
+  model:rl4_4090_b6c96/ckpt_u00480 vs model:rl1_b6c96_cpu: 69/400 games, 90s
+  model:rl4_4090_b6c96/ckpt_u00480 vs model:rl1_b6c96_cpu: 104/400 games, 120s
+  model:rl4_4090_b6c96/ckpt_u00480 vs model:rl1_b6c96_cpu: 135/400 games, 151s
+  model:rl4_4090_b6c96/ckpt_u00480 vs model:rl1_b6c96_cpu: 154/400 games, 181s
+  model:rl4_4090_b6c96/ckpt_u00480 vs model:rl1_b6c96_cpu: 185/400 games, 211s
+  model:rl4_4090_b6c96/ckpt_u00480 vs model:rl1_b6c96_cpu: 208/400 games, 241s
+  model:rl4_4090_b6c96/ckpt_u00480 vs model:rl1_b6c96_cpu: 231/400 games, 271s
+  model:rl4_4090_b6c96/ckpt_u00480 vs model:rl1_b6c96_cpu: 270/400 games, 301s
+  model:rl4_4090_b6c96/ckpt_u00480 vs model:rl1_b6c96_cpu: 307/400 games, 331s
+  model:rl4_4090_b6c96/ckpt_u00480 vs model:rl1_b6c96_cpu: 339/400 games, 361s
+  model:rl4_4090_b6c96/ckpt_u00480 vs model:rl1_b6c96_cpu: 358/400 games, 391s
+  model:rl4_4090_b6c96/ckpt_u00480 vs model:rl1_b6c96_cpu: 373/400 games, 421s
+  model:rl4_4090_b6c96/ckpt_u00480 vs model:rl1_b6c96_cpu: 378/400 games, 451s
+  model:rl4_4090_b6c96/ckpt_u00480 vs model:rl1_b6c96_cpu: 380/400 games, 481s
+  model:rl4_4090_b6c96/ckpt_u00480 vs model:rl1_b6c96_cpu: 382/400 games, 511s
+  model:rl4_4090_b6c96/ckpt_u00480 vs model:rl1_b6c96_cpu: 390/400 games, 541s
+  model:rl4_4090_b6c96/ckpt_u00480 vs model:rl1_b6c96_cpu: 399/400 games, 571s
+model:rl4_4090_b6c96/ckpt_u00480 vs model:rl1_b6c96_cpu: W-L-D 253-128-19 of 400, score 65.6%, capped 19

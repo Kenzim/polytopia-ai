@@ -1,0 +1,60 @@
+model:rl3_b6c96/ckpt_u00400: /kvm/polytopia-ai-data/runs/rl3_b6c96/ckpt_u00400.pt (step 400), 1.42M params
+  model:rl3_b6c96/ckpt_u00400 vs retail:crazy: 0/400 games, 0s
+  model:rl3_b6c96/ckpt_u00400 vs retail:crazy: 0/400 games, 16s
+  model:rl3_b6c96/ckpt_u00400 vs retail:crazy: 5/400 games, 31s
+  model:rl3_b6c96/ckpt_u00400 vs retail:crazy: 12/400 games, 46s
+  model:rl3_b6c96/ckpt_u00400 vs retail:crazy: 16/400 games, 61s
+  model:rl3_b6c96/ckpt_u00400 vs retail:crazy: 21/400 games, 76s
+  model:rl3_b6c96/ckpt_u00400 vs retail:crazy: 31/400 games, 92s
+  model:rl3_b6c96/ckpt_u00400 vs retail:crazy: 36/400 games, 107s
+  model:rl3_b6c96/ckpt_u00400 vs retail:crazy: 40/400 games, 122s
+  model:rl3_b6c96/ckpt_u00400 vs retail:crazy: 47/400 games, 137s
+  model:rl3_b6c96/ckpt_u00400 vs retail:crazy: 56/400 games, 152s
+  model:rl3_b6c96/ckpt_u00400 vs retail:crazy: 60/400 games, 167s
+  model:rl3_b6c96/ckpt_u00400 vs retail:crazy: 66/400 games, 183s
+  model:rl3_b6c96/ckpt_u00400 vs retail:crazy: 74/400 games, 198s
+  model:rl3_b6c96/ckpt_u00400 vs retail:crazy: 81/400 games, 213s
+  model:rl3_b6c96/ckpt_u00400 vs retail:crazy: 87/400 games, 228s
+  model:rl3_b6c96/ckpt_u00400 vs retail:crazy: 90/400 games, 243s
+  model:rl3_b6c96/ckpt_u00400 vs retail:crazy: 97/400 games, 258s
+  model:rl3_b6c96/ckpt_u00400 vs retail:crazy: 109/400 games, 274s
+  model:rl3_b6c96/ckpt_u00400 vs retail:crazy: 117/400 games, 289s
+  model:rl3_b6c96/ckpt_u00400 vs retail:crazy: 123/400 games, 304s
+  model:rl3_b6c96/ckpt_u00400 vs retail:crazy: 131/400 games, 319s
+  model:rl3_b6c96/ckpt_u00400 vs retail:crazy: 138/400 games, 334s
+  model:rl3_b6c96/ckpt_u00400 vs retail:crazy: 146/400 games, 349s
+  model:rl3_b6c96/ckpt_u00400 vs retail:crazy: 159/400 games, 365s
+  model:rl3_b6c96/ckpt_u00400 vs retail:crazy: 164/400 games, 380s
+  model:rl3_b6c96/ckpt_u00400 vs retail:crazy: 171/400 games, 395s
+  model:rl3_b6c96/ckpt_u00400 vs retail:crazy: 177/400 games, 410s
+  model:rl3_b6c96/ckpt_u00400 vs retail:crazy: 183/400 games, 426s
+  model:rl3_b6c96/ckpt_u00400 vs retail:crazy: 192/400 games, 441s
+  model:rl3_b6c96/ckpt_u00400 vs retail:crazy: 194/400 games, 456s
+  model:rl3_b6c96/ckpt_u00400 vs retail:crazy: 198/400 games, 471s
+  model:rl3_b6c96/ckpt_u00400 vs retail:crazy: 205/400 games, 486s
+  model:rl3_b6c96/ckpt_u00400 vs retail:crazy: 213/400 games, 502s
+  model:rl3_b6c96/ckpt_u00400 vs retail:crazy: 222/400 games, 517s
+  model:rl3_b6c96/ckpt_u00400 vs retail:crazy: 230/400 games, 532s
+  model:rl3_b6c96/ckpt_u00400 vs retail:crazy: 239/400 games, 547s
+  model:rl3_b6c96/ckpt_u00400 vs retail:crazy: 247/400 games, 563s
+  model:rl3_b6c96/ckpt_u00400 vs retail:crazy: 252/400 games, 578s
+  model:rl3_b6c96/ckpt_u00400 vs retail:crazy: 261/400 games, 593s
+  model:rl3_b6c96/ckpt_u00400 vs retail:crazy: 273/400 games, 608s
+  model:rl3_b6c96/ckpt_u00400 vs retail:crazy: 279/400 games, 624s
+  model:rl3_b6c96/ckpt_u00400 vs retail:crazy: 288/400 games, 639s
+  model:rl3_b6c96/ckpt_u00400 vs retail:crazy: 295/400 games, 654s
+  model:rl3_b6c96/ckpt_u00400 vs retail:crazy: 304/400 games, 669s
+  model:rl3_b6c96/ckpt_u00400 vs retail:crazy: 314/400 games, 684s
+  model:rl3_b6c96/ckpt_u00400 vs retail:crazy: 323/400 games, 699s
+  model:rl3_b6c96/ckpt_u00400 vs retail:crazy: 331/400 games, 714s
+  model:rl3_b6c96/ckpt_u00400 vs retail:crazy: 344/400 games, 730s
+  model:rl3_b6c96/ckpt_u00400 vs retail:crazy: 353/400 games, 745s
+  model:rl3_b6c96/ckpt_u00400 vs retail:crazy: 367/400 games, 760s
+  model:rl3_b6c96/ckpt_u00400 vs retail:crazy: 380/400 games, 775s
+  model:rl3_b6c96/ckpt_u00400 vs retail:crazy: 387/400 games, 790s
+  model:rl3_b6c96/ckpt_u00400 vs retail:crazy: 395/400 games, 805s
+retail:crazy: +400 games
+
+result (model against each opponent; a draw is half a win):
+  model:rl3_b6c96/ckpt_u00400 vs retail:crazy: W-L-D 311-89-0 of 400, score 77.8%, capped 0, mean turns 33.0
+results: /kvm/polytopia-ai-data/arena/rl3/retail_crazy_u00400.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/arena/rl3/retail_crazy_u00400.jsonl

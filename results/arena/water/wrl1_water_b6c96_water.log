@@ -1,0 +1,19 @@
+model:wrl1_water_b6c96: /kvm/polytopia-ai-data/runs/wrl1_water_b6c96/ckpt_final.pt (step 300), 1.42M params
+  model:wrl1_water_b6c96 vs retail:crazy: 0/200 games, 0s
+  model:wrl1_water_b6c96 vs retail:crazy: 2/200 games, 15s
+  model:wrl1_water_b6c96 vs retail:crazy: 19/200 games, 31s
+  model:wrl1_water_b6c96 vs retail:crazy: 37/200 games, 46s
+  model:wrl1_water_b6c96 vs retail:crazy: 54/200 games, 61s
+  model:wrl1_water_b6c96 vs retail:crazy: 74/200 games, 76s
+  model:wrl1_water_b6c96 vs retail:crazy: 94/200 games, 91s
+  model:wrl1_water_b6c96 vs retail:crazy: 114/200 games, 106s
+  model:wrl1_water_b6c96 vs retail:crazy: 142/200 games, 121s
+  model:wrl1_water_b6c96 vs retail:crazy: 162/200 games, 136s
+  model:wrl1_water_b6c96 vs retail:crazy: 178/200 games, 151s
+  model:wrl1_water_b6c96 vs retail:crazy: 194/200 games, 166s
+  model:wrl1_water_b6c96 vs retail:crazy: 198/200 games, 181s
+retail:crazy: +200 games
+
+result (model against each opponent; a draw is half a win):
+  model:wrl1_water_b6c96 vs retail:crazy: W-L-D 82-115-3 of 200, score 41.8%, capped 3, mean turns 29.4
+results: /kvm/polytopia-ai-data/arena/water/wrl1_water_b6c96_water.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/arena/water/wrl1_water_b6c96_water.jsonl

@@ -1,0 +1,30 @@
+
+=== 2026-11-09T00:16:44+00:00 /kvm/polytopia/.venv/bin/python -m polyai.arena --model /kvm/polytopia-ai-data/runs/rl3_b6c96/ckpt_u00480.pt --opponent retail:crazy --seeds 100 --seed-start 1000000 --mode might --threads 8 --device cpu --out /kvm/polytopia-ai-data/autoloop/champions/rl3_b6c96_u480_crazy.jsonl
+model:rl3_b6c96/ckpt_u00480: /kvm/polytopia-ai-data/runs/rl3_b6c96/ckpt_u00480.pt (step 480), 1.42M params
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 0/200 games, 0s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 0/200 games, 16s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 0/200 games, 31s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 5/200 games, 46s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 10/200 games, 61s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 12/200 games, 77s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 20/200 games, 92s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 30/200 games, 107s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 38/200 games, 122s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 47/200 games, 138s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 56/200 games, 153s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 60/200 games, 168s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 70/200 games, 183s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 81/200 games, 198s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 93/200 games, 213s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 108/200 games, 228s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 119/200 games, 243s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 132/200 games, 259s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 145/200 games, 274s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 159/200 games, 289s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 174/200 games, 304s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 197/200 games, 319s
+retail:crazy: +200 games
+
+result (model against each opponent; a draw is half a win):
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: W-L-D 152-48-0 of 200, score 76.0%, capped 0, mean turns 28.6
+results: /kvm/polytopia-ai-data/autoloop/champions/rl3_b6c96_u480_crazy.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/autoloop/champions/rl3_b6c96_u480_crazy.jsonl

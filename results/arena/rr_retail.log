@@ -1,0 +1,13 @@
+polyai-arena: 5 agents, 1000 games (0 already done) on 20 threads, seeds 1000000..1000049
+done: 1000 games in 12.8s
+random vs retail:easy: 0-100-0 (W-L-D for the first), 0 adjudicated, 0.1s per game
+random vs retail:normal: 0-100-0 (W-L-D for the first), 0 adjudicated, 0.1s per game
+random vs retail:hard: 0-100-0 (W-L-D for the first), 0 adjudicated, 0.1s per game
+random vs retail:crazy: 0-100-0 (W-L-D for the first), 0 adjudicated, 0.1s per game
+retail:easy vs retail:normal: 21-79-0 (W-L-D for the first), 46 adjudicated, 0.4s per game
+retail:easy vs retail:hard: 6-94-0 (W-L-D for the first), 11 adjudicated, 0.3s per game
+retail:easy vs retail:crazy: 0-100-0 (W-L-D for the first), 3 adjudicated, 0.2s per game
+retail:normal vs retail:hard: 20-80-0 (W-L-D for the first), 26 adjudicated, 0.4s per game
+retail:normal vs retail:crazy: 7-93-0 (W-L-D for the first), 13 adjudicated, 0.3s per game
+retail:hard vs retail:crazy: 27-73-0 (W-L-D for the first), 17 adjudicated, 0.5s per game
+tables: /kvm/polytopia/.venv/bin/python ai/tools/elo.py <file.jsonl>

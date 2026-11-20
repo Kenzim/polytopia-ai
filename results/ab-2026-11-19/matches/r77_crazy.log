@@ -1,0 +1,50 @@
+model:auto_r0077: /kvm/polytopia-ai-data/runs/auto_r0077/ckpt_final.pt (step 300), 1.42M params
+  model:auto_r0077 vs retail:crazy: 0/400 games, 0s
+  model:auto_r0077 vs retail:crazy: 0/400 games, 15s
+  model:auto_r0077 vs retail:crazy: 3/400 games, 31s
+  model:auto_r0077 vs retail:crazy: 5/400 games, 46s
+  model:auto_r0077 vs retail:crazy: 9/400 games, 61s
+  model:auto_r0077 vs retail:crazy: 18/400 games, 77s
+  model:auto_r0077 vs retail:crazy: 23/400 games, 92s
+  model:auto_r0077 vs retail:crazy: 28/400 games, 107s
+  model:auto_r0077 vs retail:crazy: 37/400 games, 122s
+  model:auto_r0077 vs retail:crazy: 41/400 games, 137s
+  model:auto_r0077 vs retail:crazy: 47/400 games, 152s
+  model:auto_r0077 vs retail:crazy: 56/400 games, 167s
+  model:auto_r0077 vs retail:crazy: 67/400 games, 183s
+  model:auto_r0077 vs retail:crazy: 74/400 games, 198s
+  model:auto_r0077 vs retail:crazy: 83/400 games, 213s
+  model:auto_r0077 vs retail:crazy: 92/400 games, 228s
+  model:auto_r0077 vs retail:crazy: 105/400 games, 243s
+  model:auto_r0077 vs retail:crazy: 112/400 games, 258s
+  model:auto_r0077 vs retail:crazy: 120/400 games, 274s
+  model:auto_r0077 vs retail:crazy: 129/400 games, 289s
+  model:auto_r0077 vs retail:crazy: 140/400 games, 304s
+  model:auto_r0077 vs retail:crazy: 147/400 games, 319s
+  model:auto_r0077 vs retail:crazy: 160/400 games, 334s
+  model:auto_r0077 vs retail:crazy: 166/400 games, 349s
+  model:auto_r0077 vs retail:crazy: 171/400 games, 365s
+  model:auto_r0077 vs retail:crazy: 182/400 games, 380s
+  model:auto_r0077 vs retail:crazy: 189/400 games, 395s
+  model:auto_r0077 vs retail:crazy: 196/400 games, 410s
+  model:auto_r0077 vs retail:crazy: 205/400 games, 425s
+  model:auto_r0077 vs retail:crazy: 212/400 games, 440s
+  model:auto_r0077 vs retail:crazy: 224/400 games, 455s
+  model:auto_r0077 vs retail:crazy: 240/400 games, 470s
+  model:auto_r0077 vs retail:crazy: 249/400 games, 485s
+  model:auto_r0077 vs retail:crazy: 255/400 games, 500s
+  model:auto_r0077 vs retail:crazy: 261/400 games, 516s
+  model:auto_r0077 vs retail:crazy: 274/400 games, 531s
+  model:auto_r0077 vs retail:crazy: 288/400 games, 546s
+  model:auto_r0077 vs retail:crazy: 299/400 games, 561s
+  model:auto_r0077 vs retail:crazy: 311/400 games, 576s
+  model:auto_r0077 vs retail:crazy: 321/400 games, 591s
+  model:auto_r0077 vs retail:crazy: 330/400 games, 607s
+  model:auto_r0077 vs retail:crazy: 343/400 games, 622s
+  model:auto_r0077 vs retail:crazy: 366/400 games, 637s
+  model:auto_r0077 vs retail:crazy: 383/400 games, 652s
+retail:crazy: +400 games
+
+result (model against each opponent; a draw is half a win):
+  model:auto_r0077 vs retail:crazy: W-L-D 355-45-0 of 400, score 88.8%, capped 0, mean turns 24.9
+results: /kvm/tmp/abc/eval/r77_crazy.jsonl   report: python tools/elo.py /kvm/tmp/abc/eval/r77_crazy.jsonl

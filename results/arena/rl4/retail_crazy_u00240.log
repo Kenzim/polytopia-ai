@@ -1,0 +1,59 @@
+model:rl4_4090_b6c96/ckpt_u00240: /kvm/polytopia-ai-data/runs/rl4_4090_b6c96/ckpt_u00240.pt (step 240), 1.42M params
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:crazy: 0/400 games, 0s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:crazy: 1/400 games, 16s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:crazy: 4/400 games, 31s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:crazy: 13/400 games, 46s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:crazy: 17/400 games, 61s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:crazy: 25/400 games, 76s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:crazy: 29/400 games, 91s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:crazy: 37/400 games, 107s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:crazy: 44/400 games, 122s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:crazy: 55/400 games, 137s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:crazy: 63/400 games, 152s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:crazy: 67/400 games, 167s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:crazy: 70/400 games, 183s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:crazy: 79/400 games, 198s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:crazy: 87/400 games, 213s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:crazy: 96/400 games, 229s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:crazy: 101/400 games, 244s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:crazy: 112/400 games, 259s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:crazy: 118/400 games, 274s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:crazy: 127/400 games, 290s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:crazy: 136/400 games, 305s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:crazy: 139/400 games, 320s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:crazy: 142/400 games, 336s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:crazy: 151/400 games, 351s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:crazy: 158/400 games, 366s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:crazy: 166/400 games, 381s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:crazy: 170/400 games, 397s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:crazy: 174/400 games, 412s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:crazy: 177/400 games, 427s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:crazy: 186/400 games, 442s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:crazy: 198/400 games, 458s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:crazy: 204/400 games, 473s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:crazy: 214/400 games, 488s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:crazy: 222/400 games, 503s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:crazy: 233/400 games, 519s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:crazy: 238/400 games, 534s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:crazy: 245/400 games, 549s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:crazy: 252/400 games, 564s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:crazy: 256/400 games, 579s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:crazy: 268/400 games, 595s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:crazy: 280/400 games, 610s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:crazy: 287/400 games, 625s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:crazy: 294/400 games, 640s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:crazy: 299/400 games, 655s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:crazy: 310/400 games, 670s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:crazy: 325/400 games, 685s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:crazy: 338/400 games, 700s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:crazy: 351/400 games, 715s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:crazy: 359/400 games, 730s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:crazy: 367/400 games, 746s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:crazy: 377/400 games, 761s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:crazy: 388/400 games, 776s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:crazy: 395/400 games, 791s
+retail:crazy: +400 games
+
+result (model against each opponent; a draw is half a win):
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:crazy: W-L-D 294-106-0 of 400, score 73.5%, capped 0, mean turns 34.3
+results: /kvm/polytopia-ai-data/arena/rl4/retail_crazy_u00240.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/arena/rl4/retail_crazy_u00240.jsonl

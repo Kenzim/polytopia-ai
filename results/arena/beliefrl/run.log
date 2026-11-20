@@ -1,0 +1,158 @@
++ export TMPDIR=/kvm/tmp/tmp UV_CACHE_DIR=/kvm/tmp/uv-cache
++ TMPDIR=/kvm/tmp/tmp
++ UV_CACHE_DIR=/kvm/tmp/uv-cache
++ cd /kvm/polytopia/ai/python
++ R=/kvm/polytopia-ai-data/runs
++ O=/kvm/polytopia-ai-data/arena/beliefrl
++ A=/kvm/polytopia-ai-data/runs/beliefrl_b6c96/ckpt_u00300.pt
++ B=/kvm/polytopia-ai-data/runs/might1_b6c96/ckpt_u00300.pt
++ PY='nice -n 10 /kvm/polytopia/.venv/bin/python'
++ nice -n 10 /kvm/polytopia/.venv/bin/python -m polyai.h2h --a /kvm/polytopia-ai-data/runs/beliefrl_b6c96/ckpt_u00300.pt --b /kvm/polytopia-ai-data/runs/might1_b6c96/ckpt_u00300.pt --seeds 200 --mode might --threads 8 --device cpu --out /kvm/polytopia-ai-data/arena/beliefrl/h2h.jsonl
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/kvm/polytopia/ai/python/polyai/h2h.py", line 153, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "/kvm/polytopia/ai/python/polyai/h2h.py", line 134, in main
+    path, temperature = parse_model_spec(spec)
+                        ~~~~~~~~~~~~~~~~^^^^^^
+  File "/kvm/polytopia/ai/python/polyai/arena.py", line 73, in parse_model_spec
+    path = resolve_checkpoint(spec)
+  File "/kvm/polytopia/ai/python/polyai/policy.py", line 155, in resolve_checkpoint
+    raise FileNotFoundError(f"checkpoint {path} does not exist")
+FileNotFoundError: checkpoint /kvm/polytopia-ai-data/runs/beliefrl_b6c96/ckpt_u00300.pt does not exist
++ nice -n 10 /kvm/polytopia/.venv/bin/python -m polyai.arena --model /kvm/polytopia-ai-data/runs/beliefrl_b6c96/ckpt_u00300.pt --opponent retail:hard,retail:crazy --seeds 200 --mode might --threads 8 --device cpu --out /kvm/polytopia-ai-data/arena/beliefrl/belief_vs_retail.jsonl
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/kvm/polytopia/ai/python/polyai/arena.py", line 417, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "/kvm/polytopia/ai/python/polyai/arena.py", line 382, in main
+    path, temperature = parse_model_spec(spec)
+                        ~~~~~~~~~~~~~~~~^^^^^^
+  File "/kvm/polytopia/ai/python/polyai/arena.py", line 73, in parse_model_spec
+    path = resolve_checkpoint(spec)
+  File "/kvm/polytopia/ai/python/polyai/policy.py", line 155, in resolve_checkpoint
+    raise FileNotFoundError(f"checkpoint {path} does not exist")
+FileNotFoundError: checkpoint /kvm/polytopia-ai-data/runs/beliefrl_b6c96/ckpt_u00300.pt does not exist
++ nice -n 10 /kvm/polytopia/.venv/bin/python -m polyai.arena --model /kvm/polytopia-ai-data/runs/might1_b6c96/ckpt_u00300.pt --opponent retail:hard,retail:crazy --seeds 200 --mode might --threads 8 --device cpu --out /kvm/polytopia-ai-data/arena/beliefrl/control_vs_retail.jsonl
+model:might1_b6c96/ckpt_u00300: /kvm/polytopia-ai-data/runs/might1_b6c96/ckpt_u00300.pt (step 300), 1.42M params
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 0/400 games, 0s
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 1/400 games, 16s
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 3/400 games, 31s
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 5/400 games, 46s
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 13/400 games, 61s
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 19/400 games, 76s
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 24/400 games, 92s
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 30/400 games, 107s
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 39/400 games, 122s
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 46/400 games, 137s
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 54/400 games, 153s
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 71/400 games, 168s
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 83/400 games, 183s
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 98/400 games, 198s
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 106/400 games, 213s
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 116/400 games, 228s
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 125/400 games, 244s
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 135/400 games, 259s
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 143/400 games, 274s
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 153/400 games, 289s
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 157/400 games, 304s
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 167/400 games, 320s
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 178/400 games, 335s
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 184/400 games, 350s
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 192/400 games, 365s
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 204/400 games, 380s
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 212/400 games, 395s
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 217/400 games, 410s
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 225/400 games, 425s
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 230/400 games, 441s
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 244/400 games, 456s
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 254/400 games, 471s
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 268/400 games, 486s
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 283/400 games, 502s
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 294/400 games, 517s
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 303/400 games, 532s
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 317/400 games, 547s
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 329/400 games, 562s
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 341/400 games, 577s
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 359/400 games, 592s
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 379/400 games, 607s
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 391/400 games, 622s
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 399/400 games, 637s
+retail:hard: +400 games
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 0/400 games, 0s
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 0/400 games, 15s
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 6/400 games, 31s
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 12/400 games, 46s
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 22/400 games, 61s
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 27/400 games, 76s
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 33/400 games, 92s
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 42/400 games, 107s
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 52/400 games, 122s
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 61/400 games, 137s
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 75/400 games, 152s
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 89/400 games, 168s
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 99/400 games, 183s
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 115/400 games, 198s
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 122/400 games, 213s
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 135/400 games, 228s
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 148/400 games, 243s
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 160/400 games, 259s
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 169/400 games, 274s
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 174/400 games, 289s
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 183/400 games, 304s
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 188/400 games, 319s
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 196/400 games, 334s
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 204/400 games, 350s
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 212/400 games, 365s
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 218/400 games, 380s
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 229/400 games, 396s
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 237/400 games, 411s
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 248/400 games, 426s
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 256/400 games, 441s
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 267/400 games, 456s
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 279/400 games, 472s
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 294/400 games, 487s
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 306/400 games, 502s
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 314/400 games, 517s
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 328/400 games, 532s
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 335/400 games, 547s
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 347/400 games, 562s
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 363/400 games, 578s
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 370/400 games, 593s
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 378/400 games, 608s
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 392/400 games, 623s
+retail:crazy: +400 games
+
+result (model against each opponent; a draw is half a win):
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: W-L-D 354-45-1 of 400, score 88.6%, capped 1, mean turns 28.3
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: W-L-D 298-102-0 of 400, score 74.5%, capped 0, mean turns 29.2
+results: /kvm/polytopia-ai-data/arena/beliefrl/control_vs_retail.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/arena/beliefrl/control_vs_retail.jsonl
+++ tr '\n' ' '
+++ ls -d /kvm/polytopia-ai-data/bc-might-truth-split/val/shard-00007-16x16.npz /kvm/polytopia-ai-data/bc-might-truth-split/val/shard-00022-16x16.npz /kvm/polytopia-ai-data/bc-might-truth-split/val/shard-00037-14x14.npz /kvm/polytopia-ai-data/bc-might-truth-split/val/shard-00052-14x14.npz /kvm/polytopia-ai-data/bc-might-truth-split/val/shard-00067-14x14.npz /kvm/polytopia-ai-data/bc-might-truth-split/val/shard-00082-11x11.npz /kvm/polytopia-ai-data/bc-might-truth-split/val/shard-00097-16x16.npz /kvm/polytopia-ai-data/bc-might-truth-split/val/shard-00112-16x16.npz /kvm/polytopia-ai-data/bc-might-truth-split/val/shard-00127-16x16.npz /kvm/polytopia-ai-data/bc-might-truth-split/val/shard-00142-11x11.npz
++ nice -n 10 /kvm/polytopia/.venv/bin/python -m polyai.belief --model /kvm/polytopia-ai-data/runs/beliefrl_b6c96/ckpt_u00300.pt --shards /kvm/polytopia-ai-data/bc-might-truth-split/val/shard-00007-16x16.npz /kvm/polytopia-ai-data/bc-might-truth-split/val/shard-00022-16x16.npz /kvm/polytopia-ai-data/bc-might-truth-split/val/shard-00037-14x14.npz /kvm/polytopia-ai-data/bc-might-truth-split/val/shard-00052-14x14.npz /kvm/polytopia-ai-data/bc-might-truth-split/val/shard-00067-14x14.npz /kvm/polytopia-ai-data/bc-might-truth-split/val/shard-00082-11x11.npz /kvm/polytopia-ai-data/bc-might-truth-split/val/shard-00097-16x16.npz /kvm/polytopia-ai-data/bc-might-truth-split/val/shard-00112-16x16.npz /kvm/polytopia-ai-data/bc-might-truth-split/val/shard-00127-16x16.npz /kvm/polytopia-ai-data/bc-might-truth-split/val/shard-00142-11x11.npz --device cpu --out /kvm/polytopia-ai-data/arena/beliefrl/belief_u300.json
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/kvm/polytopia/ai/python/polyai/belief.py", line 217, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "/kvm/polytopia/ai/python/polyai/belief.py", line 208, in main
+    model = load_checkpoint(path, belief=True).to(a.device)
+            ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/kvm/polytopia/ai/python/polyai/train_bc.py", line 278, in load_checkpoint
+    state = torch.load(path, map_location=map_location, weights_only=False)
+  File "/kvm/polytopia/.venv/lib/python3.13/site-packages/torch/serialization.py", line 1530, in load
+    with _open_file_like(f, "rb") as opened_file:
+         ~~~~~~~~~~~~~~~^^^^^^^^^
+  File "/kvm/polytopia/.venv/lib/python3.13/site-packages/torch/serialization.py", line 795, in _open_file_like
+    return _open_file(name_or_buffer, mode)
+  File "/kvm/polytopia/.venv/lib/python3.13/site-packages/torch/serialization.py", line 776, in __init__
+    super().__init__(open(name, mode))  # noqa: SIM115
+                     ~~~~^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/kvm/polytopia-ai-data/runs/beliefrl_b6c96/ckpt_u00300.pt'
++ echo ALLDONE
+ALLDONE

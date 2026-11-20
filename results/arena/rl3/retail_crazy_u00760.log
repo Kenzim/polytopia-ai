@@ -1,0 +1,61 @@
+model:rl3_b6c96/ckpt_u00760: /kvm/polytopia-ai-data/runs/rl3_b6c96/ckpt_u00760.pt (step 760), 1.42M params
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: 0/400 games, 0s
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: 1/400 games, 15s
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: 2/400 games, 30s
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: 8/400 games, 46s
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: 12/400 games, 61s
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: 15/400 games, 76s
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: 20/400 games, 91s
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: 27/400 games, 106s
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: 35/400 games, 121s
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: 44/400 games, 137s
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: 53/400 games, 152s
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: 58/400 games, 167s
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: 63/400 games, 182s
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: 73/400 games, 197s
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: 80/400 games, 213s
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: 91/400 games, 228s
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: 96/400 games, 243s
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: 110/400 games, 259s
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: 114/400 games, 274s
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: 121/400 games, 289s
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: 129/400 games, 304s
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: 136/400 games, 320s
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: 146/400 games, 335s
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: 153/400 games, 350s
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: 161/400 games, 365s
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: 165/400 games, 380s
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: 171/400 games, 396s
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: 179/400 games, 411s
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: 185/400 games, 426s
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: 188/400 games, 441s
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: 194/400 games, 456s
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: 200/400 games, 472s
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: 213/400 games, 487s
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: 217/400 games, 502s
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: 225/400 games, 517s
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: 232/400 games, 532s
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: 239/400 games, 547s
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: 247/400 games, 562s
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: 257/400 games, 578s
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: 261/400 games, 593s
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: 269/400 games, 608s
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: 274/400 games, 623s
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: 281/400 games, 638s
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: 292/400 games, 654s
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: 301/400 games, 669s
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: 312/400 games, 684s
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: 322/400 games, 699s
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: 334/400 games, 714s
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: 347/400 games, 729s
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: 359/400 games, 744s
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: 377/400 games, 760s
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: 387/400 games, 775s
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: 391/400 games, 790s
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: 397/400 games, 805s
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: 398/400 games, 820s
+retail:crazy: +400 games
+
+result (model against each opponent; a draw is half a win):
+  model:rl3_b6c96/ckpt_u00760 vs retail:crazy: W-L-D 306-93-1 of 400, score 76.6%, capped 1, mean turns 34.1
+results: /kvm/polytopia-ai-data/arena/rl3/retail_crazy_u00760.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/arena/rl3/retail_crazy_u00760.jsonl

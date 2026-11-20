@@ -1,0 +1,17 @@
+model:featrl_b6c96: /kvm/polytopia-ai-data/runs/featrl_b6c96/ckpt_final.pt (step 300), 1.43M params
+  model:featrl_b6c96 vs retail:hard: 0/400 games, 1s
+  model:featrl_b6c96 vs retail:hard: 27/400 games, 16s
+  model:featrl_b6c96 vs retail:hard: 65/400 games, 31s
+  model:featrl_b6c96 vs retail:hard: 118/400 games, 46s
+  model:featrl_b6c96 vs retail:hard: 160/400 games, 61s
+  model:featrl_b6c96 vs retail:hard: 199/400 games, 76s
+  model:featrl_b6c96 vs retail:hard: 257/400 games, 91s
+  model:featrl_b6c96 vs retail:hard: 307/400 games, 106s
+  model:featrl_b6c96 vs retail:hard: 357/400 games, 121s
+  model:featrl_b6c96 vs retail:hard: 399/400 games, 136s
+retail:hard: +400 games
+
+result (model against each opponent; a draw is half a win):
+  model:featrl_b6c96 vs retail:hard: W-L-D 373-27-0 of 400, score 93.2%, capped 0, mean turns 27.2
+GPU peak allocated 36 MiB
+results: /kvm/polytopia-ai-data/arena/featab/feat300_hard.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/arena/featab/feat300_hard.jsonl

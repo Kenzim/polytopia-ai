@@ -1,0 +1,58 @@
+{
+  "train": {
+    "name": "hbc1_rl3_human",
+    "model": "b6c96",
+    "train": [
+      "/kvm/polytopia-ai-data/human/shards/human-00000-14x14.npz",
+      "/kvm/polytopia-ai-data/human/shards/human-00001-14x14.npz",
+      "/kvm/polytopia-ai-data/human/shards/human-00002-14x14.npz",
+      "/kvm/polytopia-ai-data/human/shards/human-00003-14x14.npz",
+      "/kvm/polytopia-ai-data/human/shards/human-00004-14x14.npz",
+      "/kvm/polytopia-ai-data/human/shards/human-00005-14x14.npz",
+      "/kvm/polytopia-ai-data/human/shards/human-00006-14x14.npz",
+      "/kvm/polytopia-ai-data/human/shards/human-00007-11x11.npz",
+      "/kvm/polytopia-ai-data/human/shards/human-00009-16x16.npz"
+    ],
+    "val": [
+      "/kvm/polytopia-ai-data/human/shards/human-00008-14x14.npz"
+    ],
+    "batch_size": 256,
+    "steps": 6000,
+    "lr": 5e-05,
+    "weight_decay": 0.01,
+    "warmup_steps": 200,
+    "min_lr_frac": 0.02,
+    "grad_clip": 1.0,
+    "kl_weight": 0.0,
+    "kl_temperature": 50.0,
+    "winner_weight": 1.0,
+    "augment": true,
+    "bf16": true,
+    "eval_every": 1000,
+    "ckpt_every": 2000,
+    "eval_batches": 100,
+    "log_every": 50,
+    "seed": 0,
+    "threads": 4,
+    "need_gb": 1.5,
+    "runs_dir": "/kvm/polytopia-ai-data/runs",
+    "device": "cuda",
+    "resume": false,
+    "init": "/kvm/polytopia-ai-data/runs/rl3_b6c96/ckpt_u00480.pt",
+    "belief_weight": 0.0,
+    "belief_hidden": 32,
+    "features": false
+  },
+  "model": {
+    "blocks": 6,
+    "channels": 96,
+    "gpool_every": 3,
+    "policy_hidden": 128,
+    "value_hidden": 128,
+    "g_dim": 247,
+    "name": "b6c96"
+  },
+  "params": 1417866,
+  "encoding_version": 2,
+  "started_at_step": 0
+}

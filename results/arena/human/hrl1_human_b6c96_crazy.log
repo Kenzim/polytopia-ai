@@ -1,0 +1,25 @@
+model:hrl1_human_b6c96: /kvm/polytopia-ai-data/runs/hrl1_human_b6c96/ckpt_final.pt (step 300), 1.42M params
+  model:hrl1_human_b6c96 vs retail:crazy: 0/200 games, 0s
+  model:hrl1_human_b6c96 vs retail:crazy: 0/200 games, 16s
+  model:hrl1_human_b6c96 vs retail:crazy: 3/200 games, 31s
+  model:hrl1_human_b6c96 vs retail:crazy: 7/200 games, 46s
+  model:hrl1_human_b6c96 vs retail:crazy: 15/200 games, 61s
+  model:hrl1_human_b6c96 vs retail:crazy: 21/200 games, 76s
+  model:hrl1_human_b6c96 vs retail:crazy: 32/200 games, 91s
+  model:hrl1_human_b6c96 vs retail:crazy: 44/200 games, 107s
+  model:hrl1_human_b6c96 vs retail:crazy: 55/200 games, 122s
+  model:hrl1_human_b6c96 vs retail:crazy: 65/200 games, 137s
+  model:hrl1_human_b6c96 vs retail:crazy: 77/200 games, 152s
+  model:hrl1_human_b6c96 vs retail:crazy: 95/200 games, 167s
+  model:hrl1_human_b6c96 vs retail:crazy: 107/200 games, 182s
+  model:hrl1_human_b6c96 vs retail:crazy: 115/200 games, 197s
+  model:hrl1_human_b6c96 vs retail:crazy: 126/200 games, 212s
+  model:hrl1_human_b6c96 vs retail:crazy: 143/200 games, 227s
+  model:hrl1_human_b6c96 vs retail:crazy: 157/200 games, 242s
+  model:hrl1_human_b6c96 vs retail:crazy: 174/200 games, 257s
+  model:hrl1_human_b6c96 vs retail:crazy: 191/200 games, 272s
+retail:crazy: +200 games
+
+result (model against each opponent; a draw is half a win):
+  model:hrl1_human_b6c96 vs retail:crazy: W-L-D 155-44-1 of 200, score 77.8%, capped 1, mean turns 26.2
+results: /kvm/polytopia-ai-data/arena/human/hrl1_human_b6c96_crazy.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/arena/human/hrl1_human_b6c96_crazy.jsonl

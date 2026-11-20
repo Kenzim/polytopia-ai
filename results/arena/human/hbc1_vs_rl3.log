@@ -1,0 +1,26 @@
+model:hbc1_rl3_human: /kvm/polytopia-ai-data/runs/hbc1_rl3_human/ckpt_final.pt (step 6000)
+model:rl3_b6c96/ckpt_u00480: /kvm/polytopia-ai-data/runs/rl3_b6c96/ckpt_u00480.pt (step 480)
+  model:hbc1_rl3_human vs model:rl3_b6c96/ckpt_u00480: 0/200 games, 0s
+  model:hbc1_rl3_human vs model:rl3_b6c96/ckpt_u00480: 1/200 games, 30s
+  model:hbc1_rl3_human vs model:rl3_b6c96/ckpt_u00480: 1/200 games, 60s
+  model:hbc1_rl3_human vs model:rl3_b6c96/ckpt_u00480: 8/200 games, 91s
+  model:hbc1_rl3_human vs model:rl3_b6c96/ckpt_u00480: 17/200 games, 121s
+  model:hbc1_rl3_human vs model:rl3_b6c96/ckpt_u00480: 28/200 games, 151s
+  model:hbc1_rl3_human vs model:rl3_b6c96/ckpt_u00480: 38/200 games, 181s
+  model:hbc1_rl3_human vs model:rl3_b6c96/ckpt_u00480: 49/200 games, 211s
+  model:hbc1_rl3_human vs model:rl3_b6c96/ckpt_u00480: 61/200 games, 241s
+  model:hbc1_rl3_human vs model:rl3_b6c96/ckpt_u00480: 74/200 games, 272s
+  model:hbc1_rl3_human vs model:rl3_b6c96/ckpt_u00480: 89/200 games, 302s
+  model:hbc1_rl3_human vs model:rl3_b6c96/ckpt_u00480: 111/200 games, 332s
+  model:hbc1_rl3_human vs model:rl3_b6c96/ckpt_u00480: 125/200 games, 362s
+  model:hbc1_rl3_human vs model:rl3_b6c96/ckpt_u00480: 134/200 games, 392s
+  model:hbc1_rl3_human vs model:rl3_b6c96/ckpt_u00480: 148/200 games, 422s
+  model:hbc1_rl3_human vs model:rl3_b6c96/ckpt_u00480: 158/200 games, 452s
+  model:hbc1_rl3_human vs model:rl3_b6c96/ckpt_u00480: 166/200 games, 482s
+  model:hbc1_rl3_human vs model:rl3_b6c96/ckpt_u00480: 172/200 games, 512s
+  model:hbc1_rl3_human vs model:rl3_b6c96/ckpt_u00480: 182/200 games, 542s
+  model:hbc1_rl3_human vs model:rl3_b6c96/ckpt_u00480: 188/200 games, 572s
+  model:hbc1_rl3_human vs model:rl3_b6c96/ckpt_u00480: 190/200 games, 602s
+  model:hbc1_rl3_human vs model:rl3_b6c96/ckpt_u00480: 198/200 games, 632s
+  model:hbc1_rl3_human vs model:rl3_b6c96/ckpt_u00480: 199/200 games, 662s
+model:hbc1_rl3_human vs model:rl3_b6c96/ckpt_u00480: W-L-D 77-119-4 of 200, score 39.5%, capped 4

@@ -1,0 +1,50 @@
+model:abc_turn: /kvm/tmp/abc/runs/abc_turn/ckpt_final.pt (step 300), 1.42M params
+  model:abc_turn vs retail:crazy: 0/400 games, 0s
+  model:abc_turn vs retail:crazy: 0/400 games, 16s
+  model:abc_turn vs retail:crazy: 1/400 games, 31s
+  model:abc_turn vs retail:crazy: 6/400 games, 46s
+  model:abc_turn vs retail:crazy: 9/400 games, 61s
+  model:abc_turn vs retail:crazy: 19/400 games, 76s
+  model:abc_turn vs retail:crazy: 21/400 games, 91s
+  model:abc_turn vs retail:crazy: 31/400 games, 106s
+  model:abc_turn vs retail:crazy: 38/400 games, 122s
+  model:abc_turn vs retail:crazy: 46/400 games, 137s
+  model:abc_turn vs retail:crazy: 51/400 games, 152s
+  model:abc_turn vs retail:crazy: 59/400 games, 167s
+  model:abc_turn vs retail:crazy: 68/400 games, 182s
+  model:abc_turn vs retail:crazy: 78/400 games, 198s
+  model:abc_turn vs retail:crazy: 87/400 games, 213s
+  model:abc_turn vs retail:crazy: 98/400 games, 228s
+  model:abc_turn vs retail:crazy: 105/400 games, 243s
+  model:abc_turn vs retail:crazy: 113/400 games, 258s
+  model:abc_turn vs retail:crazy: 121/400 games, 273s
+  model:abc_turn vs retail:crazy: 132/400 games, 288s
+  model:abc_turn vs retail:crazy: 147/400 games, 304s
+  model:abc_turn vs retail:crazy: 154/400 games, 319s
+  model:abc_turn vs retail:crazy: 164/400 games, 334s
+  model:abc_turn vs retail:crazy: 179/400 games, 349s
+  model:abc_turn vs retail:crazy: 185/400 games, 365s
+  model:abc_turn vs retail:crazy: 202/400 games, 380s
+  model:abc_turn vs retail:crazy: 211/400 games, 395s
+  model:abc_turn vs retail:crazy: 218/400 games, 410s
+  model:abc_turn vs retail:crazy: 224/400 games, 426s
+  model:abc_turn vs retail:crazy: 235/400 games, 441s
+  model:abc_turn vs retail:crazy: 243/400 games, 456s
+  model:abc_turn vs retail:crazy: 253/400 games, 471s
+  model:abc_turn vs retail:crazy: 259/400 games, 486s
+  model:abc_turn vs retail:crazy: 268/400 games, 502s
+  model:abc_turn vs retail:crazy: 283/400 games, 517s
+  model:abc_turn vs retail:crazy: 294/400 games, 532s
+  model:abc_turn vs retail:crazy: 303/400 games, 548s
+  model:abc_turn vs retail:crazy: 315/400 games, 563s
+  model:abc_turn vs retail:crazy: 331/400 games, 578s
+  model:abc_turn vs retail:crazy: 340/400 games, 593s
+  model:abc_turn vs retail:crazy: 350/400 games, 608s
+  model:abc_turn vs retail:crazy: 367/400 games, 623s
+  model:abc_turn vs retail:crazy: 382/400 games, 638s
+  model:abc_turn vs retail:crazy: 392/400 games, 653s
+retail:crazy: +400 games
+
+result (model against each opponent; a draw is half a win):
+  model:abc_turn vs retail:crazy: W-L-D 355-45-0 of 400, score 88.8%, capped 0, mean turns 25.4
+results: /kvm/tmp/abc/eval/turn_crazy.jsonl   report: python tools/elo.py /kvm/tmp/abc/eval/turn_crazy.jsonl

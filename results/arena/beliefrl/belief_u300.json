@@ -1,0 +1,90 @@
+{
+  "hidden_tiles": 25035627,
+  "groups": {
+    "terrain": {
+      "hidden_tiles": 25035627,
+      "majority_class": 3,
+      "majority_share": 0.3317732365959918,
+      "accuracy": 0.4765312248820451,
+      "baseline_accuracy": 0.3317732365959918,
+      "ce": 1.2403467500264371,
+      "baseline_ce": 1.5129292778514098,
+      "ce_skill": 0.18016871760990805,
+      "nonmajority_precision": 0.8104595393531863,
+      "nonmajority_recall": 0.5800484127536332,
+      "nonmajority_f1": 0.6761640862111986
+    },
+    "resource": {
+      "hidden_tiles": 25035627,
+      "majority_class": 0,
+      "majority_share": 0.6829205036486604,
+      "accuracy": 0.6828305118941099,
+      "baseline_accuracy": 0.6829205036486604,
+      "ce": 1.149943521578592,
+      "baseline_ce": 1.2451195180893555,
+      "ce_skill": 0.07643924549252246,
+      "nonmajority_precision": 0.594827125527708,
+      "nonmajority_recall": 0.0014021922118180705,
+      "nonmajority_f1": 0.002797789165937853
+    },
+    "site": {
+      "hidden_tiles": 25035627,
+      "majority_class": 0,
+      "majority_share": 0.9659360238910734,
+      "accuracy": 0.9659360238910734,
+      "baseline_accuracy": 0.9659360238910734,
+      "ce": 0.14017704042315773,
+      "baseline_ce": 0.17219266420170415,
+      "ce_skill": 0.18592908081754134,
+      "nonmajority_precision": NaN,
+      "nonmajority_recall": 0.0,
+      "nonmajority_f1": NaN
+    },
+    "enemy_city": {
+      "hidden_tiles": 25035627,
+      "majority_class": 0,
+      "majority_share": 0.9656481541285146,
+      "accuracy": 0.9678006466544656,
+      "baseline_accuracy": 0.9656481541285146,
+      "ce": 0.09925009679795375,
+      "baseline_ce": 0.14955843786414502,
+      "ce_skill": 0.33637915576445143,
+      "nonmajority_precision": 0.645260416947453,
+      "nonmajority_recall": 0.13917118206553336,
+      "nonmajority_f1": 0.22895981008329896
+    },
+    "enemy_capital": {
+      "hidden_tiles": 25035627,
+      "majority_class": 0,
+      "majority_share": 0.9907090004176847,
+      "accuracy": 0.990706444060698,
+      "baseline_accuracy": 0.9907090004176847,
+      "ce": 0.04342811991631087,
+      "baseline_ce": 0.06189703290171531,
+      "ce_skill": 0.29838123282469375,
+      "nonmajority_precision": 0.5340572556762093,
+      "nonmajority_recall": 0.002325821345967,
+      "nonmajority_f1": 0.004631472611388627
+    },
+    "unit": {
+      "hidden_tiles": 25035627,
+      "majority_class": 0,
+      "majority_share": 0.9251193109723196,
+      "accuracy": 0.9251375250158504,
+      "baseline_accuracy": 0.9251193109723196,
+      "ce": 0.22853117929584857,
+      "baseline_ce": 0.2660846149957538,
+      "ce_skill": 0.14113343494325858,
+      "nonmajority_precision": 0.505558264261336,
+      "nonmajority_recall": 0.011062125103684086,
+      "nonmajority_f1": 0.02165051508452502
+    }
+  },
+  "capital_location": {
+    "positions_with_hidden_capital": 163530,
+    "top1": 0.32583012291322694,
+    "top1_uniform": 0.03642258228668896,
+    "top3": 0.5609735216779795,
+    "top3_uniform": 0.10595396899407025
+  }
+}

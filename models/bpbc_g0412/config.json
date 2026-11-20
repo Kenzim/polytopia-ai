@@ -1,0 +1,50 @@
+{
+  "train": {
+    "name": "bpbc_g0412",
+    "model": "b6c96",
+    "train": [
+      "/kvm/polytopia-ai-data/human/bpolait/shards"
+    ],
+    "val": [
+      "/kvm/polytopia-ai-data/human/bpolait/val"
+    ],
+    "batch_size": 256,
+    "steps": 4000,
+    "lr": 5e-05,
+    "weight_decay": 0.01,
+    "warmup_steps": 200,
+    "min_lr_frac": 0.02,
+    "grad_clip": 1.0,
+    "kl_weight": 0.0,
+    "kl_temperature": 50.0,
+    "winner_weight": 1.0,
+    "augment": true,
+    "bf16": true,
+    "eval_every": 500,
+    "ckpt_every": 1000,
+    "eval_batches": 100,
+    "log_every": 50,
+    "seed": 0,
+    "threads": 8,
+    "need_gb": 1.5,
+    "runs_dir": "/kvm/polytopia-ai-data/runs",
+    "device": "cuda",
+    "resume": false,
+    "init": "/kvm/polytopia-ai-data/runs/hbc1_rl3_human/ckpt_final.pt",
+    "belief_weight": 0.0,
+    "belief_hidden": 32,
+    "features": false
+  },
+  "model": {
+    "blocks": 6,
+    "channels": 96,
+    "gpool_every": 3,
+    "policy_hidden": 128,
+    "value_hidden": 128,
+    "g_dim": 247,
+    "name": "b6c96"
+  },
+  "params": 1417866,
+  "encoding_version": 2,
+  "started_at_step": 0
+}

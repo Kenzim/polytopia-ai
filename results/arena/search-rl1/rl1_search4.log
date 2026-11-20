@@ -1,0 +1,76 @@
+/kvm/polytopia-ai-data/runs/rl1_b6c96_cpu/ckpt_final.pt: SearchConfig(k=4, w=1.0, skip=0.9, budget=200, turns=4, plan=True)
+  model:rl1_b6c96_cpu:search=4 vs retail:crazy: 4/200 games, 119s
+  model:rl1_b6c96_cpu:search=4 vs retail:crazy: 8/200 games, 148s
+  model:rl1_b6c96_cpu:search=4 vs retail:crazy: 12/200 games, 199s
+  model:rl1_b6c96_cpu:search=4 vs retail:crazy: 16/200 games, 217s
+  model:rl1_b6c96_cpu:search=4 vs retail:crazy: 20/200 games, 238s
+  model:rl1_b6c96_cpu:search=4 vs retail:crazy: 28/200 games, 324s
+  model:rl1_b6c96_cpu:search=4 vs retail:crazy: 32/200 games, 353s
+  model:rl1_b6c96_cpu:search=4 vs retail:crazy: 36/200 games, 411s
+  model:rl1_b6c96_cpu:search=4 vs retail:crazy: 44/200 games, 432s
+  model:rl1_b6c96_cpu:search=4 vs retail:crazy: 48/200 games, 458s
+  model:rl1_b6c96_cpu:search=4 vs retail:crazy: 56/200 games, 507s
+  model:rl1_b6c96_cpu:search=4 vs retail:crazy: 60/200 games, 550s
+  model:rl1_b6c96_cpu:search=4 vs retail:crazy: 64/200 games, 595s
+  model:rl1_b6c96_cpu:search=4 vs retail:crazy: 68/200 games, 627s
+  model:rl1_b6c96_cpu:search=4 vs retail:crazy: 72/200 games, 645s
+  model:rl1_b6c96_cpu:search=4 vs retail:crazy: 76/200 games, 689s
+  model:rl1_b6c96_cpu:search=4 vs retail:crazy: 84/200 games, 718s
+  model:rl1_b6c96_cpu:search=4 vs retail:crazy: 88/200 games, 739s
+  model:rl1_b6c96_cpu:search=4 vs retail:crazy: 96/200 games, 789s
+  model:rl1_b6c96_cpu:search=4 vs retail:crazy: 100/200 games, 818s
+  model:rl1_b6c96_cpu:search=4 vs retail:crazy: 104/200 games, 864s
+  model:rl1_b6c96_cpu:search=4 vs retail:crazy: 112/200 games, 892s
+  model:rl1_b6c96_cpu:search=4 vs retail:crazy: 120/200 games, 982s
+  model:rl1_b6c96_cpu:search=4 vs retail:crazy: 124/200 games, 1027s
+  model:rl1_b6c96_cpu:search=4 vs retail:crazy: 132/200 games, 1049s
+  model:rl1_b6c96_cpu:search=4 vs retail:crazy: 144/200 games, 1074s
+  model:rl1_b6c96_cpu:search=4 vs retail:crazy: 148/200 games, 1133s
+  model:rl1_b6c96_cpu:search=4 vs retail:crazy: 156/200 games, 1172s
+  model:rl1_b6c96_cpu:search=4 vs retail:crazy: 160/200 games, 1189s
+  model:rl1_b6c96_cpu:search=4 vs retail:crazy: 164/200 games, 1210s
+  model:rl1_b6c96_cpu:search=4 vs retail:crazy: 176/200 games, 1255s
+  model:rl1_b6c96_cpu:search=4 vs retail:crazy: 180/200 games, 1304s
+  model:rl1_b6c96_cpu:search=4 vs retail:crazy: 188/200 games, 1351s
+  model:rl1_b6c96_cpu:search=4 vs retail:crazy: 192/200 games, 1371s
+  model:rl1_b6c96_cpu:search=4 vs retail:crazy: 200/200 games, 1441s
+retail:crazy: +200 games; 200 games, 153288 decisions: 68.9 ms each (15/s), searched 27448 (18%), plan steps 125394, network rows 27894 root + 2134112 rollout; 52.8 s of policy per game, wall 1441s
+  model:rl1_b6c96_cpu:search=4 vs retail:hard: 4/200 games, 58s
+  model:rl1_b6c96_cpu:search=4 vs retail:hard: 8/200 games, 143s
+  model:rl1_b6c96_cpu:search=4 vs retail:hard: 12/200 games, 158s
+  model:rl1_b6c96_cpu:search=4 vs retail:hard: 20/200 games, 201s
+  model:rl1_b6c96_cpu:search=4 vs retail:hard: 28/200 games, 258s
+  model:rl1_b6c96_cpu:search=4 vs retail:hard: 32/200 games, 278s
+  model:rl1_b6c96_cpu:search=4 vs retail:hard: 36/200 games, 296s
+  model:rl1_b6c96_cpu:search=4 vs retail:hard: 40/200 games, 370s
+  model:rl1_b6c96_cpu:search=4 vs retail:hard: 48/200 games, 402s
+  model:rl1_b6c96_cpu:search=4 vs retail:hard: 52/200 games, 420s
+  model:rl1_b6c96_cpu:search=4 vs retail:hard: 60/200 games, 507s
+  model:rl1_b6c96_cpu:search=4 vs retail:hard: 72/200 games, 555s
+  model:rl1_b6c96_cpu:search=4 vs retail:hard: 76/200 games, 579s
+  model:rl1_b6c96_cpu:search=4 vs retail:hard: 80/200 games, 599s
+  model:rl1_b6c96_cpu:search=4 vs retail:hard: 84/200 games, 621s
+  model:rl1_b6c96_cpu:search=4 vs retail:hard: 88/200 games, 687s
+  model:rl1_b6c96_cpu:search=4 vs retail:hard: 92/200 games, 717s
+  model:rl1_b6c96_cpu:search=4 vs retail:hard: 100/200 games, 797s
+  model:rl1_b6c96_cpu:search=4 vs retail:hard: 112/200 games, 874s
+  model:rl1_b6c96_cpu:search=4 vs retail:hard: 124/200 games, 950s
+  model:rl1_b6c96_cpu:search=4 vs retail:hard: 132/200 games, 967s
+  model:rl1_b6c96_cpu:search=4 vs retail:hard: 140/200 games, 990s
+  model:rl1_b6c96_cpu:search=4 vs retail:hard: 148/200 games, 1019s
+  model:rl1_b6c96_cpu:search=4 vs retail:hard: 152/200 games, 1039s
+  model:rl1_b6c96_cpu:search=4 vs retail:hard: 156/200 games, 1081s
+  model:rl1_b6c96_cpu:search=4 vs retail:hard: 164/200 games, 1098s
+  model:rl1_b6c96_cpu:search=4 vs retail:hard: 168/200 games, 1131s
+  model:rl1_b6c96_cpu:search=4 vs retail:hard: 172/200 games, 1164s
+  model:rl1_b6c96_cpu:search=4 vs retail:hard: 180/200 games, 1235s
+  model:rl1_b6c96_cpu:search=4 vs retail:hard: 184/200 games, 1274s
+  model:rl1_b6c96_cpu:search=4 vs retail:hard: 188/200 games, 1325s
+  model:rl1_b6c96_cpu:search=4 vs retail:hard: 196/200 games, 1427s
+  model:rl1_b6c96_cpu:search=4 vs retail:hard: 200/200 games, 1771s
+retail:hard: +200 games; 200 games, 151209 decisions: 70.3 ms each (14/s), searched 26125 (17%), plan steps 124652, network rows 26557 root + 2116405 rollout; 53.1 s of policy per game, wall 1771s
+
+result (model against each opponent; a draw is half a win):
+  model:rl1_b6c96_cpu:search=4 vs retail:crazy: W-L-D 136-63-1 of 200, score 68.2%, capped 1, mean turns 36.0
+  model:rl1_b6c96_cpu:search=4 vs retail:hard: W-L-D 174-23-3 of 200, score 87.8%, capped 3, mean turns 33.9
+results: /kvm/polytopia-ai-data/arena/search-rl1/rl1_search4.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/arena/search-rl1/rl1_search4.jsonl

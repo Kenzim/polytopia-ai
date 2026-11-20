@@ -1,0 +1,49 @@
+model:abc_ctrl: /kvm/tmp/abc/runs/abc_ctrl/ckpt_final.pt (step 300), 1.42M params
+  model:abc_ctrl vs retail:crazy: 0/400 games, 0s
+  model:abc_ctrl vs retail:crazy: 0/400 games, 15s
+  model:abc_ctrl vs retail:crazy: 2/400 games, 30s
+  model:abc_ctrl vs retail:crazy: 5/400 games, 46s
+  model:abc_ctrl vs retail:crazy: 14/400 games, 61s
+  model:abc_ctrl vs retail:crazy: 25/400 games, 76s
+  model:abc_ctrl vs retail:crazy: 31/400 games, 91s
+  model:abc_ctrl vs retail:crazy: 41/400 games, 106s
+  model:abc_ctrl vs retail:crazy: 48/400 games, 121s
+  model:abc_ctrl vs retail:crazy: 56/400 games, 136s
+  model:abc_ctrl vs retail:crazy: 65/400 games, 151s
+  model:abc_ctrl vs retail:crazy: 69/400 games, 166s
+  model:abc_ctrl vs retail:crazy: 80/400 games, 182s
+  model:abc_ctrl vs retail:crazy: 89/400 games, 197s
+  model:abc_ctrl vs retail:crazy: 95/400 games, 212s
+  model:abc_ctrl vs retail:crazy: 102/400 games, 227s
+  model:abc_ctrl vs retail:crazy: 117/400 games, 242s
+  model:abc_ctrl vs retail:crazy: 125/400 games, 257s
+  model:abc_ctrl vs retail:crazy: 133/400 games, 273s
+  model:abc_ctrl vs retail:crazy: 142/400 games, 288s
+  model:abc_ctrl vs retail:crazy: 154/400 games, 303s
+  model:abc_ctrl vs retail:crazy: 161/400 games, 318s
+  model:abc_ctrl vs retail:crazy: 167/400 games, 333s
+  model:abc_ctrl vs retail:crazy: 174/400 games, 348s
+  model:abc_ctrl vs retail:crazy: 187/400 games, 364s
+  model:abc_ctrl vs retail:crazy: 193/400 games, 379s
+  model:abc_ctrl vs retail:crazy: 201/400 games, 394s
+  model:abc_ctrl vs retail:crazy: 210/400 games, 409s
+  model:abc_ctrl vs retail:crazy: 220/400 games, 425s
+  model:abc_ctrl vs retail:crazy: 227/400 games, 440s
+  model:abc_ctrl vs retail:crazy: 239/400 games, 455s
+  model:abc_ctrl vs retail:crazy: 248/400 games, 470s
+  model:abc_ctrl vs retail:crazy: 255/400 games, 485s
+  model:abc_ctrl vs retail:crazy: 264/400 games, 500s
+  model:abc_ctrl vs retail:crazy: 278/400 games, 516s
+  model:abc_ctrl vs retail:crazy: 288/400 games, 531s
+  model:abc_ctrl vs retail:crazy: 295/400 games, 546s
+  model:abc_ctrl vs retail:crazy: 309/400 games, 561s
+  model:abc_ctrl vs retail:crazy: 318/400 games, 576s
+  model:abc_ctrl vs retail:crazy: 335/400 games, 591s
+  model:abc_ctrl vs retail:crazy: 358/400 games, 606s
+  model:abc_ctrl vs retail:crazy: 377/400 games, 621s
+  model:abc_ctrl vs retail:crazy: 394/400 games, 636s
+retail:crazy: +400 games
+
+result (model against each opponent; a draw is half a win):
+  model:abc_ctrl vs retail:crazy: W-L-D 355-45-0 of 400, score 88.8%, capped 0, mean turns 24.3
+results: /kvm/tmp/abc/eval/ctrl_crazy.jsonl   report: python tools/elo.py /kvm/tmp/abc/eval/ctrl_crazy.jsonl

@@ -1,0 +1,89 @@
+model:ab_feat_s1: /kvm/polytopia-ai-data/runs/ab_feat_s1/ckpt_final.pt (step 300), 1.43M params
+  model:ab_feat_s1 vs retail:hard: 0/400 games, 0s
+  model:ab_feat_s1 vs retail:hard: 1/400 games, 15s
+  model:ab_feat_s1 vs retail:hard: 5/400 games, 30s
+  model:ab_feat_s1 vs retail:hard: 8/400 games, 46s
+  model:ab_feat_s1 vs retail:hard: 15/400 games, 61s
+  model:ab_feat_s1 vs retail:hard: 26/400 games, 76s
+  model:ab_feat_s1 vs retail:hard: 35/400 games, 91s
+  model:ab_feat_s1 vs retail:hard: 49/400 games, 106s
+  model:ab_feat_s1 vs retail:hard: 58/400 games, 121s
+  model:ab_feat_s1 vs retail:hard: 74/400 games, 137s
+  model:ab_feat_s1 vs retail:hard: 89/400 games, 152s
+  model:ab_feat_s1 vs retail:hard: 99/400 games, 167s
+  model:ab_feat_s1 vs retail:hard: 108/400 games, 182s
+  model:ab_feat_s1 vs retail:hard: 118/400 games, 197s
+  model:ab_feat_s1 vs retail:hard: 125/400 games, 213s
+  model:ab_feat_s1 vs retail:hard: 139/400 games, 228s
+  model:ab_feat_s1 vs retail:hard: 148/400 games, 243s
+  model:ab_feat_s1 vs retail:hard: 158/400 games, 258s
+  model:ab_feat_s1 vs retail:hard: 165/400 games, 273s
+  model:ab_feat_s1 vs retail:hard: 178/400 games, 288s
+  model:ab_feat_s1 vs retail:hard: 187/400 games, 303s
+  model:ab_feat_s1 vs retail:hard: 197/400 games, 319s
+  model:ab_feat_s1 vs retail:hard: 210/400 games, 334s
+  model:ab_feat_s1 vs retail:hard: 222/400 games, 349s
+  model:ab_feat_s1 vs retail:hard: 232/400 games, 364s
+  model:ab_feat_s1 vs retail:hard: 248/400 games, 379s
+  model:ab_feat_s1 vs retail:hard: 259/400 games, 394s
+  model:ab_feat_s1 vs retail:hard: 266/400 games, 409s
+  model:ab_feat_s1 vs retail:hard: 278/400 games, 425s
+  model:ab_feat_s1 vs retail:hard: 295/400 games, 440s
+  model:ab_feat_s1 vs retail:hard: 310/400 games, 455s
+  model:ab_feat_s1 vs retail:hard: 317/400 games, 470s
+  model:ab_feat_s1 vs retail:hard: 337/400 games, 485s
+  model:ab_feat_s1 vs retail:hard: 354/400 games, 500s
+  model:ab_feat_s1 vs retail:hard: 369/400 games, 515s
+  model:ab_feat_s1 vs retail:hard: 381/400 games, 530s
+  model:ab_feat_s1 vs retail:hard: 395/400 games, 545s
+retail:hard: +400 games
+  model:ab_feat_s1 vs retail:crazy: 0/400 games, 0s
+  model:ab_feat_s1 vs retail:crazy: 0/400 games, 15s
+  model:ab_feat_s1 vs retail:crazy: 5/400 games, 31s
+  model:ab_feat_s1 vs retail:crazy: 12/400 games, 46s
+  model:ab_feat_s1 vs retail:crazy: 21/400 games, 61s
+  model:ab_feat_s1 vs retail:crazy: 26/400 games, 76s
+  model:ab_feat_s1 vs retail:crazy: 42/400 games, 91s
+  model:ab_feat_s1 vs retail:crazy: 48/400 games, 107s
+  model:ab_feat_s1 vs retail:crazy: 56/400 games, 122s
+  model:ab_feat_s1 vs retail:crazy: 64/400 games, 137s
+  model:ab_feat_s1 vs retail:crazy: 79/400 games, 152s
+  model:ab_feat_s1 vs retail:crazy: 88/400 games, 168s
+  model:ab_feat_s1 vs retail:crazy: 101/400 games, 183s
+  model:ab_feat_s1 vs retail:crazy: 110/400 games, 198s
+  model:ab_feat_s1 vs retail:crazy: 119/400 games, 213s
+  model:ab_feat_s1 vs retail:crazy: 128/400 games, 229s
+  model:ab_feat_s1 vs retail:crazy: 136/400 games, 244s
+  model:ab_feat_s1 vs retail:crazy: 148/400 games, 259s
+  model:ab_feat_s1 vs retail:crazy: 155/400 games, 274s
+  model:ab_feat_s1 vs retail:crazy: 164/400 games, 289s
+  model:ab_feat_s1 vs retail:crazy: 172/400 games, 304s
+  model:ab_feat_s1 vs retail:crazy: 181/400 games, 320s
+  model:ab_feat_s1 vs retail:crazy: 192/400 games, 335s
+  model:ab_feat_s1 vs retail:crazy: 203/400 games, 350s
+  model:ab_feat_s1 vs retail:crazy: 208/400 games, 366s
+  model:ab_feat_s1 vs retail:crazy: 222/400 games, 381s
+  model:ab_feat_s1 vs retail:crazy: 232/400 games, 396s
+  model:ab_feat_s1 vs retail:crazy: 240/400 games, 411s
+  model:ab_feat_s1 vs retail:crazy: 248/400 games, 426s
+  model:ab_feat_s1 vs retail:crazy: 253/400 games, 442s
+  model:ab_feat_s1 vs retail:crazy: 260/400 games, 457s
+  model:ab_feat_s1 vs retail:crazy: 273/400 games, 472s
+  model:ab_feat_s1 vs retail:crazy: 282/400 games, 487s
+  model:ab_feat_s1 vs retail:crazy: 295/400 games, 502s
+  model:ab_feat_s1 vs retail:crazy: 305/400 games, 517s
+  model:ab_feat_s1 vs retail:crazy: 314/400 games, 532s
+  model:ab_feat_s1 vs retail:crazy: 329/400 games, 547s
+  model:ab_feat_s1 vs retail:crazy: 345/400 games, 562s
+  model:ab_feat_s1 vs retail:crazy: 356/400 games, 577s
+  model:ab_feat_s1 vs retail:crazy: 362/400 games, 592s
+  model:ab_feat_s1 vs retail:crazy: 374/400 games, 607s
+  model:ab_feat_s1 vs retail:crazy: 384/400 games, 622s
+  model:ab_feat_s1 vs retail:crazy: 391/400 games, 637s
+  model:ab_feat_s1 vs retail:crazy: 399/400 games, 652s
+retail:crazy: +400 games
+
+result (model against each opponent; a draw is half a win):
+  model:ab_feat_s1 vs retail:hard: W-L-D 358-42-0 of 400, score 89.5%, capped 0, mean turns 26.5
+  model:ab_feat_s1 vs retail:crazy: W-L-D 306-94-0 of 400, score 76.5%, capped 0, mean turns 28.7
+results: /kvm/polytopia-ai-data/arena/stack/ab_feat_s1_vs_retail.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/arena/stack/ab_feat_s1_vs_retail.jsonl

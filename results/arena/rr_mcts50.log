@@ -1,0 +1,28 @@
+polyai-arena: 6 agents, 1500 games (1000 already done) on 20 threads, seeds 1000000..1000049
+24/500 games, 30.0s
+55/500 games, 60.0s
+80/500 games, 90.0s
+106/500 games, 120.0s
+128/500 games, 150.1s
+168/500 games, 180.1s
+187/500 games, 210.1s
+212/500 games, 240.1s
+242/500 games, 270.1s
+256/500 games, 300.1s
+280/500 games, 330.1s
+308/500 games, 360.1s
+337/500 games, 390.1s
+367/500 games, 420.1s
+402/500 games, 450.2s
+435/500 games, 480.2s
+456/500 games, 510.2s
+487/500 games, 540.2s
+498/500 games, 570.2s
+499/500 games, 600.2s
+done: 500 games in 622.8s
+random vs mcts:50: 20-80-0 (W-L-D for the first), 99 adjudicated, 41.9s per game
+retail:easy vs mcts:50: 100-0-0 (W-L-D for the first), 0 adjudicated, 31.0s per game
+retail:normal vs mcts:50: 100-0-0 (W-L-D for the first), 0 adjudicated, 18.1s per game
+retail:hard vs mcts:50: 100-0-0 (W-L-D for the first), 0 adjudicated, 10.0s per game
+retail:crazy vs mcts:50: 100-0-0 (W-L-D for the first), 0 adjudicated, 9.4s per game
+tables: /kvm/polytopia/.venv/bin/python ai/tools/elo.py <file.jsonl>

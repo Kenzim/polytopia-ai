@@ -1,0 +1,722 @@
+model:avg_h50_b6c96: /kvm/polytopia-ai-data/runs/avg_h50_b6c96/ckpt_final.pt (step 0)
+model:avg_h25_b6c96: /kvm/polytopia-ai-data/runs/avg_h25_b6c96/ckpt_final.pt (step 0)
+model:avg_h25_b6c96: /kvm/polytopia-ai-data/runs/avg_h25_b6c96/ckpt_final.pt (step 0), 1.42M params
+model:avg_h50_b6c96: /kvm/polytopia-ai-data/runs/avg_h50_b6c96/ckpt_final.pt (step 0), 1.42M params
+model:hrl1_human_b6c96: /kvm/polytopia-ai-data/runs/hrl1_human_b6c96/ckpt_final.pt (step 300)
+model:hrl1_human_b6c96: /kvm/polytopia-ai-data/runs/hrl1_human_b6c96/ckpt_final.pt (step 300)
+  model:avg_h25_b6c96 vs retail:crazy: 0/200 games, 0s
+  model:avg_h50_b6c96 vs retail:crazy: 0/200 games, 0s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 0/400 games, 0s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 0/400 games, 0s
+  model:avg_h50_b6c96 vs retail:crazy: 0/200 games, 15s
+  model:avg_h25_b6c96 vs retail:crazy: 0/200 games, 15s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 0/400 games, 30s
+  model:avg_h50_b6c96 vs retail:crazy: 0/200 games, 30s
+  model:avg_h25_b6c96 vs retail:crazy: 1/200 games, 31s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 0/400 games, 31s
+  model:avg_h50_b6c96 vs retail:crazy: 5/200 games, 46s
+  model:avg_h25_b6c96 vs retail:crazy: 6/200 games, 46s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 0/400 games, 61s
+  model:avg_h50_b6c96 vs retail:crazy: 15/200 games, 61s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 0/400 games, 61s
+  model:avg_h25_b6c96 vs retail:crazy: 17/200 games, 61s
+  model:avg_h50_b6c96 vs retail:crazy: 24/200 games, 76s
+  model:avg_h25_b6c96 vs retail:crazy: 24/200 games, 76s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 7/400 games, 91s
+  model:avg_h50_b6c96 vs retail:crazy: 33/200 games, 91s
+  model:avg_h25_b6c96 vs retail:crazy: 27/200 games, 91s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 3/400 games, 91s
+  model:avg_h50_b6c96 vs retail:crazy: 41/200 games, 106s
+  model:avg_h25_b6c96 vs retail:crazy: 35/200 games, 106s
+  model:avg_h50_b6c96 vs retail:crazy: 48/200 games, 121s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 15/400 games, 121s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 17/400 games, 121s
+  model:avg_h25_b6c96 vs retail:crazy: 45/200 games, 122s
+  model:avg_h50_b6c96 vs retail:crazy: 59/200 games, 136s
+  model:avg_h25_b6c96 vs retail:crazy: 56/200 games, 137s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 24/400 games, 151s
+  model:avg_h50_b6c96 vs retail:crazy: 62/200 games, 151s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 27/400 games, 151s
+  model:avg_h25_b6c96 vs retail:crazy: 65/200 games, 152s
+  model:avg_h50_b6c96 vs retail:crazy: 76/200 games, 166s
+  model:avg_h25_b6c96 vs retail:crazy: 76/200 games, 167s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 38/400 games, 181s
+  model:avg_h50_b6c96 vs retail:crazy: 83/200 games, 182s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 33/400 games, 182s
+  model:avg_h25_b6c96 vs retail:crazy: 87/200 games, 182s
+  model:avg_h50_b6c96 vs retail:crazy: 96/200 games, 197s
+  model:avg_h25_b6c96 vs retail:crazy: 96/200 games, 197s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 49/400 games, 211s
+  model:avg_h50_b6c96 vs retail:crazy: 102/200 games, 212s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 48/400 games, 212s
+  model:avg_h25_b6c96 vs retail:crazy: 103/200 games, 213s
+  model:avg_h50_b6c96 vs retail:crazy: 119/200 games, 227s
+  model:avg_h25_b6c96 vs retail:crazy: 118/200 games, 228s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 60/400 games, 242s
+  model:avg_h50_b6c96 vs retail:crazy: 130/200 games, 242s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 54/400 games, 242s
+  model:avg_h25_b6c96 vs retail:crazy: 138/200 games, 243s
+  model:avg_h50_b6c96 vs retail:crazy: 146/200 games, 257s
+  model:avg_h25_b6c96 vs retail:crazy: 149/200 games, 258s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 68/400 games, 272s
+  model:avg_h50_b6c96 vs retail:crazy: 170/200 games, 272s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 65/400 games, 272s
+  model:avg_h25_b6c96 vs retail:crazy: 169/200 games, 273s
+  model:avg_h50_b6c96 vs retail:crazy: 188/200 games, 287s
+  model:avg_h25_b6c96 vs retail:crazy: 186/200 games, 288s
+retail:crazy: +200 games
+
+result (model against each opponent; a draw is half a win):
+  model:avg_h25_b6c96 vs retail:crazy: W-L-D 160-40-0 of 200, score 80.0%, capped 0, mean turns 27.7
+results: /kvm/polytopia-ai-data/arena/soup/avg_h25_b6c96_crazy.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/arena/soup/avg_h25_b6c96_crazy.jsonl
+model:avg_h75_b6c96: /kvm/polytopia-ai-data/runs/avg_h75_b6c96/ckpt_final.pt (step 0)
+model:hrl1_human_b6c96: /kvm/polytopia-ai-data/runs/hrl1_human_b6c96/ckpt_final.pt (step 300)
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 0/400 games, 0s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 73/400 games, 302s
+  model:avg_h50_b6c96 vs retail:crazy: 199/200 games, 302s
+retail:crazy: +200 games
+
+result (model against each opponent; a draw is half a win):
+  model:avg_h50_b6c96 vs retail:crazy: W-L-D 164-36-0 of 200, score 82.0%, capped 0, mean turns 27.0
+results: /kvm/polytopia-ai-data/arena/soup/avg_h50_b6c96_crazy.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/arena/soup/avg_h50_b6c96_crazy.jsonl
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 66/400 games, 303s
+model:avg_h75_b6c96: /kvm/polytopia-ai-data/runs/avg_h75_b6c96/ckpt_final.pt (step 0), 1.42M params
+  model:avg_h75_b6c96 vs retail:crazy: 0/200 games, 0s
+  model:avg_h75_b6c96 vs retail:crazy: 0/200 games, 15s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 0/400 games, 31s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 84/400 games, 332s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 71/400 games, 333s
+  model:avg_h75_b6c96 vs retail:crazy: 2/200 games, 31s
+  model:avg_h75_b6c96 vs retail:crazy: 5/200 games, 46s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 0/400 games, 61s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 95/400 games, 362s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 81/400 games, 363s
+  model:avg_h75_b6c96 vs retail:crazy: 10/200 games, 61s
+  model:avg_h75_b6c96 vs retail:crazy: 22/200 games, 76s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 6/400 games, 91s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 103/400 games, 393s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 94/400 games, 393s
+  model:avg_h75_b6c96 vs retail:crazy: 28/200 games, 91s
+  model:avg_h75_b6c96 vs retail:crazy: 36/200 games, 106s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 15/400 games, 121s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 107/400 games, 423s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 102/400 games, 423s
+  model:avg_h75_b6c96 vs retail:crazy: 43/200 games, 121s
+  model:avg_h75_b6c96 vs retail:crazy: 49/200 games, 136s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 25/400 games, 151s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 117/400 games, 453s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 108/400 games, 454s
+  model:avg_h75_b6c96 vs retail:crazy: 58/200 games, 152s
+  model:avg_h75_b6c96 vs retail:crazy: 63/200 games, 167s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 36/400 games, 182s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 131/400 games, 483s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 121/400 games, 484s
+  model:avg_h75_b6c96 vs retail:crazy: 78/200 games, 182s
+  model:avg_h75_b6c96 vs retail:crazy: 91/200 games, 197s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 50/400 games, 212s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 136/400 games, 513s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 129/400 games, 514s
+  model:avg_h75_b6c96 vs retail:crazy: 105/200 games, 213s
+  model:avg_h75_b6c96 vs retail:crazy: 118/200 games, 228s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 59/400 games, 242s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 150/400 games, 543s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 136/400 games, 544s
+  model:avg_h75_b6c96 vs retail:crazy: 145/200 games, 243s
+  model:avg_h75_b6c96 vs retail:crazy: 164/200 games, 258s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 158/400 games, 573s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 66/400 games, 272s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 143/400 games, 574s
+  model:avg_h75_b6c96 vs retail:crazy: 180/200 games, 273s
+  model:avg_h75_b6c96 vs retail:crazy: 194/200 games, 288s
+retail:crazy: +200 games
+
+result (model against each opponent; a draw is half a win):
+  model:avg_h75_b6c96 vs retail:crazy: W-L-D 159-41-0 of 200, score 79.5%, capped 0, mean turns 26.0
+results: /kvm/polytopia-ai-data/arena/soup/avg_h75_b6c96_crazy.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/arena/soup/avg_h75_b6c96_crazy.jsonl
+model:soup5_b6c96: /kvm/polytopia-ai-data/runs/soup5_b6c96/ckpt_final.pt (step 0)
+model:hrl1_human_b6c96: /kvm/polytopia-ai-data/runs/hrl1_human_b6c96/ckpt_final.pt (step 300)
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 0/400 games, 0s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 73/400 games, 303s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 165/400 games, 604s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 150/400 games, 605s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 0/400 games, 30s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 178/400 games, 634s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 82/400 games, 333s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 155/400 games, 635s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 3/400 games, 61s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 191/400 games, 664s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 95/400 games, 363s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 164/400 games, 665s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 11/400 games, 91s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 101/400 games, 393s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 196/400 games, 694s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 176/400 games, 695s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 19/400 games, 121s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 110/400 games, 423s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 200/400 games, 725s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 182/400 games, 725s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 31/400 games, 151s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 123/400 games, 453s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 205/400 games, 755s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 186/400 games, 755s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 38/400 games, 181s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 131/400 games, 484s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 211/400 games, 785s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 195/400 games, 786s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 46/400 games, 212s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 138/400 games, 514s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 221/400 games, 816s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 199/400 games, 816s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 56/400 games, 242s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 144/400 games, 544s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 224/400 games, 846s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 207/400 games, 846s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 66/400 games, 272s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 153/400 games, 574s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 230/400 games, 876s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 213/400 games, 876s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 71/400 games, 302s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 163/400 games, 604s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 234/400 games, 906s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 221/400 games, 906s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 79/400 games, 332s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 175/400 games, 634s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 237/400 games, 937s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 223/400 games, 937s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 85/400 games, 362s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 180/400 games, 664s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 242/400 games, 967s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 229/400 games, 967s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 95/400 games, 393s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 183/400 games, 695s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 246/400 games, 997s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 234/400 games, 997s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 102/400 games, 423s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 190/400 games, 725s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 249/400 games, 1027s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 238/400 games, 1027s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 107/400 games, 453s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 199/400 games, 755s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 254/400 games, 1057s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 243/400 games, 1058s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 117/400 games, 483s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 203/400 games, 785s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 259/400 games, 1087s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 246/400 games, 1088s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 124/400 games, 513s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 206/400 games, 816s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 261/400 games, 1118s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 252/400 games, 1118s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 131/400 games, 543s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 209/400 games, 846s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 265/400 games, 1148s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 252/400 games, 1148s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 135/400 games, 574s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 212/400 games, 876s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 271/400 games, 1178s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 257/400 games, 1178s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 140/400 games, 604s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 214/400 games, 906s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 276/400 games, 1209s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 265/400 games, 1208s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 147/400 games, 634s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 221/400 games, 936s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 284/400 games, 1239s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 270/400 games, 1239s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 158/400 games, 664s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 224/400 games, 966s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 289/400 games, 1269s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 277/400 games, 1269s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 163/400 games, 694s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 229/400 games, 997s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 297/400 games, 1299s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 280/400 games, 1299s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 172/400 games, 724s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 232/400 games, 1027s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 304/400 games, 1329s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 280/400 games, 1329s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 180/400 games, 755s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 235/400 games, 1057s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 308/400 games, 1359s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 285/400 games, 1360s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 184/400 games, 785s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 237/400 games, 1087s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 310/400 games, 1389s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 288/400 games, 1390s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 187/400 games, 815s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 240/400 games, 1117s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 313/400 games, 1419s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 290/400 games, 1420s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 191/400 games, 845s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 246/400 games, 1147s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 313/400 games, 1450s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 295/400 games, 1450s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 198/400 games, 875s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 250/400 games, 1178s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 315/400 games, 1480s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 295/400 games, 1480s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 206/400 games, 906s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 253/400 games, 1208s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 316/400 games, 1510s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 300/400 games, 1511s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 209/400 games, 936s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 258/400 games, 1238s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 318/400 games, 1540s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 301/400 games, 1541s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 210/400 games, 966s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 262/400 games, 1268s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 318/400 games, 1570s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 306/400 games, 1571s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 212/400 games, 996s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 267/400 games, 1298s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 320/400 games, 1600s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 309/400 games, 1601s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 214/400 games, 1027s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 273/400 games, 1328s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 323/400 games, 1631s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 312/400 games, 1631s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 218/400 games, 1057s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 279/400 games, 1359s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 326/400 games, 1661s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 316/400 games, 1661s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 218/400 games, 1087s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 280/400 games, 1389s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 326/400 games, 1691s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 318/400 games, 1691s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 225/400 games, 1117s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 284/400 games, 1419s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 328/400 games, 1721s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 318/400 games, 1721s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 231/400 games, 1147s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 287/400 games, 1449s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 330/400 games, 1751s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 320/400 games, 1751s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 236/400 games, 1177s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 289/400 games, 1480s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 334/400 games, 1781s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 324/400 games, 1781s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 238/400 games, 1208s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 292/400 games, 1510s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 335/400 games, 1811s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 326/400 games, 1811s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 243/400 games, 1238s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 297/400 games, 1540s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 335/400 games, 1841s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 326/400 games, 1842s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 248/400 games, 1268s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 299/400 games, 1570s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 336/400 games, 1871s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 327/400 games, 1872s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 252/400 games, 1298s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 302/400 games, 1600s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 339/400 games, 1902s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 328/400 games, 1902s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 254/400 games, 1328s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 305/400 games, 1630s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 340/400 games, 1932s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 329/400 games, 1932s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 259/400 games, 1358s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 308/400 games, 1660s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 344/400 games, 1962s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 331/400 games, 1962s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 261/400 games, 1389s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 308/400 games, 1691s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 347/400 games, 1992s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 333/400 games, 1992s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 265/400 games, 1419s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 311/400 games, 1721s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 349/400 games, 2022s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 335/400 games, 2022s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 268/400 games, 1449s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 312/400 games, 1751s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 355/400 games, 2052s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 337/400 games, 2052s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 271/400 games, 1479s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 357/400 games, 2082s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 314/400 games, 1781s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 340/400 games, 2082s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 275/400 games, 1510s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 359/400 games, 2112s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 317/400 games, 1811s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 340/400 games, 2113s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 279/400 games, 1540s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 362/400 games, 2142s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 321/400 games, 1842s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 342/400 games, 2143s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 280/400 games, 1570s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 365/400 games, 2172s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 322/400 games, 1872s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 342/400 games, 2173s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 283/400 games, 1600s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 369/400 games, 2202s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 323/400 games, 1902s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 346/400 games, 2203s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 286/400 games, 1630s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 372/400 games, 2232s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 325/400 games, 1932s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 348/400 games, 2233s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 288/400 games, 1661s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 373/400 games, 2262s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 329/400 games, 1962s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 351/400 games, 2263s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 376/400 games, 2292s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 288/400 games, 1691s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 329/400 games, 1992s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 353/400 games, 2293s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 377/400 games, 2323s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 291/400 games, 1721s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 357/400 games, 2323s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 331/400 games, 2022s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 377/400 games, 2353s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 292/400 games, 1751s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 361/400 games, 2353s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 333/400 games, 2053s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 379/400 games, 2383s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 293/400 games, 1781s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 365/400 games, 2383s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 336/400 games, 2083s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 380/400 games, 2413s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 296/400 games, 1812s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 368/400 games, 2413s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 338/400 games, 2113s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 380/400 games, 2443s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 369/400 games, 2443s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 297/400 games, 1842s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 338/400 games, 2143s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 386/400 games, 2473s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 371/400 games, 2473s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 300/400 games, 1872s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 341/400 games, 2173s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 389/400 games, 2503s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 376/400 games, 2503s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 342/400 games, 2203s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 304/400 games, 1903s
+  model:avg_h50_b6c96 vs model:hrl1_human_b6c96: 393/400 games, 2533s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 378/400 games, 2533s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 305/400 games, 1933s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 343/400 games, 2233s
+model:avg_h50_b6c96 vs model:hrl1_human_b6c96: W-L-D 160-180-60 of 400, score 47.5%, capped 60
+model:soup5_b6c96: /kvm/polytopia-ai-data/runs/soup5_b6c96/ckpt_final.pt (step 0), 1.42M params
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 382/400 games, 2564s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 308/400 games, 1963s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 349/400 games, 2264s
+  model:soup5_b6c96 vs retail:crazy: 0/200 games, 0s
+  model:soup5_b6c96 vs retail:crazy: 0/200 games, 16s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 388/400 games, 2594s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 312/400 games, 1993s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 352/400 games, 2294s
+  model:soup5_b6c96 vs retail:crazy: 0/200 games, 31s
+  model:soup5_b6c96 vs retail:crazy: 6/200 games, 46s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 394/400 games, 2624s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 312/400 games, 2023s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 355/400 games, 2324s
+  model:soup5_b6c96 vs retail:crazy: 11/200 games, 61s
+  model:soup5_b6c96 vs retail:crazy: 19/200 games, 76s
+  model:avg_h25_b6c96 vs model:hrl1_human_b6c96: 398/400 games, 2654s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 314/400 games, 2053s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 357/400 games, 2354s
+  model:soup5_b6c96 vs retail:crazy: 32/200 games, 91s
+model:avg_h25_b6c96 vs model:hrl1_human_b6c96: W-L-D 163-168-69 of 400, score 49.4%, capped 69
+model:rl3_b6c96/ckpt_u00480: /kvm/polytopia-ai-data/runs/rl3_b6c96/ckpt_u00480.pt (step 480)
+model:hrl1_human_b6c96: /kvm/polytopia-ai-data/runs/hrl1_human_b6c96/ckpt_final.pt (step 300)
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 0/400 games, 0s
+  model:soup5_b6c96 vs retail:crazy: 39/200 games, 107s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 314/400 games, 2083s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 366/400 games, 2384s
+  model:soup5_b6c96 vs retail:crazy: 47/200 games, 122s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 0/400 games, 30s
+  model:soup5_b6c96 vs retail:crazy: 52/200 games, 137s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 318/400 games, 2113s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 368/400 games, 2414s
+  model:soup5_b6c96 vs retail:crazy: 65/200 games, 152s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 0/400 games, 61s
+  model:soup5_b6c96 vs retail:crazy: 74/200 games, 167s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 320/400 games, 2143s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 373/400 games, 2444s
+  model:soup5_b6c96 vs retail:crazy: 85/200 games, 182s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 4/400 games, 91s
+  model:soup5_b6c96 vs retail:crazy: 98/200 games, 198s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 321/400 games, 2173s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 377/400 games, 2474s
+  model:soup5_b6c96 vs retail:crazy: 107/200 games, 213s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 11/400 games, 121s
+  model:soup5_b6c96 vs retail:crazy: 122/200 games, 228s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 323/400 games, 2204s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 380/400 games, 2504s
+  model:soup5_b6c96 vs retail:crazy: 134/200 games, 243s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 19/400 games, 151s
+  model:soup5_b6c96 vs retail:crazy: 147/200 games, 258s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 384/400 games, 2534s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 324/400 games, 2234s
+  model:soup5_b6c96 vs retail:crazy: 170/200 games, 273s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 31/400 games, 181s
+  model:soup5_b6c96 vs retail:crazy: 186/200 games, 288s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 387/400 games, 2564s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 325/400 games, 2264s
+  model:soup5_b6c96 vs retail:crazy: 198/200 games, 303s
+retail:crazy: +200 games
+
+result (model against each opponent; a draw is half a win):
+  model:soup5_b6c96 vs retail:crazy: W-L-D 166-34-0 of 200, score 83.0%, capped 0, mean turns 27.4
+results: /kvm/polytopia-ai-data/arena/soup/soup5_b6c96_crazy.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/arena/soup/soup5_b6c96_crazy.jsonl
+model:rl3_b6c96/ckpt_u00480: /kvm/polytopia-ai-data/runs/rl3_b6c96/ckpt_u00480.pt (step 480), 1.42M params
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 0/200 games, 1s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 38/400 games, 211s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 0/200 games, 16s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 389/400 games, 2594s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 325/400 games, 2294s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 0/200 games, 31s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 46/400 games, 241s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 5/200 games, 46s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 392/400 games, 2624s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 328/400 games, 2324s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 10/200 games, 61s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 51/400 games, 272s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 13/200 games, 77s
+  model:avg_h75_b6c96 vs model:hrl1_human_b6c96: 396/400 games, 2654s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 330/400 games, 2354s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 21/200 games, 92s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 62/400 games, 302s
+model:avg_h75_b6c96 vs model:hrl1_human_b6c96: W-L-D 151-183-66 of 400, score 46.0%, capped 66
+model:avg_h50_b6c96: /kvm/polytopia-ai-data/runs/avg_h50_b6c96/ckpt_final.pt (step 0), 1.42M params
+  model:avg_h50_b6c96 vs retail:crazy: 0/200 games, 0s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 31/200 games, 107s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 330/400 games, 2384s
+  model:avg_h50_b6c96 vs retail:crazy: 2/200 games, 15s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 38/200 games, 122s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 75/400 games, 332s
+  model:avg_h50_b6c96 vs retail:crazy: 13/200 games, 31s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 47/200 games, 137s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 332/400 games, 2414s
+  model:avg_h50_b6c96 vs retail:crazy: 47/200 games, 46s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 56/200 games, 152s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 88/400 games, 362s
+  model:avg_h50_b6c96 vs retail:crazy: 70/200 games, 61s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 61/200 games, 167s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 338/400 games, 2444s
+  model:avg_h50_b6c96 vs retail:crazy: 96/200 games, 76s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 70/200 games, 183s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 91/400 games, 393s
+  model:avg_h50_b6c96 vs retail:crazy: 117/200 games, 91s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 80/200 games, 198s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 341/400 games, 2475s
+  model:avg_h50_b6c96 vs retail:crazy: 137/200 games, 106s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 88/200 games, 213s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 101/400 games, 423s
+  model:avg_h50_b6c96 vs retail:crazy: 157/200 games, 122s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 100/200 games, 228s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 347/400 games, 2505s
+  model:avg_h50_b6c96 vs retail:crazy: 176/200 games, 137s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 112/200 games, 243s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 109/400 games, 453s
+  model:avg_h50_b6c96 vs retail:crazy: 181/200 games, 152s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 123/200 games, 258s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 351/400 games, 2535s
+  model:avg_h50_b6c96 vs retail:crazy: 191/200 games, 167s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 131/200 games, 273s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 112/400 games, 483s
+  model:avg_h50_b6c96 vs retail:crazy: 192/200 games, 182s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 143/200 games, 288s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 356/400 games, 2565s
+  model:avg_h50_b6c96 vs retail:crazy: 197/200 games, 197s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 153/200 games, 303s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 123/400 games, 513s
+retail:crazy: +200 games
+
+result (model against each opponent; a draw is half a win):
+  model:avg_h50_b6c96 vs retail:crazy: W-L-D 24-169-7 of 200, score 13.8%, capped 7, mean turns 32.6
+results: /kvm/polytopia-ai-data/arena/soup/avg_h50_b6c96_water.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/arena/soup/avg_h50_b6c96_water.jsonl
+model:avg_h25_b6c96: /kvm/polytopia-ai-data/runs/avg_h25_b6c96/ckpt_final.pt (step 0), 1.42M params
+  model:avg_h25_b6c96 vs retail:crazy: 0/200 games, 0s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 168/200 games, 318s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 358/400 games, 2595s
+  model:avg_h25_b6c96 vs retail:crazy: 1/200 games, 15s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 182/200 games, 333s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 134/400 games, 543s
+  model:avg_h25_b6c96 vs retail:crazy: 13/200 games, 31s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 199/200 games, 348s
+retail:crazy: +200 games
+
+result (model against each opponent; a draw is half a win):
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: W-L-D 153-47-0 of 200, score 76.5%, capped 0, mean turns 28.4
+results: /kvm/polytopia-ai-data/arena/soup/rl3_b6c96_crazy.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/arena/soup/rl3_b6c96_crazy.jsonl
+model:avg_h75_b6c96: /kvm/polytopia-ai-data/runs/avg_h75_b6c96/ckpt_final.pt (step 0), 1.42M params
+  model:avg_h75_b6c96 vs retail:crazy: 0/200 games, 0s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 363/400 games, 2625s
+  model:avg_h25_b6c96 vs retail:crazy: 47/200 games, 46s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 137/400 games, 573s
+  model:avg_h75_b6c96 vs retail:crazy: 1/200 games, 16s
+  model:avg_h25_b6c96 vs retail:crazy: 67/200 games, 61s
+  model:avg_h75_b6c96 vs retail:crazy: 12/200 games, 31s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 366/400 games, 2655s
+  model:avg_h25_b6c96 vs retail:crazy: 88/200 games, 76s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 139/400 games, 603s
+  model:avg_h75_b6c96 vs retail:crazy: 39/200 games, 46s
+  model:avg_h25_b6c96 vs retail:crazy: 112/200 games, 91s
+  model:avg_h75_b6c96 vs retail:crazy: 56/200 games, 61s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 370/400 games, 2685s
+  model:avg_h25_b6c96 vs retail:crazy: 132/200 games, 106s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 146/400 games, 634s
+  model:avg_h75_b6c96 vs retail:crazy: 82/200 games, 76s
+  model:avg_h25_b6c96 vs retail:crazy: 155/200 games, 121s
+  model:avg_h75_b6c96 vs retail:crazy: 110/200 games, 92s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 372/400 games, 2715s
+  model:avg_h25_b6c96 vs retail:crazy: 167/200 games, 137s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 152/400 games, 664s
+  model:avg_h75_b6c96 vs retail:crazy: 142/200 games, 107s
+  model:avg_h25_b6c96 vs retail:crazy: 177/200 games, 152s
+  model:avg_h75_b6c96 vs retail:crazy: 167/200 games, 122s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 377/400 games, 2745s
+  model:avg_h25_b6c96 vs retail:crazy: 184/200 games, 167s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 158/400 games, 694s
+  model:avg_h75_b6c96 vs retail:crazy: 178/200 games, 137s
+  model:avg_h25_b6c96 vs retail:crazy: 191/200 games, 182s
+  model:avg_h75_b6c96 vs retail:crazy: 189/200 games, 152s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 380/400 games, 2775s
+  model:avg_h25_b6c96 vs retail:crazy: 198/200 games, 197s
+retail:crazy: +200 games
+
+result (model against each opponent; a draw is half a win):
+  model:avg_h25_b6c96 vs retail:crazy: W-L-D 25-169-6 of 200, score 14.0%, capped 6, mean turns 32.1
+results: /kvm/polytopia-ai-data/arena/soup/avg_h25_b6c96_water.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/arena/soup/avg_h25_b6c96_water.jsonl
+model:soup5_b6c96: /kvm/polytopia-ai-data/runs/soup5_b6c96/ckpt_final.pt (step 0), 1.42M params
+  model:soup5_b6c96 vs retail:crazy: 0/200 games, 0s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 167/400 games, 724s
+  model:avg_h75_b6c96 vs retail:crazy: 191/200 games, 167s
+  model:soup5_b6c96 vs retail:crazy: 1/200 games, 16s
+  model:avg_h75_b6c96 vs retail:crazy: 195/200 games, 182s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 381/400 games, 2805s
+  model:soup5_b6c96 vs retail:crazy: 8/200 games, 31s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 173/400 games, 754s
+  model:avg_h75_b6c96 vs retail:crazy: 198/200 games, 197s
+retail:crazy: +200 games
+
+result (model against each opponent; a draw is half a win):
+  model:avg_h75_b6c96 vs retail:crazy: W-L-D 25-167-8 of 200, score 14.5%, capped 8, mean turns 30.5
+results: /kvm/polytopia-ai-data/arena/soup/avg_h75_b6c96_water.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/arena/soup/avg_h75_b6c96_water.jsonl
+  model:soup5_b6c96 vs retail:crazy: 36/200 games, 46s
+model:rl3_b6c96/ckpt_u00480: /kvm/polytopia-ai-data/runs/rl3_b6c96/ckpt_u00480.pt (step 480), 1.42M params
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 0/200 games, 0s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 381/400 games, 2835s
+  model:soup5_b6c96 vs retail:crazy: 64/200 games, 62s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 1/200 games, 16s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 182/400 games, 784s
+  model:soup5_b6c96 vs retail:crazy: 80/200 games, 77s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 8/200 games, 31s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 382/400 games, 2865s
+  model:soup5_b6c96 vs retail:crazy: 95/200 games, 92s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 35/200 games, 46s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 188/400 games, 814s
+  model:soup5_b6c96 vs retail:crazy: 120/200 games, 107s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 59/200 games, 62s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 384/400 games, 2895s
+  model:soup5_b6c96 vs retail:crazy: 133/200 games, 123s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 79/200 games, 77s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 191/400 games, 844s
+  model:soup5_b6c96 vs retail:crazy: 157/200 games, 138s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 93/200 games, 92s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 387/400 games, 2926s
+  model:soup5_b6c96 vs retail:crazy: 172/200 games, 153s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 195/400 games, 875s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 124/200 games, 107s
+  model:soup5_b6c96 vs retail:crazy: 184/200 games, 168s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 145/200 games, 122s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 390/400 games, 2956s
+  model:soup5_b6c96 vs retail:crazy: 190/200 games, 183s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 199/400 games, 905s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 160/200 games, 137s
+  model:soup5_b6c96 vs retail:crazy: 191/200 games, 198s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 174/200 games, 152s
+  model:soup5_b6c96 vs model:hrl1_human_b6c96: 393/400 games, 2986s
+  model:soup5_b6c96 vs retail:crazy: 197/200 games, 213s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 203/400 games, 935s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 183/200 games, 167s
+retail:crazy: +200 games
+
+result (model against each opponent; a draw is half a win):
+  model:soup5_b6c96 vs retail:crazy: W-L-D 24-167-9 of 200, score 14.2%, capped 9, mean turns 32.2
+results: /kvm/polytopia-ai-data/arena/soup/soup5_b6c96_water.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/arena/soup/soup5_b6c96_water.jsonl
+model:hrl1_human_b6c96: /kvm/polytopia-ai-data/runs/hrl1_human_b6c96/ckpt_final.pt (step 300), 1.42M params
+  model:hrl1_human_b6c96 vs retail:crazy: 0/200 games, 0s
+model:soup5_b6c96 vs model:hrl1_human_b6c96: W-L-D 176-149-75 of 400, score 53.4%, capped 75
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 186/200 games, 182s
+  model:hrl1_human_b6c96 vs retail:crazy: 2/200 games, 15s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 206/400 games, 965s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 188/200 games, 197s
+  model:hrl1_human_b6c96 vs retail:crazy: 13/200 games, 31s
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: 196/200 games, 212s
+  model:hrl1_human_b6c96 vs retail:crazy: 44/200 games, 46s
+retail:crazy: +200 games
+
+result (model against each opponent; a draw is half a win):
+  model:rl3_b6c96/ckpt_u00480 vs retail:crazy: W-L-D 24-170-6 of 200, score 13.5%, capped 6, mean turns 31.7
+results: /kvm/polytopia-ai-data/arena/soup/rl3_b6c96_water.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/arena/soup/rl3_b6c96_water.jsonl
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 209/400 games, 995s
+  model:hrl1_human_b6c96 vs retail:crazy: 63/200 games, 61s
+  model:hrl1_human_b6c96 vs retail:crazy: 94/200 games, 76s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 211/400 games, 1025s
+  model:hrl1_human_b6c96 vs retail:crazy: 124/200 games, 91s
+  model:hrl1_human_b6c96 vs retail:crazy: 156/200 games, 107s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 216/400 games, 1055s
+  model:hrl1_human_b6c96 vs retail:crazy: 172/200 games, 122s
+  model:hrl1_human_b6c96 vs retail:crazy: 183/200 games, 137s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 222/400 games, 1086s
+  model:hrl1_human_b6c96 vs retail:crazy: 191/200 games, 152s
+  model:hrl1_human_b6c96 vs retail:crazy: 197/200 games, 167s
+retail:crazy: +200 games
+
+result (model against each opponent; a draw is half a win):
+  model:hrl1_human_b6c96 vs retail:crazy: W-L-D 24-169-7 of 200, score 13.8%, capped 7, mean turns 31.6
+results: /kvm/polytopia-ai-data/arena/soup/hrl1_human_b6c96_water.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/arena/soup/hrl1_human_b6c96_water.jsonl
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 225/400 games, 1116s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 230/400 games, 1146s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 237/400 games, 1176s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 242/400 games, 1206s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 243/400 games, 1236s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 246/400 games, 1267s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 256/400 games, 1297s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 265/400 games, 1327s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 271/400 games, 1357s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 275/400 games, 1387s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 281/400 games, 1417s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 287/400 games, 1448s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 287/400 games, 1478s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 292/400 games, 1508s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 296/400 games, 1538s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 300/400 games, 1568s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 304/400 games, 1598s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 307/400 games, 1628s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 310/400 games, 1658s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 311/400 games, 1689s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 315/400 games, 1719s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 316/400 games, 1749s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 318/400 games, 1779s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 319/400 games, 1809s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 323/400 games, 1839s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 325/400 games, 1869s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 327/400 games, 1899s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 331/400 games, 1929s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 333/400 games, 1960s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 334/400 games, 1990s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 335/400 games, 2020s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 336/400 games, 2050s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 338/400 games, 2080s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 339/400 games, 2110s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 341/400 games, 2140s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 342/400 games, 2170s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 344/400 games, 2200s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 347/400 games, 2230s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 350/400 games, 2260s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 353/400 games, 2290s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 358/400 games, 2320s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 363/400 games, 2350s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 369/400 games, 2381s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 372/400 games, 2411s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 376/400 games, 2441s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 381/400 games, 2471s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 384/400 games, 2501s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 386/400 games, 2531s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 391/400 games, 2561s
+  model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: 395/400 games, 2591s
+model:rl3_b6c96/ckpt_u00480 vs model:hrl1_human_b6c96: W-L-D 130-204-66 of 400, score 40.8%, capped 66
+2026-11-09T18:15:10+00:00 done

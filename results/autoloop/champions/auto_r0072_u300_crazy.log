@@ -1,0 +1,22 @@
+
+=== 2026-11-18T11:16:57+00:00 /kvm/polytopia/.venv/bin/python -m polyai.arena --model /kvm/polytopia-ai-data/runs/auto_r0072/ckpt_final.pt --opponent retail:crazy --seeds 100 --seed-start 1000000 --mode might --threads 24 --device cpu --out /kvm/polytopia-ai-data/autoloop/champions/auto_r0072_u300_crazy.jsonl
+model:auto_r0072: /kvm/polytopia-ai-data/runs/auto_r0072/ckpt_final.pt (step 300), 1.42M params
+  model:auto_r0072 vs retail:crazy: 0/200 games, 0s
+  model:auto_r0072 vs retail:crazy: 2/200 games, 15s
+  model:auto_r0072 vs retail:crazy: 7/200 games, 30s
+  model:auto_r0072 vs retail:crazy: 17/200 games, 45s
+  model:auto_r0072 vs retail:crazy: 37/200 games, 60s
+  model:auto_r0072 vs retail:crazy: 55/200 games, 76s
+  model:auto_r0072 vs retail:crazy: 68/200 games, 91s
+  model:auto_r0072 vs retail:crazy: 77/200 games, 106s
+  model:auto_r0072 vs retail:crazy: 94/200 games, 121s
+  model:auto_r0072 vs retail:crazy: 122/200 games, 136s
+  model:auto_r0072 vs retail:crazy: 140/200 games, 151s
+  model:auto_r0072 vs retail:crazy: 162/200 games, 166s
+  model:auto_r0072 vs retail:crazy: 186/200 games, 181s
+  model:auto_r0072 vs retail:crazy: 199/200 games, 196s
+retail:crazy: +200 games
+
+result (model against each opponent; a draw is half a win):
+  model:auto_r0072 vs retail:crazy: W-L-D 173-26-1 of 200, score 86.8%, capped 1, mean turns 26.1
+results: /kvm/polytopia-ai-data/autoloop/champions/auto_r0072_u300_crazy.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/autoloop/champions/auto_r0072_u300_crazy.jsonl

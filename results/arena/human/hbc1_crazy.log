@@ -1,0 +1,19 @@
+model:hbc1_rl3_human: /kvm/polytopia-ai-data/runs/hbc1_rl3_human/ckpt_final.pt (step 6000), 1.42M params
+  model:hbc1_rl3_human vs retail:crazy: 0/200 games, 0s
+  model:hbc1_rl3_human vs retail:crazy: 0/200 games, 16s
+  model:hbc1_rl3_human vs retail:crazy: 12/200 games, 31s
+  model:hbc1_rl3_human vs retail:crazy: 25/200 games, 46s
+  model:hbc1_rl3_human vs retail:crazy: 37/200 games, 61s
+  model:hbc1_rl3_human vs retail:crazy: 54/200 games, 76s
+  model:hbc1_rl3_human vs retail:crazy: 73/200 games, 91s
+  model:hbc1_rl3_human vs retail:crazy: 88/200 games, 106s
+  model:hbc1_rl3_human vs retail:crazy: 112/200 games, 122s
+  model:hbc1_rl3_human vs retail:crazy: 125/200 games, 137s
+  model:hbc1_rl3_human vs retail:crazy: 145/200 games, 152s
+  model:hbc1_rl3_human vs retail:crazy: 164/200 games, 167s
+  model:hbc1_rl3_human vs retail:crazy: 179/200 games, 182s
+retail:crazy: +200 games
+
+result (model against each opponent; a draw is half a win):
+  model:hbc1_rl3_human vs retail:crazy: W-L-D 109-89-2 of 200, score 55.0%, capped 2, mean turns 27.7
+results: /kvm/polytopia-ai-data/arena/human/hbc1_crazy.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/arena/human/hbc1_crazy.jsonl

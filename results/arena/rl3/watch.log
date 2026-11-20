@@ -1,0 +1,77 @@
+2026-10-24T02:35:00+01:00 eval u00240
+u00240 model:rl3_b6c96/ckpt_u00240 vs model:rl1_b6c96_cpu: W-L-D 193-178-29 of 400, score 51.9%, capped 29
+u00240   model:rl3_b6c96/ckpt_u00240 vs retail:crazy: W-L-D 272-124-4 of 400, score 68.5%, capped 4, mean turns 34.7
+u00240   model:rl3_b6c96/ckpt_u00240 vs retail:hard: W-L-D 345-52-3 of 400, score 86.6%, capped 3, mean turns 33.5
+2026-10-24T03:23:06+01:00 eval u00280
+u00280 model:rl3_b6c96/ckpt_u00280 vs model:rl1_b6c96_cpu: W-L-D 212-178-10 of 400, score 54.2%, capped 10
+u00280   model:rl3_b6c96/ckpt_u00280 vs retail:crazy: W-L-D 281-117-2 of 400, score 70.5%, capped 2, mean turns 34.4
+u00280   model:rl3_b6c96/ckpt_u00280 vs retail:hard: W-L-D 349-49-2 of 400, score 87.5%, capped 2, mean turns 32.9
+2026-10-24T04:27:14+01:00 eval u00320
+u00320 model:rl3_b6c96/ckpt_u00320 vs model:rl1_b6c96_cpu: W-L-D 250-125-25 of 400, score 65.6%, capped 25
+u00320   model:rl3_b6c96/ckpt_u00320 vs retail:crazy: W-L-D 293-105-2 of 400, score 73.5%, capped 2, mean turns 33.6
+u00320   model:rl3_b6c96/ckpt_u00320 vs retail:hard: W-L-D 360-40-0 of 400, score 90.0%, capped 0, mean turns 30.6
+2026-10-24T05:37:54+01:00 eval u00360
+u00360 model:rl3_b6c96/ckpt_u00360 vs model:rl1_b6c96_cpu: W-L-D 221-152-27 of 400, score 58.6%, capped 27
+u00360   model:rl3_b6c96/ckpt_u00360 vs retail:crazy: W-L-D 307-92-1 of 400, score 76.9%, capped 1, mean turns 33.7
+u00360   model:rl3_b6c96/ckpt_u00360 vs retail:hard: W-L-D 362-35-3 of 400, score 90.9%, capped 3, mean turns 32.0
+2026-10-24T06:49:01+01:00 eval u00400
+u00400 model:rl3_b6c96/ckpt_u00400 vs model:rl1_b6c96_cpu: W-L-D 256-123-21 of 400, score 66.6%, capped 21
+u00400   model:rl3_b6c96/ckpt_u00400 vs retail:crazy: W-L-D 311-89-0 of 400, score 77.8%, capped 0, mean turns 33.0
+u00400   model:rl3_b6c96/ckpt_u00400 vs retail:hard: W-L-D 365-35-0 of 400, score 91.2%, capped 0, mean turns 30.4
+2026-10-24T08:01:33+01:00 eval u00440
+u00440 model:rl3_b6c96/ckpt_u00440 vs model:rl1_b6c96_cpu: W-L-D 194-185-21 of 400, score 51.1%, capped 21
+u00440   model:rl3_b6c96/ckpt_u00440 vs retail:crazy: W-L-D 246-152-2 of 400, score 61.8%, capped 2, mean turns 33.4
+u00440   model:rl3_b6c96/ckpt_u00440 vs retail:hard: W-L-D 315-85-0 of 400, score 78.8%, capped 0, mean turns 32.2
+2026-10-24T09:10:28+01:00 eval u00480
+u00480 model:rl3_b6c96/ckpt_u00480 vs model:rl1_b6c96_cpu: W-L-D 274-108-18 of 400, score 70.8%, capped 18
+u00480   model:rl3_b6c96/ckpt_u00480 vs retail:crazy: W-L-D 316-84-0 of 400, score 79.0%, capped 0, mean turns 32.3
+u00480   model:rl3_b6c96/ckpt_u00480 vs retail:hard: W-L-D 378-22-0 of 400, score 94.5%, capped 0, mean turns 30.9
+2026-10-24T10:23:20+01:00 eval u00520
+u00520 model:rl3_b6c96/ckpt_u00520 vs model:rl1_b6c96_cpu: W-L-D 259-125-16 of 400, score 66.8%, capped 16
+u00520   model:rl3_b6c96/ckpt_u00520 vs retail:crazy: W-L-D 305-95-0 of 400, score 76.2%, capped 0, mean turns 33.6
+u00520   model:rl3_b6c96/ckpt_u00520 vs retail:hard: W-L-D 361-38-1 of 400, score 90.4%, capped 1, mean turns 32.0
+2026-10-24T11:33:12+01:00 eval u00560
+u00560 model:rl3_b6c96/ckpt_u00560 vs model:rl1_b6c96_cpu: W-L-D 270-119-11 of 400, score 68.9%, capped 11
+u00560   model:rl3_b6c96/ckpt_u00560 vs retail:crazy: W-L-D 316-83-1 of 400, score 79.1%, capped 1, mean turns 31.8
+u00560   model:rl3_b6c96/ckpt_u00560 vs retail:hard: W-L-D 368-31-1 of 400, score 92.1%, capped 1, mean turns 30.6
+2026-10-24T12:44:12+01:00 eval u00600
+u00600 model:rl3_b6c96/ckpt_u00600 vs model:rl1_b6c96_cpu: W-L-D 212-164-24 of 400, score 56.0%, capped 24
+u00600   model:rl3_b6c96/ckpt_u00600 vs retail:crazy: W-L-D 285-115-0 of 400, score 71.2%, capped 0, mean turns 33.6
+u00600   model:rl3_b6c96/ckpt_u00600 vs retail:hard: W-L-D 344-55-1 of 400, score 86.1%, capped 1, mean turns 32.8
+2026-10-24T13:56:09+01:00 eval u00640
+u00640 model:rl3_b6c96/ckpt_u00640 vs model:rl1_b6c96_cpu: W-L-D 259-115-26 of 400, score 68.0%, capped 26
+u00640   model:rl3_b6c96/ckpt_u00640 vs retail:crazy: W-L-D 315-83-2 of 400, score 79.0%, capped 2, mean turns 33.0
+u00640   model:rl3_b6c96/ckpt_u00640 vs retail:hard: W-L-D 370-28-2 of 400, score 92.8%, capped 2, mean turns 30.9
+2026-10-24T15:06:28+01:00 eval u00680
+u00680 model:rl3_b6c96/ckpt_u00680 vs model:rl1_b6c96_cpu: W-L-D 246-143-11 of 400, score 62.9%, capped 11
+u00680   model:rl3_b6c96/ckpt_u00680 vs retail:crazy: W-L-D 304-96-0 of 400, score 76.0%, capped 0, mean turns 32.9
+u00680   model:rl3_b6c96/ckpt_u00680 vs retail:hard: W-L-D 358-39-3 of 400, score 89.9%, capped 3, mean turns 32.2
+2026-10-24T16:19:58+01:00 eval u00720
+u00720 model:rl3_b6c96/ckpt_u00720 vs model:rl1_b6c96_cpu: W-L-D 246-129-25 of 400, score 64.6%, capped 25
+u00720   model:rl3_b6c96/ckpt_u00720 vs retail:crazy: W-L-D 310-90-0 of 400, score 77.5%, capped 0, mean turns 32.4
+u00720   model:rl3_b6c96/ckpt_u00720 vs retail:hard: W-L-D 367-32-1 of 400, score 91.9%, capped 1, mean turns 31.3
+2026-10-24T17:37:46+01:00 eval u00760
+u00760 model:rl3_b6c96/ckpt_u00760 vs model:rl1_b6c96_cpu: W-L-D 250-136-14 of 400, score 64.2%, capped 14
+u00760   model:rl3_b6c96/ckpt_u00760 vs retail:crazy: W-L-D 306-93-1 of 400, score 76.6%, capped 1, mean turns 34.1
+u00760   model:rl3_b6c96/ckpt_u00760 vs retail:hard: W-L-D 370-29-1 of 400, score 92.6%, capped 1, mean turns 32.0
+2026-10-24T18:47:38+01:00 eval u00800
+u00800 model:rl3_b6c96/ckpt_u00800 vs model:rl1_b6c96_cpu: W-L-D 255-129-16 of 400, score 65.8%, capped 16
+u00800   model:rl3_b6c96/ckpt_u00800 vs retail:crazy: W-L-D 308-92-0 of 400, score 77.0%, capped 0, mean turns 33.1
+u00800   model:rl3_b6c96/ckpt_u00800 vs retail:hard: W-L-D 360-39-1 of 400, score 90.1%, capped 1, mean turns 30.9
+2026-10-24T20:01:21+01:00 eval u00840
+u00840 model:rl3_b6c96/ckpt_u00840 vs model:rl1_b6c96_cpu: W-L-D 270-122-8 of 400, score 68.5%, capped 8
+u00840   model:rl3_b6c96/ckpt_u00840 vs retail:crazy: W-L-D 315-84-1 of 400, score 78.9%, capped 1, mean turns 32.6
+u00840   model:rl3_b6c96/ckpt_u00840 vs retail:hard: W-L-D 364-36-0 of 400, score 91.0%, capped 0, mean turns 30.9
+2026-10-24T21:14:23+01:00 eval u00880
+u00880 model:rl3_b6c96/ckpt_u00880 vs model:rl1_b6c96_cpu: W-L-D 252-140-8 of 400, score 64.0%, capped 8
+u00880   model:rl3_b6c96/ckpt_u00880 vs retail:crazy: W-L-D 298-101-1 of 400, score 74.6%, capped 1, mean turns 33.5
+u00880   model:rl3_b6c96/ckpt_u00880 vs retail:hard: W-L-D 364-36-0 of 400, score 91.0%, capped 0, mean turns 31.2
+2026-10-24T22:29:23+01:00 eval u00920
+u00920 model:rl3_b6c96/ckpt_u00920 vs model:rl1_b6c96_cpu: W-L-D 257-132-11 of 400, score 65.6%, capped 11
+u00920   model:rl3_b6c96/ckpt_u00920 vs retail:crazy: W-L-D 306-90-4 of 400, score 77.0%, capped 4, mean turns 35.9
+u00920   model:rl3_b6c96/ckpt_u00920 vs retail:hard: W-L-D 363-37-0 of 400, score 90.8%, capped 0, mean turns 32.1
+2026-10-24T23:45:50+01:00 eval u00960
+u00960 model:rl3_b6c96/ckpt_u00960 vs model:rl1_b6c96_cpu: W-L-D 262-124-14 of 400, score 67.2%, capped 14
+u00960   model:rl3_b6c96/ckpt_u00960 vs retail:crazy: W-L-D 297-80-23 of 400, score 77.1%, capped 23, mean turns 41.9
+u00960   model:rl3_b6c96/ckpt_u00960 vs retail:hard: W-L-D 361-30-9 of 400, score 91.4%, capped 9, mean turns 36.3
+2026-10-25T01:01:09+01:00 done

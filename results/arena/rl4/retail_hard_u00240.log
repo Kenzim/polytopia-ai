@@ -1,0 +1,57 @@
+model:rl4_4090_b6c96/ckpt_u00240: /kvm/polytopia-ai-data/runs/rl4_4090_b6c96/ckpt_u00240.pt (step 240), 1.42M params
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:hard: 0/400 games, 0s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:hard: 1/400 games, 15s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:hard: 2/400 games, 31s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:hard: 6/400 games, 46s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:hard: 16/400 games, 61s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:hard: 18/400 games, 76s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:hard: 21/400 games, 91s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:hard: 25/400 games, 106s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:hard: 29/400 games, 122s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:hard: 35/400 games, 137s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:hard: 44/400 games, 152s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:hard: 58/400 games, 168s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:hard: 68/400 games, 183s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:hard: 77/400 games, 198s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:hard: 84/400 games, 214s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:hard: 89/400 games, 229s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:hard: 96/400 games, 244s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:hard: 101/400 games, 259s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:hard: 116/400 games, 275s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:hard: 128/400 games, 290s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:hard: 136/400 games, 305s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:hard: 139/400 games, 320s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:hard: 151/400 games, 335s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:hard: 159/400 games, 351s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:hard: 165/400 games, 366s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:hard: 170/400 games, 381s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:hard: 179/400 games, 396s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:hard: 188/400 games, 412s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:hard: 199/400 games, 427s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:hard: 205/400 games, 442s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:hard: 211/400 games, 457s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:hard: 219/400 games, 472s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:hard: 230/400 games, 488s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:hard: 237/400 games, 503s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:hard: 246/400 games, 518s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:hard: 251/400 games, 533s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:hard: 257/400 games, 548s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:hard: 264/400 games, 564s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:hard: 269/400 games, 579s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:hard: 281/400 games, 594s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:hard: 295/400 games, 609s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:hard: 305/400 games, 624s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:hard: 319/400 games, 639s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:hard: 330/400 games, 654s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:hard: 343/400 games, 669s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:hard: 358/400 games, 684s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:hard: 374/400 games, 699s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:hard: 381/400 games, 715s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:hard: 390/400 games, 730s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:hard: 397/400 games, 745s
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:hard: 399/400 games, 760s
+retail:hard: +400 games
+
+result (model against each opponent; a draw is half a win):
+  model:rl4_4090_b6c96/ckpt_u00240 vs retail:hard: W-L-D 356-43-1 of 400, score 89.1%, capped 1, mean turns 32.8
+results: /kvm/polytopia-ai-data/arena/rl4/retail_hard_u00240.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/arena/rl4/retail_hard_u00240.jsonl

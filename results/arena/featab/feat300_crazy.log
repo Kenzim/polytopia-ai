@@ -1,0 +1,17 @@
+model:featrl_b6c96: /kvm/polytopia-ai-data/runs/featrl_b6c96/ckpt_final.pt (step 300), 1.43M params
+  model:featrl_b6c96 vs retail:crazy: 0/400 games, 1s
+  model:featrl_b6c96 vs retail:crazy: 35/400 games, 16s
+  model:featrl_b6c96 vs retail:crazy: 79/400 games, 31s
+  model:featrl_b6c96 vs retail:crazy: 124/400 games, 46s
+  model:featrl_b6c96 vs retail:crazy: 170/400 games, 61s
+  model:featrl_b6c96 vs retail:crazy: 212/400 games, 76s
+  model:featrl_b6c96 vs retail:crazy: 267/400 games, 91s
+  model:featrl_b6c96 vs retail:crazy: 301/400 games, 106s
+  model:featrl_b6c96 vs retail:crazy: 355/400 games, 121s
+  model:featrl_b6c96 vs retail:crazy: 393/400 games, 136s
+retail:crazy: +400 games
+
+result (model against each opponent; a draw is half a win):
+  model:featrl_b6c96 vs retail:crazy: W-L-D 306-94-0 of 400, score 76.5%, capped 0, mean turns 28.7
+GPU peak allocated 36 MiB
+results: /kvm/polytopia-ai-data/arena/featab/feat300_crazy.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/arena/featab/feat300_crazy.jsonl

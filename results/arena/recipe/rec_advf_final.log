@@ -1,0 +1,83 @@
+model:rec_advf: /kvm/polytopia-ai-data/runs/rec_advf/ckpt_final.pt (step 300), 1.42M params
+  model:rec_advf vs retail:hard: 0/400 games, 0s
+  model:rec_advf vs retail:hard: 3/400 games, 16s
+  model:rec_advf vs retail:hard: 8/400 games, 31s
+  model:rec_advf vs retail:hard: 10/400 games, 46s
+  model:rec_advf vs retail:hard: 17/400 games, 61s
+  model:rec_advf vs retail:hard: 29/400 games, 76s
+  model:rec_advf vs retail:hard: 34/400 games, 91s
+  model:rec_advf vs retail:hard: 44/400 games, 106s
+  model:rec_advf vs retail:hard: 58/400 games, 121s
+  model:rec_advf vs retail:hard: 63/400 games, 136s
+  model:rec_advf vs retail:hard: 78/400 games, 152s
+  model:rec_advf vs retail:hard: 90/400 games, 167s
+  model:rec_advf vs retail:hard: 100/400 games, 182s
+  model:rec_advf vs retail:hard: 110/400 games, 197s
+  model:rec_advf vs retail:hard: 120/400 games, 212s
+  model:rec_advf vs retail:hard: 129/400 games, 228s
+  model:rec_advf vs retail:hard: 139/400 games, 243s
+  model:rec_advf vs retail:hard: 153/400 games, 258s
+  model:rec_advf vs retail:hard: 167/400 games, 273s
+  model:rec_advf vs retail:hard: 176/400 games, 289s
+  model:rec_advf vs retail:hard: 190/400 games, 304s
+  model:rec_advf vs retail:hard: 199/400 games, 319s
+  model:rec_advf vs retail:hard: 205/400 games, 334s
+  model:rec_advf vs retail:hard: 214/400 games, 349s
+  model:rec_advf vs retail:hard: 226/400 games, 365s
+  model:rec_advf vs retail:hard: 234/400 games, 380s
+  model:rec_advf vs retail:hard: 249/400 games, 395s
+  model:rec_advf vs retail:hard: 263/400 games, 410s
+  model:rec_advf vs retail:hard: 270/400 games, 425s
+  model:rec_advf vs retail:hard: 283/400 games, 440s
+  model:rec_advf vs retail:hard: 298/400 games, 456s
+  model:rec_advf vs retail:hard: 306/400 games, 471s
+  model:rec_advf vs retail:hard: 331/400 games, 486s
+  model:rec_advf vs retail:hard: 348/400 games, 501s
+  model:rec_advf vs retail:hard: 360/400 games, 516s
+  model:rec_advf vs retail:hard: 379/400 games, 531s
+retail:hard: +400 games
+  model:rec_advf vs retail:crazy: 0/400 games, 0s
+  model:rec_advf vs retail:crazy: 1/400 games, 15s
+  model:rec_advf vs retail:crazy: 9/400 games, 31s
+  model:rec_advf vs retail:crazy: 15/400 games, 46s
+  model:rec_advf vs retail:crazy: 24/400 games, 61s
+  model:rec_advf vs retail:crazy: 37/400 games, 76s
+  model:rec_advf vs retail:crazy: 44/400 games, 91s
+  model:rec_advf vs retail:crazy: 52/400 games, 106s
+  model:rec_advf vs retail:crazy: 63/400 games, 122s
+  model:rec_advf vs retail:crazy: 78/400 games, 137s
+  model:rec_advf vs retail:crazy: 89/400 games, 152s
+  model:rec_advf vs retail:crazy: 98/400 games, 167s
+  model:rec_advf vs retail:crazy: 105/400 games, 182s
+  model:rec_advf vs retail:crazy: 116/400 games, 198s
+  model:rec_advf vs retail:crazy: 122/400 games, 213s
+  model:rec_advf vs retail:crazy: 138/400 games, 228s
+  model:rec_advf vs retail:crazy: 146/400 games, 243s
+  model:rec_advf vs retail:crazy: 157/400 games, 258s
+  model:rec_advf vs retail:crazy: 165/400 games, 274s
+  model:rec_advf vs retail:crazy: 178/400 games, 289s
+  model:rec_advf vs retail:crazy: 185/400 games, 304s
+  model:rec_advf vs retail:crazy: 192/400 games, 319s
+  model:rec_advf vs retail:crazy: 205/400 games, 334s
+  model:rec_advf vs retail:crazy: 218/400 games, 349s
+  model:rec_advf vs retail:crazy: 226/400 games, 364s
+  model:rec_advf vs retail:crazy: 234/400 games, 380s
+  model:rec_advf vs retail:crazy: 246/400 games, 395s
+  model:rec_advf vs retail:crazy: 255/400 games, 410s
+  model:rec_advf vs retail:crazy: 267/400 games, 425s
+  model:rec_advf vs retail:crazy: 274/400 games, 440s
+  model:rec_advf vs retail:crazy: 285/400 games, 456s
+  model:rec_advf vs retail:crazy: 297/400 games, 471s
+  model:rec_advf vs retail:crazy: 308/400 games, 486s
+  model:rec_advf vs retail:crazy: 320/400 games, 501s
+  model:rec_advf vs retail:crazy: 340/400 games, 516s
+  model:rec_advf vs retail:crazy: 363/400 games, 531s
+  model:rec_advf vs retail:crazy: 377/400 games, 546s
+  model:rec_advf vs retail:crazy: 383/400 games, 561s
+  model:rec_advf vs retail:crazy: 391/400 games, 576s
+retail:crazy: +400 games
+
+result (model against each opponent; a draw is half a win):
+  model:rec_advf vs retail:hard: W-L-D 359-41-0 of 400, score 89.8%, capped 0, mean turns 27.5
+  model:rec_advf vs retail:crazy: W-L-D 307-93-0 of 400, score 76.8%, capped 0, mean turns 29.5
+results: /kvm/polytopia-ai-data/arena/recipe/rec_advf_final.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/arena/recipe/rec_advf_final.jsonl

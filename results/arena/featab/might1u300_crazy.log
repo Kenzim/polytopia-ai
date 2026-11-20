@@ -1,0 +1,21 @@
+model:might1_b6c96/ckpt_u00300: /kvm/polytopia-ai-data/runs/might1_b6c96/ckpt_u00300.pt (step 300), 1.42M params
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 0/400 games, 1s
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 17/400 games, 16s
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 38/400 games, 31s
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 77/400 games, 46s
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 112/400 games, 61s
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 146/400 games, 76s
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 181/400 games, 91s
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 210/400 games, 106s
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 246/400 games, 121s
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 274/400 games, 136s
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 313/400 games, 151s
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 350/400 games, 166s
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 375/400 games, 181s
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: 391/400 games, 196s
+retail:crazy: +400 games
+
+result (model against each opponent; a draw is half a win):
+  model:might1_b6c96/ckpt_u00300 vs retail:crazy: W-L-D 299-100-1 of 400, score 74.9%, capped 1, mean turns 29.3
+GPU peak allocated 36 MiB
+results: /kvm/polytopia-ai-data/arena/featab/might1u300_crazy.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/arena/featab/might1u300_crazy.jsonl

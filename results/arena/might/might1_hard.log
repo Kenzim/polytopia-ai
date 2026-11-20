@@ -1,0 +1,43 @@
+model:might1_b6c96: /kvm/polytopia-ai-data/runs/might1_b6c96/ckpt_final.pt (step 600), 1.42M params
+  model:might1_b6c96 vs retail:hard: 0/400 games, 0s
+  model:might1_b6c96 vs retail:hard: 0/400 games, 15s
+  model:might1_b6c96 vs retail:hard: 5/400 games, 30s
+  model:might1_b6c96 vs retail:hard: 12/400 games, 45s
+  model:might1_b6c96 vs retail:hard: 20/400 games, 61s
+  model:might1_b6c96 vs retail:hard: 29/400 games, 76s
+  model:might1_b6c96 vs retail:hard: 35/400 games, 91s
+  model:might1_b6c96 vs retail:hard: 43/400 games, 106s
+  model:might1_b6c96 vs retail:hard: 56/400 games, 121s
+  model:might1_b6c96 vs retail:hard: 65/400 games, 136s
+  model:might1_b6c96 vs retail:hard: 76/400 games, 151s
+  model:might1_b6c96 vs retail:hard: 90/400 games, 166s
+  model:might1_b6c96 vs retail:hard: 101/400 games, 182s
+  model:might1_b6c96 vs retail:hard: 114/400 games, 197s
+  model:might1_b6c96 vs retail:hard: 127/400 games, 212s
+  model:might1_b6c96 vs retail:hard: 133/400 games, 227s
+  model:might1_b6c96 vs retail:hard: 147/400 games, 242s
+  model:might1_b6c96 vs retail:hard: 159/400 games, 258s
+  model:might1_b6c96 vs retail:hard: 171/400 games, 273s
+  model:might1_b6c96 vs retail:hard: 178/400 games, 288s
+  model:might1_b6c96 vs retail:hard: 186/400 games, 303s
+  model:might1_b6c96 vs retail:hard: 199/400 games, 318s
+  model:might1_b6c96 vs retail:hard: 210/400 games, 333s
+  model:might1_b6c96 vs retail:hard: 216/400 games, 348s
+  model:might1_b6c96 vs retail:hard: 229/400 games, 364s
+  model:might1_b6c96 vs retail:hard: 236/400 games, 379s
+  model:might1_b6c96 vs retail:hard: 257/400 games, 394s
+  model:might1_b6c96 vs retail:hard: 264/400 games, 409s
+  model:might1_b6c96 vs retail:hard: 274/400 games, 424s
+  model:might1_b6c96 vs retail:hard: 284/400 games, 440s
+  model:might1_b6c96 vs retail:hard: 293/400 games, 455s
+  model:might1_b6c96 vs retail:hard: 306/400 games, 470s
+  model:might1_b6c96 vs retail:hard: 321/400 games, 485s
+  model:might1_b6c96 vs retail:hard: 341/400 games, 500s
+  model:might1_b6c96 vs retail:hard: 360/400 games, 515s
+  model:might1_b6c96 vs retail:hard: 379/400 games, 530s
+  model:might1_b6c96 vs retail:hard: 398/400 games, 545s
+retail:hard: +400 games
+
+result (model against each opponent; a draw is half a win):
+  model:might1_b6c96 vs retail:hard: W-L-D 367-33-0 of 400, score 91.8%, capped 0, mean turns 27.1
+results: /kvm/polytopia-ai-data/arena/might/might1_hard.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/arena/might/might1_hard.jsonl

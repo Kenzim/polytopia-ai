@@ -1,0 +1,78 @@
+model:rec_ema/ckpt_ema_final: /kvm/polytopia-ai-data/runs/rec_ema/ckpt_ema_final.pt (step 300), 1.42M params
+  model:rec_ema/ckpt_ema_final vs retail:hard: 0/400 games, 0s
+  model:rec_ema/ckpt_ema_final vs retail:hard: 0/400 games, 15s
+  model:rec_ema/ckpt_ema_final vs retail:hard: 8/400 games, 31s
+  model:rec_ema/ckpt_ema_final vs retail:hard: 15/400 games, 46s
+  model:rec_ema/ckpt_ema_final vs retail:hard: 24/400 games, 61s
+  model:rec_ema/ckpt_ema_final vs retail:hard: 33/400 games, 76s
+  model:rec_ema/ckpt_ema_final vs retail:hard: 45/400 games, 91s
+  model:rec_ema/ckpt_ema_final vs retail:hard: 55/400 games, 106s
+  model:rec_ema/ckpt_ema_final vs retail:hard: 66/400 games, 122s
+  model:rec_ema/ckpt_ema_final vs retail:hard: 82/400 games, 137s
+  model:rec_ema/ckpt_ema_final vs retail:hard: 98/400 games, 152s
+  model:rec_ema/ckpt_ema_final vs retail:hard: 107/400 games, 167s
+  model:rec_ema/ckpt_ema_final vs retail:hard: 117/400 games, 182s
+  model:rec_ema/ckpt_ema_final vs retail:hard: 129/400 games, 197s
+  model:rec_ema/ckpt_ema_final vs retail:hard: 138/400 games, 212s
+  model:rec_ema/ckpt_ema_final vs retail:hard: 152/400 games, 228s
+  model:rec_ema/ckpt_ema_final vs retail:hard: 160/400 games, 243s
+  model:rec_ema/ckpt_ema_final vs retail:hard: 170/400 games, 258s
+  model:rec_ema/ckpt_ema_final vs retail:hard: 184/400 games, 273s
+  model:rec_ema/ckpt_ema_final vs retail:hard: 195/400 games, 288s
+  model:rec_ema/ckpt_ema_final vs retail:hard: 208/400 games, 303s
+  model:rec_ema/ckpt_ema_final vs retail:hard: 216/400 games, 319s
+  model:rec_ema/ckpt_ema_final vs retail:hard: 238/400 games, 334s
+  model:rec_ema/ckpt_ema_final vs retail:hard: 248/400 games, 349s
+  model:rec_ema/ckpt_ema_final vs retail:hard: 258/400 games, 364s
+  model:rec_ema/ckpt_ema_final vs retail:hard: 274/400 games, 379s
+  model:rec_ema/ckpt_ema_final vs retail:hard: 284/400 games, 395s
+  model:rec_ema/ckpt_ema_final vs retail:hard: 297/400 games, 410s
+  model:rec_ema/ckpt_ema_final vs retail:hard: 314/400 games, 425s
+  model:rec_ema/ckpt_ema_final vs retail:hard: 337/400 games, 440s
+  model:rec_ema/ckpt_ema_final vs retail:hard: 353/400 games, 455s
+  model:rec_ema/ckpt_ema_final vs retail:hard: 375/400 games, 470s
+  model:rec_ema/ckpt_ema_final vs retail:hard: 396/400 games, 485s
+retail:hard: +400 games
+  model:rec_ema/ckpt_ema_final vs retail:crazy: 0/400 games, 0s
+  model:rec_ema/ckpt_ema_final vs retail:crazy: 1/400 games, 15s
+  model:rec_ema/ckpt_ema_final vs retail:crazy: 8/400 games, 30s
+  model:rec_ema/ckpt_ema_final vs retail:crazy: 13/400 games, 46s
+  model:rec_ema/ckpt_ema_final vs retail:crazy: 21/400 games, 61s
+  model:rec_ema/ckpt_ema_final vs retail:crazy: 33/400 games, 76s
+  model:rec_ema/ckpt_ema_final vs retail:crazy: 41/400 games, 91s
+  model:rec_ema/ckpt_ema_final vs retail:crazy: 50/400 games, 106s
+  model:rec_ema/ckpt_ema_final vs retail:crazy: 61/400 games, 122s
+  model:rec_ema/ckpt_ema_final vs retail:crazy: 73/400 games, 137s
+  model:rec_ema/ckpt_ema_final vs retail:crazy: 87/400 games, 152s
+  model:rec_ema/ckpt_ema_final vs retail:crazy: 103/400 games, 167s
+  model:rec_ema/ckpt_ema_final vs retail:crazy: 113/400 games, 182s
+  model:rec_ema/ckpt_ema_final vs retail:crazy: 124/400 games, 197s
+  model:rec_ema/ckpt_ema_final vs retail:crazy: 135/400 games, 213s
+  model:rec_ema/ckpt_ema_final vs retail:crazy: 147/400 games, 228s
+  model:rec_ema/ckpt_ema_final vs retail:crazy: 155/400 games, 243s
+  model:rec_ema/ckpt_ema_final vs retail:crazy: 168/400 games, 258s
+  model:rec_ema/ckpt_ema_final vs retail:crazy: 175/400 games, 274s
+  model:rec_ema/ckpt_ema_final vs retail:crazy: 186/400 games, 289s
+  model:rec_ema/ckpt_ema_final vs retail:crazy: 196/400 games, 304s
+  model:rec_ema/ckpt_ema_final vs retail:crazy: 207/400 games, 319s
+  model:rec_ema/ckpt_ema_final vs retail:crazy: 221/400 games, 335s
+  model:rec_ema/ckpt_ema_final vs retail:crazy: 234/400 games, 350s
+  model:rec_ema/ckpt_ema_final vs retail:crazy: 246/400 games, 365s
+  model:rec_ema/ckpt_ema_final vs retail:crazy: 255/400 games, 380s
+  model:rec_ema/ckpt_ema_final vs retail:crazy: 266/400 games, 395s
+  model:rec_ema/ckpt_ema_final vs retail:crazy: 272/400 games, 411s
+  model:rec_ema/ckpt_ema_final vs retail:crazy: 284/400 games, 426s
+  model:rec_ema/ckpt_ema_final vs retail:crazy: 290/400 games, 441s
+  model:rec_ema/ckpt_ema_final vs retail:crazy: 304/400 games, 456s
+  model:rec_ema/ckpt_ema_final vs retail:crazy: 317/400 games, 472s
+  model:rec_ema/ckpt_ema_final vs retail:crazy: 329/400 games, 487s
+  model:rec_ema/ckpt_ema_final vs retail:crazy: 339/400 games, 502s
+  model:rec_ema/ckpt_ema_final vs retail:crazy: 355/400 games, 517s
+  model:rec_ema/ckpt_ema_final vs retail:crazy: 377/400 games, 532s
+  model:rec_ema/ckpt_ema_final vs retail:crazy: 389/400 games, 547s
+retail:crazy: +400 games
+
+result (model against each opponent; a draw is half a win):
+  model:rec_ema/ckpt_ema_final vs retail:hard: W-L-D 352-48-0 of 400, score 88.0%, capped 0, mean turns 27.6
+  model:rec_ema/ckpt_ema_final vs retail:crazy: W-L-D 293-107-0 of 400, score 73.2%, capped 0, mean turns 28.6
+results: /kvm/polytopia-ai-data/arena/recipe/rec_ema_ema_final.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/arena/recipe/rec_ema_ema_final.jsonl

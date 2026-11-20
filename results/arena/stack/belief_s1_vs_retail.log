@@ -1,0 +1,92 @@
+model:belief_s1: /kvm/polytopia-ai-data/runs/belief_s1/ckpt_final.pt (step 300), 1.42M params
+  model:belief_s1 vs retail:hard: 0/400 games, 0s
+  model:belief_s1 vs retail:hard: 1/400 games, 16s
+  model:belief_s1 vs retail:hard: 5/400 games, 31s
+  model:belief_s1 vs retail:hard: 8/400 games, 46s
+  model:belief_s1 vs retail:hard: 17/400 games, 61s
+  model:belief_s1 vs retail:hard: 29/400 games, 77s
+  model:belief_s1 vs retail:hard: 35/400 games, 92s
+  model:belief_s1 vs retail:hard: 40/400 games, 107s
+  model:belief_s1 vs retail:hard: 45/400 games, 122s
+  model:belief_s1 vs retail:hard: 58/400 games, 137s
+  model:belief_s1 vs retail:hard: 70/400 games, 153s
+  model:belief_s1 vs retail:hard: 82/400 games, 168s
+  model:belief_s1 vs retail:hard: 92/400 games, 183s
+  model:belief_s1 vs retail:hard: 104/400 games, 198s
+  model:belief_s1 vs retail:hard: 115/400 games, 214s
+  model:belief_s1 vs retail:hard: 130/400 games, 229s
+  model:belief_s1 vs retail:hard: 146/400 games, 244s
+  model:belief_s1 vs retail:hard: 155/400 games, 259s
+  model:belief_s1 vs retail:hard: 164/400 games, 274s
+  model:belief_s1 vs retail:hard: 173/400 games, 289s
+  model:belief_s1 vs retail:hard: 183/400 games, 304s
+  model:belief_s1 vs retail:hard: 194/400 games, 319s
+  model:belief_s1 vs retail:hard: 206/400 games, 334s
+  model:belief_s1 vs retail:hard: 215/400 games, 349s
+  model:belief_s1 vs retail:hard: 222/400 games, 364s
+  model:belief_s1 vs retail:hard: 235/400 games, 380s
+  model:belief_s1 vs retail:hard: 251/400 games, 395s
+  model:belief_s1 vs retail:hard: 263/400 games, 410s
+  model:belief_s1 vs retail:hard: 271/400 games, 425s
+  model:belief_s1 vs retail:hard: 280/400 games, 440s
+  model:belief_s1 vs retail:hard: 290/400 games, 455s
+  model:belief_s1 vs retail:hard: 299/400 games, 471s
+  model:belief_s1 vs retail:hard: 309/400 games, 486s
+  model:belief_s1 vs retail:hard: 321/400 games, 501s
+  model:belief_s1 vs retail:hard: 337/400 games, 516s
+  model:belief_s1 vs retail:hard: 352/400 games, 531s
+  model:belief_s1 vs retail:hard: 371/400 games, 546s
+  model:belief_s1 vs retail:hard: 379/400 games, 561s
+  model:belief_s1 vs retail:hard: 393/400 games, 576s
+retail:hard: +400 games
+  model:belief_s1 vs retail:crazy: 0/400 games, 0s
+  model:belief_s1 vs retail:crazy: 0/400 games, 15s
+  model:belief_s1 vs retail:crazy: 3/400 games, 31s
+  model:belief_s1 vs retail:crazy: 11/400 games, 46s
+  model:belief_s1 vs retail:crazy: 18/400 games, 61s
+  model:belief_s1 vs retail:crazy: 30/400 games, 76s
+  model:belief_s1 vs retail:crazy: 38/400 games, 91s
+  model:belief_s1 vs retail:crazy: 45/400 games, 106s
+  model:belief_s1 vs retail:crazy: 54/400 games, 122s
+  model:belief_s1 vs retail:crazy: 66/400 games, 137s
+  model:belief_s1 vs retail:crazy: 75/400 games, 152s
+  model:belief_s1 vs retail:crazy: 86/400 games, 167s
+  model:belief_s1 vs retail:crazy: 103/400 games, 182s
+  model:belief_s1 vs retail:crazy: 116/400 games, 197s
+  model:belief_s1 vs retail:crazy: 123/400 games, 212s
+  model:belief_s1 vs retail:crazy: 135/400 games, 227s
+  model:belief_s1 vs retail:crazy: 143/400 games, 243s
+  model:belief_s1 vs retail:crazy: 147/400 games, 258s
+  model:belief_s1 vs retail:crazy: 156/400 games, 273s
+  model:belief_s1 vs retail:crazy: 163/400 games, 288s
+  model:belief_s1 vs retail:crazy: 171/400 games, 303s
+  model:belief_s1 vs retail:crazy: 184/400 games, 318s
+  model:belief_s1 vs retail:crazy: 187/400 games, 334s
+  model:belief_s1 vs retail:crazy: 198/400 games, 349s
+  model:belief_s1 vs retail:crazy: 205/400 games, 364s
+  model:belief_s1 vs retail:crazy: 214/400 games, 379s
+  model:belief_s1 vs retail:crazy: 223/400 games, 394s
+  model:belief_s1 vs retail:crazy: 232/400 games, 410s
+  model:belief_s1 vs retail:crazy: 241/400 games, 425s
+  model:belief_s1 vs retail:crazy: 250/400 games, 440s
+  model:belief_s1 vs retail:crazy: 257/400 games, 455s
+  model:belief_s1 vs retail:crazy: 266/400 games, 471s
+  model:belief_s1 vs retail:crazy: 273/400 games, 486s
+  model:belief_s1 vs retail:crazy: 286/400 games, 501s
+  model:belief_s1 vs retail:crazy: 295/400 games, 516s
+  model:belief_s1 vs retail:crazy: 304/400 games, 531s
+  model:belief_s1 vs retail:crazy: 317/400 games, 546s
+  model:belief_s1 vs retail:crazy: 335/400 games, 561s
+  model:belief_s1 vs retail:crazy: 347/400 games, 576s
+  model:belief_s1 vs retail:crazy: 364/400 games, 591s
+  model:belief_s1 vs retail:crazy: 372/400 games, 607s
+  model:belief_s1 vs retail:crazy: 382/400 games, 622s
+  model:belief_s1 vs retail:crazy: 393/400 games, 637s
+  model:belief_s1 vs retail:crazy: 398/400 games, 652s
+  model:belief_s1 vs retail:crazy: 399/400 games, 667s
+retail:crazy: +400 games
+
+result (model against each opponent; a draw is half a win):
+  model:belief_s1 vs retail:hard: W-L-D 345-54-1 of 400, score 86.4%, capped 1, mean turns 28.1
+  model:belief_s1 vs retail:crazy: W-L-D 294-105-1 of 400, score 73.6%, capped 1, mean turns 30.3
+results: /kvm/polytopia-ai-data/arena/stack/belief_s1_vs_retail.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/arena/stack/belief_s1_vs_retail.jsonl

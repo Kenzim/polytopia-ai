@@ -1,0 +1,48 @@
+model:might1_b6c96: /kvm/polytopia-ai-data/runs/might1_b6c96/ckpt_final.pt (step 600), 1.42M params
+  model:might1_b6c96 vs retail:crazy: 0/400 games, 0s
+  model:might1_b6c96 vs retail:crazy: 1/400 games, 15s
+  model:might1_b6c96 vs retail:crazy: 3/400 games, 30s
+  model:might1_b6c96 vs retail:crazy: 6/400 games, 46s
+  model:might1_b6c96 vs retail:crazy: 9/400 games, 61s
+  model:might1_b6c96 vs retail:crazy: 16/400 games, 76s
+  model:might1_b6c96 vs retail:crazy: 23/400 games, 91s
+  model:might1_b6c96 vs retail:crazy: 32/400 games, 106s
+  model:might1_b6c96 vs retail:crazy: 37/400 games, 122s
+  model:might1_b6c96 vs retail:crazy: 42/400 games, 137s
+  model:might1_b6c96 vs retail:crazy: 55/400 games, 152s
+  model:might1_b6c96 vs retail:crazy: 67/400 games, 167s
+  model:might1_b6c96 vs retail:crazy: 73/400 games, 182s
+  model:might1_b6c96 vs retail:crazy: 83/400 games, 198s
+  model:might1_b6c96 vs retail:crazy: 94/400 games, 213s
+  model:might1_b6c96 vs retail:crazy: 103/400 games, 228s
+  model:might1_b6c96 vs retail:crazy: 118/400 games, 243s
+  model:might1_b6c96 vs retail:crazy: 128/400 games, 258s
+  model:might1_b6c96 vs retail:crazy: 140/400 games, 274s
+  model:might1_b6c96 vs retail:crazy: 150/400 games, 289s
+  model:might1_b6c96 vs retail:crazy: 167/400 games, 304s
+  model:might1_b6c96 vs retail:crazy: 178/400 games, 319s
+  model:might1_b6c96 vs retail:crazy: 187/400 games, 334s
+  model:might1_b6c96 vs retail:crazy: 196/400 games, 349s
+  model:might1_b6c96 vs retail:crazy: 207/400 games, 364s
+  model:might1_b6c96 vs retail:crazy: 216/400 games, 380s
+  model:might1_b6c96 vs retail:crazy: 227/400 games, 395s
+  model:might1_b6c96 vs retail:crazy: 236/400 games, 410s
+  model:might1_b6c96 vs retail:crazy: 241/400 games, 425s
+  model:might1_b6c96 vs retail:crazy: 252/400 games, 441s
+  model:might1_b6c96 vs retail:crazy: 260/400 games, 456s
+  model:might1_b6c96 vs retail:crazy: 265/400 games, 471s
+  model:might1_b6c96 vs retail:crazy: 277/400 games, 486s
+  model:might1_b6c96 vs retail:crazy: 288/400 games, 501s
+  model:might1_b6c96 vs retail:crazy: 301/400 games, 516s
+  model:might1_b6c96 vs retail:crazy: 314/400 games, 532s
+  model:might1_b6c96 vs retail:crazy: 326/400 games, 547s
+  model:might1_b6c96 vs retail:crazy: 346/400 games, 562s
+  model:might1_b6c96 vs retail:crazy: 358/400 games, 577s
+  model:might1_b6c96 vs retail:crazy: 374/400 games, 592s
+  model:might1_b6c96 vs retail:crazy: 389/400 games, 607s
+  model:might1_b6c96 vs retail:crazy: 398/400 games, 622s
+retail:crazy: +400 games
+
+result (model against each opponent; a draw is half a win):
+  model:might1_b6c96 vs retail:crazy: W-L-D 325-74-1 of 400, score 81.4%, capped 1, mean turns 28.7
+results: /kvm/polytopia-ai-data/arena/might/might1_crazy.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/arena/might/might1_crazy.jsonl

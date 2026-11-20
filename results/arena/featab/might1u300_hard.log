@@ -1,0 +1,20 @@
+model:might1_b6c96/ckpt_u00300: /kvm/polytopia-ai-data/runs/might1_b6c96/ckpt_u00300.pt (step 300), 1.42M params
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 0/400 games, 1s
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 15/400 games, 16s
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 46/400 games, 31s
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 91/400 games, 46s
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 130/400 games, 61s
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 160/400 games, 76s
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 190/400 games, 91s
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 222/400 games, 106s
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 259/400 games, 121s
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 303/400 games, 136s
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 339/400 games, 151s
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 375/400 games, 166s
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: 398/400 games, 181s
+retail:hard: +400 games
+
+result (model against each opponent; a draw is half a win):
+  model:might1_b6c96/ckpt_u00300 vs retail:hard: W-L-D 355-45-0 of 400, score 88.8%, capped 0, mean turns 27.9
+GPU peak allocated 37 MiB
+results: /kvm/polytopia-ai-data/arena/featab/might1u300_hard.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/arena/featab/might1u300_hard.jsonl

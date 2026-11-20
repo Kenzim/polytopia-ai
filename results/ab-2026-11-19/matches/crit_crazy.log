@@ -1,0 +1,49 @@
+model:abc_crit: /kvm/tmp/abc/runs/abc_crit/ckpt_final.pt (step 300), 1.42M params
+  model:abc_crit vs retail:crazy: 0/400 games, 0s
+  model:abc_crit vs retail:crazy: 0/400 games, 16s
+  model:abc_crit vs retail:crazy: 0/400 games, 31s
+  model:abc_crit vs retail:crazy: 9/400 games, 46s
+  model:abc_crit vs retail:crazy: 14/400 games, 61s
+  model:abc_crit vs retail:crazy: 21/400 games, 76s
+  model:abc_crit vs retail:crazy: 26/400 games, 92s
+  model:abc_crit vs retail:crazy: 35/400 games, 107s
+  model:abc_crit vs retail:crazy: 46/400 games, 122s
+  model:abc_crit vs retail:crazy: 53/400 games, 137s
+  model:abc_crit vs retail:crazy: 61/400 games, 152s
+  model:abc_crit vs retail:crazy: 72/400 games, 167s
+  model:abc_crit vs retail:crazy: 81/400 games, 183s
+  model:abc_crit vs retail:crazy: 86/400 games, 198s
+  model:abc_crit vs retail:crazy: 97/400 games, 213s
+  model:abc_crit vs retail:crazy: 104/400 games, 228s
+  model:abc_crit vs retail:crazy: 113/400 games, 243s
+  model:abc_crit vs retail:crazy: 123/400 games, 259s
+  model:abc_crit vs retail:crazy: 131/400 games, 274s
+  model:abc_crit vs retail:crazy: 142/400 games, 289s
+  model:abc_crit vs retail:crazy: 152/400 games, 304s
+  model:abc_crit vs retail:crazy: 156/400 games, 319s
+  model:abc_crit vs retail:crazy: 167/400 games, 334s
+  model:abc_crit vs retail:crazy: 176/400 games, 349s
+  model:abc_crit vs retail:crazy: 188/400 games, 364s
+  model:abc_crit vs retail:crazy: 194/400 games, 380s
+  model:abc_crit vs retail:crazy: 204/400 games, 395s
+  model:abc_crit vs retail:crazy: 213/400 games, 410s
+  model:abc_crit vs retail:crazy: 223/400 games, 425s
+  model:abc_crit vs retail:crazy: 232/400 games, 440s
+  model:abc_crit vs retail:crazy: 239/400 games, 455s
+  model:abc_crit vs retail:crazy: 254/400 games, 471s
+  model:abc_crit vs retail:crazy: 267/400 games, 486s
+  model:abc_crit vs retail:crazy: 275/400 games, 501s
+  model:abc_crit vs retail:crazy: 285/400 games, 516s
+  model:abc_crit vs retail:crazy: 307/400 games, 531s
+  model:abc_crit vs retail:crazy: 319/400 games, 546s
+  model:abc_crit vs retail:crazy: 338/400 games, 561s
+  model:abc_crit vs retail:crazy: 352/400 games, 577s
+  model:abc_crit vs retail:crazy: 364/400 games, 592s
+  model:abc_crit vs retail:crazy: 378/400 games, 607s
+  model:abc_crit vs retail:crazy: 392/400 games, 622s
+  model:abc_crit vs retail:crazy: 396/400 games, 637s
+retail:crazy: +400 games
+
+result (model against each opponent; a draw is half a win):
+  model:abc_crit vs retail:crazy: W-L-D 340-60-0 of 400, score 85.0%, capped 0, mean turns 26.3
+results: /kvm/tmp/abc/eval/crit_crazy.jsonl   report: python tools/elo.py /kvm/tmp/abc/eval/crit_crazy.jsonl

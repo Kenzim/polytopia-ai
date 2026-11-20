@@ -12,6 +12,8 @@ checkpoints/
 *.pt
 *.pth
 *.ckpt
+# The curated models of models/README.md are kept in the repo
+!models/*/*.pt
 
 # Saves hold the account id and name: never commit
 *.state

@@ -1,0 +1,71 @@
+model:rl1_b6c96_cpu: /kvm/polytopia-ai-data/runs/rl1_b6c96_cpu/ckpt_final.pt (step 200), 1.42M params
+  model:rl1_b6c96_cpu vs retail:easy: 0/400 games, 0s
+  model:rl1_b6c96_cpu vs retail:easy: 49/400 games, 15s
+  model:rl1_b6c96_cpu vs retail:easy: 132/400 games, 30s
+  model:rl1_b6c96_cpu vs retail:easy: 207/400 games, 45s
+  model:rl1_b6c96_cpu vs retail:easy: 288/400 games, 61s
+  model:rl1_b6c96_cpu vs retail:easy: 353/400 games, 76s
+  model:rl1_b6c96_cpu vs retail:easy: 386/400 games, 91s
+  model:rl1_b6c96_cpu vs retail:easy: 395/400 games, 106s
+  model:rl1_b6c96_cpu vs retail:easy: 398/400 games, 121s
+  model:rl1_b6c96_cpu vs retail:easy: 398/400 games, 136s
+  model:rl1_b6c96_cpu vs retail:easy: 399/400 games, 151s
+retail:easy: +400 games
+  model:rl1_b6c96_cpu vs retail:normal: 0/400 games, 0s
+  model:rl1_b6c96_cpu vs retail:normal: 21/400 games, 15s
+  model:rl1_b6c96_cpu vs retail:normal: 71/400 games, 30s
+  model:rl1_b6c96_cpu vs retail:normal: 128/400 games, 45s
+  model:rl1_b6c96_cpu vs retail:normal: 175/400 games, 60s
+  model:rl1_b6c96_cpu vs retail:normal: 229/400 games, 75s
+  model:rl1_b6c96_cpu vs retail:normal: 271/400 games, 90s
+  model:rl1_b6c96_cpu vs retail:normal: 321/400 games, 105s
+  model:rl1_b6c96_cpu vs retail:normal: 363/400 games, 120s
+  model:rl1_b6c96_cpu vs retail:normal: 395/400 games, 135s
+  model:rl1_b6c96_cpu vs retail:normal: 398/400 games, 150s
+retail:normal: +400 games
+  model:rl1_b6c96_cpu vs retail:hard: 0/400 games, 0s
+  model:rl1_b6c96_cpu vs retail:hard: 23/400 games, 15s
+  model:rl1_b6c96_cpu vs retail:hard: 53/400 games, 30s
+  model:rl1_b6c96_cpu vs retail:hard: 99/400 games, 45s
+  model:rl1_b6c96_cpu vs retail:hard: 139/400 games, 60s
+  model:rl1_b6c96_cpu vs retail:hard: 182/400 games, 75s
+  model:rl1_b6c96_cpu vs retail:hard: 219/400 games, 90s
+  model:rl1_b6c96_cpu vs retail:hard: 258/400 games, 105s
+  model:rl1_b6c96_cpu vs retail:hard: 301/400 games, 120s
+  model:rl1_b6c96_cpu vs retail:hard: 342/400 games, 135s
+  model:rl1_b6c96_cpu vs retail:hard: 375/400 games, 150s
+  model:rl1_b6c96_cpu vs retail:hard: 392/400 games, 165s
+  model:rl1_b6c96_cpu vs retail:hard: 396/400 games, 180s
+retail:hard: +400 games
+  model:rl1_b6c96_cpu vs retail:crazy: 0/400 games, 0s
+  model:rl1_b6c96_cpu vs retail:crazy: 24/400 games, 15s
+  model:rl1_b6c96_cpu vs retail:crazy: 48/400 games, 30s
+  model:rl1_b6c96_cpu vs retail:crazy: 70/400 games, 45s
+  model:rl1_b6c96_cpu vs retail:crazy: 106/400 games, 60s
+  model:rl1_b6c96_cpu vs retail:crazy: 134/400 games, 75s
+  model:rl1_b6c96_cpu vs retail:crazy: 157/400 games, 90s
+  model:rl1_b6c96_cpu vs retail:crazy: 188/400 games, 105s
+  model:rl1_b6c96_cpu vs retail:crazy: 224/400 games, 121s
+  model:rl1_b6c96_cpu vs retail:crazy: 251/400 games, 136s
+  model:rl1_b6c96_cpu vs retail:crazy: 280/400 games, 151s
+  model:rl1_b6c96_cpu vs retail:crazy: 302/400 games, 166s
+  model:rl1_b6c96_cpu vs retail:crazy: 329/400 games, 181s
+  model:rl1_b6c96_cpu vs retail:crazy: 349/400 games, 196s
+  model:rl1_b6c96_cpu vs retail:crazy: 375/400 games, 211s
+  model:rl1_b6c96_cpu vs retail:crazy: 391/400 games, 226s
+  model:rl1_b6c96_cpu vs retail:crazy: 394/400 games, 241s
+  model:rl1_b6c96_cpu vs retail:crazy: 395/400 games, 256s
+  model:rl1_b6c96_cpu vs retail:crazy: 396/400 games, 271s
+  model:rl1_b6c96_cpu vs retail:crazy: 396/400 games, 286s
+  model:rl1_b6c96_cpu vs retail:crazy: 397/400 games, 301s
+  model:rl1_b6c96_cpu vs retail:crazy: 398/400 games, 316s
+  model:rl1_b6c96_cpu vs retail:crazy: 399/400 games, 331s
+retail:crazy: +400 games
+
+result (model against each opponent; a draw is half a win):
+  model:rl1_b6c96_cpu vs retail:easy: W-L-D 396-2-2 of 400, score 99.2%, capped 2, mean turns 26.2
+  model:rl1_b6c96_cpu vs retail:normal: W-L-D 386-13-1 of 400, score 96.6%, capped 1, mean turns 30.1
+  model:rl1_b6c96_cpu vs retail:hard: W-L-D 338-60-2 of 400, score 84.8%, capped 2, mean turns 33.8
+  model:rl1_b6c96_cpu vs retail:crazy: W-L-D 273-122-5 of 400, score 68.9%, capped 5, mean turns 35.9
+GPU peak allocated 37 MiB
+results: /kvm/polytopia-ai-data/arena/rl1/rl1_raw.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/arena/rl1/rl1_raw.jsonl

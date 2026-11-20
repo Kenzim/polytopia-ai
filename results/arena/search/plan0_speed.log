@@ -1,0 +1,3 @@
+  model:bc3_b6c96_v11:search=4:plan=0 vs retail:normal: 4/8 games, 150s
+  model:bc3_b6c96_v11:search=4:plan=0 vs retail:normal: 8/8 games, 435s
+plan0 8 games, 5699 decisions: 75.6 ms each (13/s), searched 1429 (25%), plan steps 0, network rows 5699 root + 75409 rollout; 53.9 s of policy per game, wall 435s

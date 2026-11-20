@@ -1,0 +1,168 @@
++ export TMPDIR=/kvm/tmp/tmp UV_CACHE_DIR=/kvm/tmp/uv-cache
++ TMPDIR=/kvm/tmp/tmp
++ UV_CACHE_DIR=/kvm/tmp/uv-cache
++ cd /kvm/polytopia/ai/python
++ R=/kvm/polytopia-ai-data/runs
++ O=/kvm/polytopia-ai-data/arena/beliefrl
++ A=/kvm/polytopia-ai-data/runs/beliefrl_b6c96/ckpt_final.pt
++ B=/kvm/polytopia-ai-data/runs/might1_b6c96/ckpt_u00300.pt
++ PY='nice -n 10 /kvm/polytopia/.venv/bin/python'
++ nice -n 10 /kvm/polytopia/.venv/bin/python -m polyai.h2h --a /kvm/polytopia-ai-data/runs/beliefrl_b6c96/ckpt_final.pt --b /kvm/polytopia-ai-data/runs/might1_b6c96/ckpt_u00300.pt --seeds 200 --mode might --threads 8 --device cpu --out /kvm/polytopia-ai-data/arena/beliefrl/h2h.jsonl
+model:beliefrl_b6c96: /kvm/polytopia-ai-data/runs/beliefrl_b6c96/ckpt_final.pt (step 300)
+model:might1_b6c96/ckpt_u00300: /kvm/polytopia-ai-data/runs/might1_b6c96/ckpt_u00300.pt (step 300)
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 0/400 games, 0s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 1/400 games, 31s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 3/400 games, 61s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 9/400 games, 91s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 19/400 games, 121s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 28/400 games, 151s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 35/400 games, 181s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 43/400 games, 211s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 47/400 games, 241s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 56/400 games, 272s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 71/400 games, 302s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 81/400 games, 332s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 91/400 games, 362s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 100/400 games, 392s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 111/400 games, 422s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 119/400 games, 453s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 126/400 games, 483s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 136/400 games, 513s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 144/400 games, 543s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 153/400 games, 573s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 156/400 games, 604s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 159/400 games, 634s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 167/400 games, 664s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 176/400 games, 694s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 189/400 games, 724s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 198/400 games, 755s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 203/400 games, 785s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 209/400 games, 815s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 218/400 games, 845s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 226/400 games, 875s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 234/400 games, 905s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 239/400 games, 936s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 251/400 games, 966s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 256/400 games, 996s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 268/400 games, 1027s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 272/400 games, 1057s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 280/400 games, 1087s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 291/400 games, 1117s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 301/400 games, 1147s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 312/400 games, 1178s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 320/400 games, 1208s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 328/400 games, 1238s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 336/400 games, 1268s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 339/400 games, 1298s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 346/400 games, 1328s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 351/400 games, 1358s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 358/400 games, 1388s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 360/400 games, 1418s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 370/400 games, 1448s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 372/400 games, 1478s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 375/400 games, 1508s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 379/400 games, 1539s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 383/400 games, 1569s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 388/400 games, 1599s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 390/400 games, 1629s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 394/400 games, 1659s
+  model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: 398/400 games, 1689s
+model:beliefrl_b6c96 vs model:might1_b6c96/ckpt_u00300: W-L-D 230-165-5 of 400, score 58.1%, capped 5
++ nice -n 10 /kvm/polytopia/.venv/bin/python -m polyai.arena --model /kvm/polytopia-ai-data/runs/beliefrl_b6c96/ckpt_final.pt --opponent retail:hard,retail:crazy --seeds 200 --mode might --threads 8 --device cpu --out /kvm/polytopia-ai-data/arena/beliefrl/belief_vs_retail.jsonl
+model:beliefrl_b6c96: /kvm/polytopia-ai-data/runs/beliefrl_b6c96/ckpt_final.pt (step 300), 1.42M params
+  model:beliefrl_b6c96 vs retail:hard: 0/400 games, 0s
+  model:beliefrl_b6c96 vs retail:hard: 1/400 games, 16s
+  model:beliefrl_b6c96 vs retail:hard: 8/400 games, 31s
+  model:beliefrl_b6c96 vs retail:hard: 12/400 games, 46s
+  model:beliefrl_b6c96 vs retail:hard: 19/400 games, 61s
+  model:beliefrl_b6c96 vs retail:hard: 27/400 games, 76s
+  model:beliefrl_b6c96 vs retail:hard: 35/400 games, 91s
+  model:beliefrl_b6c96 vs retail:hard: 48/400 games, 106s
+  model:beliefrl_b6c96 vs retail:hard: 60/400 games, 121s
+  model:beliefrl_b6c96 vs retail:hard: 68/400 games, 137s
+  model:beliefrl_b6c96 vs retail:hard: 76/400 games, 152s
+  model:beliefrl_b6c96 vs retail:hard: 91/400 games, 167s
+  model:beliefrl_b6c96 vs retail:hard: 101/400 games, 182s
+  model:beliefrl_b6c96 vs retail:hard: 110/400 games, 197s
+  model:beliefrl_b6c96 vs retail:hard: 117/400 games, 212s
+  model:beliefrl_b6c96 vs retail:hard: 126/400 games, 227s
+  model:beliefrl_b6c96 vs retail:hard: 141/400 games, 242s
+  model:beliefrl_b6c96 vs retail:hard: 154/400 games, 258s
+  model:beliefrl_b6c96 vs retail:hard: 170/400 games, 273s
+  model:beliefrl_b6c96 vs retail:hard: 178/400 games, 288s
+  model:beliefrl_b6c96 vs retail:hard: 184/400 games, 303s
+  model:beliefrl_b6c96 vs retail:hard: 188/400 games, 318s
+  model:beliefrl_b6c96 vs retail:hard: 199/400 games, 333s
+  model:beliefrl_b6c96 vs retail:hard: 207/400 games, 349s
+  model:beliefrl_b6c96 vs retail:hard: 221/400 games, 364s
+  model:beliefrl_b6c96 vs retail:hard: 241/400 games, 379s
+  model:beliefrl_b6c96 vs retail:hard: 248/400 games, 394s
+  model:beliefrl_b6c96 vs retail:hard: 263/400 games, 409s
+  model:beliefrl_b6c96 vs retail:hard: 277/400 games, 425s
+  model:beliefrl_b6c96 vs retail:hard: 290/400 games, 440s
+  model:beliefrl_b6c96 vs retail:hard: 299/400 games, 455s
+  model:beliefrl_b6c96 vs retail:hard: 322/400 games, 470s
+  model:beliefrl_b6c96 vs retail:hard: 337/400 games, 485s
+  model:beliefrl_b6c96 vs retail:hard: 356/400 games, 500s
+  model:beliefrl_b6c96 vs retail:hard: 375/400 games, 515s
+  model:beliefrl_b6c96 vs retail:hard: 397/400 games, 530s
+retail:hard: +400 games
+  model:beliefrl_b6c96 vs retail:crazy: 0/400 games, 0s
+  model:beliefrl_b6c96 vs retail:crazy: 2/400 games, 15s
+  model:beliefrl_b6c96 vs retail:crazy: 2/400 games, 31s
+  model:beliefrl_b6c96 vs retail:crazy: 10/400 games, 46s
+  model:beliefrl_b6c96 vs retail:crazy: 15/400 games, 61s
+  model:beliefrl_b6c96 vs retail:crazy: 20/400 games, 76s
+  model:beliefrl_b6c96 vs retail:crazy: 31/400 games, 91s
+  model:beliefrl_b6c96 vs retail:crazy: 48/400 games, 106s
+  model:beliefrl_b6c96 vs retail:crazy: 58/400 games, 121s
+  model:beliefrl_b6c96 vs retail:crazy: 65/400 games, 137s
+  model:beliefrl_b6c96 vs retail:crazy: 74/400 games, 152s
+  model:beliefrl_b6c96 vs retail:crazy: 84/400 games, 167s
+  model:beliefrl_b6c96 vs retail:crazy: 97/400 games, 182s
+  model:beliefrl_b6c96 vs retail:crazy: 111/400 games, 197s
+  model:beliefrl_b6c96 vs retail:crazy: 123/400 games, 213s
+  model:beliefrl_b6c96 vs retail:crazy: 139/400 games, 228s
+  model:beliefrl_b6c96 vs retail:crazy: 146/400 games, 243s
+  model:beliefrl_b6c96 vs retail:crazy: 151/400 games, 258s
+  model:beliefrl_b6c96 vs retail:crazy: 168/400 games, 273s
+  model:beliefrl_b6c96 vs retail:crazy: 175/400 games, 289s
+  model:beliefrl_b6c96 vs retail:crazy: 183/400 games, 304s
+  model:beliefrl_b6c96 vs retail:crazy: 192/400 games, 319s
+  model:beliefrl_b6c96 vs retail:crazy: 199/400 games, 334s
+  model:beliefrl_b6c96 vs retail:crazy: 208/400 games, 350s
+  model:beliefrl_b6c96 vs retail:crazy: 221/400 games, 365s
+  model:beliefrl_b6c96 vs retail:crazy: 232/400 games, 380s
+  model:beliefrl_b6c96 vs retail:crazy: 243/400 games, 396s
+  model:beliefrl_b6c96 vs retail:crazy: 254/400 games, 411s
+  model:beliefrl_b6c96 vs retail:crazy: 264/400 games, 426s
+  model:beliefrl_b6c96 vs retail:crazy: 276/400 games, 441s
+  model:beliefrl_b6c96 vs retail:crazy: 285/400 games, 456s
+  model:beliefrl_b6c96 vs retail:crazy: 300/400 games, 471s
+  model:beliefrl_b6c96 vs retail:crazy: 306/400 games, 487s
+  model:beliefrl_b6c96 vs retail:crazy: 316/400 games, 502s
+  model:beliefrl_b6c96 vs retail:crazy: 336/400 games, 517s
+  model:beliefrl_b6c96 vs retail:crazy: 350/400 games, 532s
+  model:beliefrl_b6c96 vs retail:crazy: 368/400 games, 547s
+  model:beliefrl_b6c96 vs retail:crazy: 379/400 games, 562s
+  model:beliefrl_b6c96 vs retail:crazy: 388/400 games, 577s
+  model:beliefrl_b6c96 vs retail:crazy: 394/400 games, 592s
+retail:crazy: +400 games
+
+result (model against each opponent; a draw is half a win):
+  model:beliefrl_b6c96 vs retail:hard: W-L-D 369-31-0 of 400, score 92.2%, capped 0, mean turns 25.1
+  model:beliefrl_b6c96 vs retail:crazy: W-L-D 320-80-0 of 400, score 80.0%, capped 0, mean turns 27.4
+results: /kvm/polytopia-ai-data/arena/beliefrl/belief_vs_retail.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/arena/beliefrl/belief_vs_retail.jsonl
+++ tr '\n' ' '
+++ ls -d /kvm/polytopia-ai-data/bc-might-truth-split/val/shard-00007-16x16.npz /kvm/polytopia-ai-data/bc-might-truth-split/val/shard-00022-16x16.npz /kvm/polytopia-ai-data/bc-might-truth-split/val/shard-00037-14x14.npz /kvm/polytopia-ai-data/bc-might-truth-split/val/shard-00052-14x14.npz /kvm/polytopia-ai-data/bc-might-truth-split/val/shard-00067-14x14.npz /kvm/polytopia-ai-data/bc-might-truth-split/val/shard-00082-11x11.npz /kvm/polytopia-ai-data/bc-might-truth-split/val/shard-00097-16x16.npz /kvm/polytopia-ai-data/bc-might-truth-split/val/shard-00112-16x16.npz /kvm/polytopia-ai-data/bc-might-truth-split/val/shard-00127-16x16.npz /kvm/polytopia-ai-data/bc-might-truth-split/val/shard-00142-11x11.npz
++ nice -n 10 /kvm/polytopia/.venv/bin/python -m polyai.belief --model /kvm/polytopia-ai-data/runs/beliefrl_b6c96/ckpt_final.pt --shards /kvm/polytopia-ai-data/bc-might-truth-split/val/shard-00007-16x16.npz /kvm/polytopia-ai-data/bc-might-truth-split/val/shard-00022-16x16.npz /kvm/polytopia-ai-data/bc-might-truth-split/val/shard-00037-14x14.npz /kvm/polytopia-ai-data/bc-might-truth-split/val/shard-00052-14x14.npz /kvm/polytopia-ai-data/bc-might-truth-split/val/shard-00067-14x14.npz /kvm/polytopia-ai-data/bc-might-truth-split/val/shard-00082-11x11.npz /kvm/polytopia-ai-data/bc-might-truth-split/val/shard-00097-16x16.npz /kvm/polytopia-ai-data/bc-might-truth-split/val/shard-00112-16x16.npz /kvm/polytopia-ai-data/bc-might-truth-split/val/shard-00127-16x16.npz /kvm/polytopia-ai-data/bc-might-truth-split/val/shard-00142-11x11.npz --device cpu --out /kvm/polytopia-ai-data/arena/beliefrl/belief_u300.json
+channel             tiles     acc    base      CE  CE base   skill   prec    rec
+terrain          25035627  0.4765  0.3318  1.2403   1.5129   0.180  0.810  0.580
+resource         25035627  0.6828  0.6829  1.1499   1.2451   0.076  0.595  0.001
+site             25035627  0.9659  0.9659  0.1402   0.1722   0.186    nan  0.000
+enemy_city       25035627  0.9678  0.9656  0.0993   0.1496   0.336  0.645  0.139
+enemy_capital    25035627  0.9907  0.9907  0.0434   0.0619   0.298  0.534  0.002
+unit             25035627  0.9251  0.9251  0.2285   0.2661   0.141  0.506  0.011
+capital location over hidden land tiles (163530 positions): top-1 0.326 (uniform 0.036), top-3 0.561 (uniform 0.106)
++ echo ALLDONE
+ALLDONE

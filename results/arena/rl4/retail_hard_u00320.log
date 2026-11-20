@@ -1,0 +1,69 @@
+model:rl4_4090_b6c96/ckpt_u00320: /kvm/polytopia-ai-data/runs/rl4_4090_b6c96/ckpt_u00320.pt (step 320), 1.42M params
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 0/400 games, 0s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 1/400 games, 16s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 1/400 games, 31s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 4/400 games, 46s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 7/400 games, 61s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 11/400 games, 76s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 17/400 games, 91s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 23/400 games, 106s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 28/400 games, 121s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 31/400 games, 137s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 40/400 games, 152s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 44/400 games, 168s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 48/400 games, 183s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 57/400 games, 198s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 64/400 games, 213s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 73/400 games, 228s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 81/400 games, 243s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 86/400 games, 259s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 94/400 games, 274s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 98/400 games, 289s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 109/400 games, 304s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 119/400 games, 319s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 127/400 games, 334s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 138/400 games, 350s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 150/400 games, 365s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 155/400 games, 380s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 162/400 games, 395s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 171/400 games, 410s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 180/400 games, 425s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 188/400 games, 441s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 198/400 games, 456s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 208/400 games, 471s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 215/400 games, 486s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 222/400 games, 501s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 228/400 games, 517s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 234/400 games, 532s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 249/400 games, 547s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 255/400 games, 562s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 259/400 games, 577s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 265/400 games, 592s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 276/400 games, 608s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 284/400 games, 623s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 292/400 games, 638s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 297/400 games, 653s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 304/400 games, 668s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 310/400 games, 684s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 319/400 games, 699s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 325/400 games, 714s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 339/400 games, 729s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 347/400 games, 744s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 354/400 games, 759s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 363/400 games, 774s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 375/400 games, 789s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 384/400 games, 804s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 393/400 games, 819s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 394/400 games, 834s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 394/400 games, 849s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 395/400 games, 864s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 397/400 games, 879s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 398/400 games, 894s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 398/400 games, 909s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 398/400 games, 924s
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: 399/400 games, 939s
+retail:hard: +400 games
+
+result (model against each opponent; a draw is half a win):
+  model:rl4_4090_b6c96/ckpt_u00320 vs retail:hard: W-L-D 350-46-4 of 400, score 88.0%, capped 4, mean turns 33.3
+results: /kvm/polytopia-ai-data/arena/rl4/retail_hard_u00320.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/arena/rl4/retail_hard_u00320.jsonl

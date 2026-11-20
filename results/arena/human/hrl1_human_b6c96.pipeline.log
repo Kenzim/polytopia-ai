@@ -1,0 +1,5 @@
+2026-11-09T03:41:08+00:00 loop inactive; training hrl1_human_b6c96 from /kvm/polytopia-ai-data/runs/hbc1_rl3_human/ckpt_final.pt
+2026-11-09T03:47:45+00:00 loop inactive; training hrl1_human_b6c96 from /kvm/polytopia-ai-data/runs/hbc1_rl3_human/ckpt_final.pt
+2026-11-09T06:05:39+00:00 trained; gate vs champion
+2026-11-09T06:51:59+00:00 done: gate 223-117-60 of 400, 63.2% (95% CI 58.4 to 67.8); crazy 155-44-1 of 200, 77.8% (95% CI 71.5 to 83.0) (champion 76.0%); PROMOTED
+2026-11-09T06:51:59+00:00 autoloop restarted

@@ -1,0 +1,64 @@
+[     98s] jobs 1/48, candidates 23
+[    117s] jobs 2/48, candidates 45
+[    210s] jobs 3/48, candidates 67
+[    266s] jobs 4/48, candidates 99
+[    289s] jobs 5/48, candidates 130
+[    485s] jobs 6/48, candidates 153
+[    488s] jobs 7/48, candidates 176
+[    657s] jobs 8/48, candidates 202
+[    875s] jobs 9/48, candidates 225
+[    926s] jobs 10/48, candidates 267
+[   1102s] jobs 11/48, candidates 305
+[   1195s] jobs 12/48, candidates 339
+[   1232s] jobs 13/48, candidates 373
+[   1359s] jobs 14/48, candidates 395
+[   1421s] jobs 15/48, candidates 429
+[   1480s] jobs 16/48, candidates 467
+[   1492s] jobs 17/48, candidates 492
+[   1502s] jobs 18/48, candidates 527
+[   1580s] jobs 19/48, candidates 557
+[   1612s] jobs 20/48, candidates 599
+[   1731s] jobs 21/48, candidates 635
+[   1766s] jobs 22/48, candidates 668
+[   1784s] jobs 23/48, candidates 691
+[   1797s] jobs 24/48, candidates 723
+[   1845s] jobs 25/48, candidates 758
+[   1875s] jobs 26/48, candidates 794
+[   1885s] jobs 27/48, candidates 829
+[   1950s] jobs 28/48, candidates 868
+[   1975s] jobs 29/48, candidates 896
+[   2016s] jobs 30/48, candidates 925
+[   2143s] jobs 31/48, candidates 965
+[   2698s] jobs 32/48, candidates 1007
+[   2803s] jobs 33/48, candidates 1047
+[   2822s] jobs 34/48, candidates 1088
+[   3261s] jobs 35/48, candidates 1123
+[   3415s] jobs 36/48, candidates 1165
+[   3443s] jobs 37/48, candidates 1206
+[   3552s] jobs 38/48, candidates 1241
+[   3580s] jobs 39/48, candidates 1280
+[   3591s] jobs 40/48, candidates 1319
+[   3749s] jobs 41/48, candidates 1360
+[   3804s] jobs 42/48, candidates 1400
+[   4102s] jobs 43/48, candidates 1440
+[   4480s] jobs 44/48, candidates 1482
+[   4546s] jobs 45/48, candidates 1521
+[   4848s] jobs 46/48, candidates 1560
+[   5157s] jobs 47/48, candidates 1599
+[   5492s] jobs 48/48, candidates 1641
+roots 289, with a choice 289, candidates 1641
+Spearman(V, R) within roots:      +0.022 ± 0.070 (n=183)
+Spearman(prior, R) within roots:  -0.032 ± 0.069 (n=183)
+split-half Spearman of R:         +0.148 ± 0.079 (n=118)  (Spearman-Brown ceiling 0.258)
+  Spearman(V, R), turns 2-7: -0.007 ± 0.091 (n=119)
+  Spearman(V, R), turns 11-16: +0.022 ± 0.118 (n=50)
+  Spearman(V, R), turns 22+: +0.265 ± 0.232 (n=14)
+realised R of the turn picked by:
+  value   +0.749 ± 0.039 (n=289)
+  prior   +0.747 ± 0.039 (n=289)
+  search  +0.749 ± 0.039 (n=289)
+  greedy  +0.750 ± 0.038 (n=289)
+  mean    +0.747 ± 0.038 (n=289)
+  best    +0.820 ± 0.033 (n=289)
+value pick minus greedy:  -0.001 ± 0.013 (n=289)
+search pick minus greedy: -0.001 ± 0.002 (n=289)

@@ -1,0 +1,79 @@
+model:rec_ema: /kvm/polytopia-ai-data/runs/rec_ema/ckpt_final.pt (step 300), 1.42M params
+  model:rec_ema vs retail:hard: 0/400 games, 0s
+  model:rec_ema vs retail:hard: 1/400 games, 15s
+  model:rec_ema vs retail:hard: 3/400 games, 31s
+  model:rec_ema vs retail:hard: 12/400 games, 46s
+  model:rec_ema vs retail:hard: 20/400 games, 61s
+  model:rec_ema vs retail:hard: 26/400 games, 76s
+  model:rec_ema vs retail:hard: 41/400 games, 91s
+  model:rec_ema vs retail:hard: 50/400 games, 106s
+  model:rec_ema vs retail:hard: 60/400 games, 121s
+  model:rec_ema vs retail:hard: 65/400 games, 137s
+  model:rec_ema vs retail:hard: 83/400 games, 152s
+  model:rec_ema vs retail:hard: 99/400 games, 167s
+  model:rec_ema vs retail:hard: 111/400 games, 182s
+  model:rec_ema vs retail:hard: 124/400 games, 197s
+  model:rec_ema vs retail:hard: 137/400 games, 213s
+  model:rec_ema vs retail:hard: 144/400 games, 228s
+  model:rec_ema vs retail:hard: 166/400 games, 243s
+  model:rec_ema vs retail:hard: 176/400 games, 259s
+  model:rec_ema vs retail:hard: 185/400 games, 274s
+  model:rec_ema vs retail:hard: 192/400 games, 289s
+  model:rec_ema vs retail:hard: 202/400 games, 304s
+  model:rec_ema vs retail:hard: 217/400 games, 319s
+  model:rec_ema vs retail:hard: 233/400 games, 335s
+  model:rec_ema vs retail:hard: 248/400 games, 350s
+  model:rec_ema vs retail:hard: 261/400 games, 365s
+  model:rec_ema vs retail:hard: 274/400 games, 380s
+  model:rec_ema vs retail:hard: 285/400 games, 396s
+  model:rec_ema vs retail:hard: 296/400 games, 411s
+  model:rec_ema vs retail:hard: 308/400 games, 426s
+  model:rec_ema vs retail:hard: 320/400 games, 441s
+  model:rec_ema vs retail:hard: 334/400 games, 456s
+  model:rec_ema vs retail:hard: 358/400 games, 471s
+  model:rec_ema vs retail:hard: 372/400 games, 486s
+  model:rec_ema vs retail:hard: 392/400 games, 501s
+  model:rec_ema vs retail:hard: 399/400 games, 516s
+retail:hard: +400 games
+  model:rec_ema vs retail:crazy: 0/400 games, 0s
+  model:rec_ema vs retail:crazy: 1/400 games, 15s
+  model:rec_ema vs retail:crazy: 12/400 games, 30s
+  model:rec_ema vs retail:crazy: 15/400 games, 45s
+  model:rec_ema vs retail:crazy: 29/400 games, 60s
+  model:rec_ema vs retail:crazy: 39/400 games, 76s
+  model:rec_ema vs retail:crazy: 49/400 games, 91s
+  model:rec_ema vs retail:crazy: 63/400 games, 106s
+  model:rec_ema vs retail:crazy: 70/400 games, 121s
+  model:rec_ema vs retail:crazy: 81/400 games, 137s
+  model:rec_ema vs retail:crazy: 92/400 games, 152s
+  model:rec_ema vs retail:crazy: 106/400 games, 167s
+  model:rec_ema vs retail:crazy: 120/400 games, 182s
+  model:rec_ema vs retail:crazy: 129/400 games, 197s
+  model:rec_ema vs retail:crazy: 135/400 games, 212s
+  model:rec_ema vs retail:crazy: 145/400 games, 228s
+  model:rec_ema vs retail:crazy: 156/400 games, 243s
+  model:rec_ema vs retail:crazy: 167/400 games, 258s
+  model:rec_ema vs retail:crazy: 179/400 games, 273s
+  model:rec_ema vs retail:crazy: 186/400 games, 289s
+  model:rec_ema vs retail:crazy: 194/400 games, 304s
+  model:rec_ema vs retail:crazy: 204/400 games, 319s
+  model:rec_ema vs retail:crazy: 218/400 games, 334s
+  model:rec_ema vs retail:crazy: 231/400 games, 349s
+  model:rec_ema vs retail:crazy: 242/400 games, 364s
+  model:rec_ema vs retail:crazy: 253/400 games, 380s
+  model:rec_ema vs retail:crazy: 262/400 games, 395s
+  model:rec_ema vs retail:crazy: 277/400 games, 410s
+  model:rec_ema vs retail:crazy: 287/400 games, 425s
+  model:rec_ema vs retail:crazy: 301/400 games, 440s
+  model:rec_ema vs retail:crazy: 315/400 games, 455s
+  model:rec_ema vs retail:crazy: 332/400 games, 471s
+  model:rec_ema vs retail:crazy: 341/400 games, 486s
+  model:rec_ema vs retail:crazy: 356/400 games, 501s
+  model:rec_ema vs retail:crazy: 370/400 games, 516s
+  model:rec_ema vs retail:crazy: 386/400 games, 531s
+retail:crazy: +400 games
+
+result (model against each opponent; a draw is half a win):
+  model:rec_ema vs retail:hard: W-L-D 361-38-1 of 400, score 90.4%, capped 1, mean turns 27.4
+  model:rec_ema vs retail:crazy: W-L-D 298-102-0 of 400, score 74.5%, capped 0, mean turns 28.5
+results: /kvm/polytopia-ai-data/arena/recipe/rec_ema_final.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/arena/recipe/rec_ema_final.jsonl

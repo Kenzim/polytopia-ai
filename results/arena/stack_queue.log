@@ -1,0 +1,3 @@
+2026-11-01T23:49:50+00:00 seed-1 A/B finished; evaluating and starting belief_s1, featbelief_s0
+2026-11-02T05:38:38+00:00 training done; starting recipe_queue.sh on the GPU, evaluating here
+2026-11-02T16:37:24+00:00 done
