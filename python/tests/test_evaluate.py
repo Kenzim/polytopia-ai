@@ -31,7 +31,7 @@ KINDS = ["human2"] + [f"{m}-{g}" for m in MODE_NAMES.values() for g in ("2p", "3
 def make_line(seed: int, n_players: int = 2, mode: int = 2, steps: int = 120) -> tuple[str, list[str]]:
     """A start position and the texts of the retail AI's first `steps` commands."""
     g = pe.Game.sample(seed, n_players=[n_players], mode=mode)
-    pos = g.position_json()
+    pos = g.position()
     texts = []
     while len(texts) < steps and not g.is_over():
         legal = g.legal_texts()
@@ -75,7 +75,7 @@ def test_from_line_replays_to_the_same_state(line):
     h = pe.Game.from_position(pos)
     for t in texts:
         h.play_text(t)
-    assert g.position_json() == h.position_json()
+    assert g.position() == h.position()
     assert g.turn > 0
 
 
@@ -143,7 +143,7 @@ def test_evaluate_over_the_socket(line):
 def test_moves_need_no_value(line):
     pos, texts = line
     ev = Evaluator(ModelPolicy(MODEL, "cpu"), None, "cpu")
-    r = ev.evaluate({"line": {"position": pos, "steps": steps_of(texts)}, "at": [0], "moves": 2})
+    r = ev.evaluate({"line": {"position": json.loads(pos), "steps": steps_of(texts)}, "at": [0], "moves": 2})
     e = r["evals"][0]
     assert r["value_id"] is None and len(e["moves"]) == 2
     assert all(w is None for w in e["win"].values()) and all("no calibrated value" in x for x in e["why"].values())
@@ -179,7 +179,7 @@ def hidden_swap(pos: str, pid: int, k: int = 6) -> str:
 def test_a_seat_value_ignores_what_it_has_not_seen(evaluator, seed):
     pos, texts = make_line(seed, n_players=3, mode=2, steps=60)
     g = pe.Game.from_line(pos, texts)
-    mid = g.position_json()
+    mid = g.position()
     for pid, alive, _ in g.players():
         if not alive:
             continue
@@ -189,8 +189,8 @@ def test_a_seat_value_ignores_what_it_has_not_seen(evaluator, seed):
         ta, ga = a.encode_for(pid)
         tb, gb = b.encode_for(pid)
         assert np.array_equal(ta, tb) and np.array_equal(ga, gb), f"player {pid}'s view changed"
-        ra = evaluator.evaluate({"line": {"position": mid, "steps": []}, "seats": [pid]})
-        rb = evaluator.evaluate({"line": {"position": other, "steps": []}, "seats": [pid]})
+        ra = evaluator.evaluate({"line": {"position": json.loads(mid), "steps": []}, "seats": [pid]})
+        rb = evaluator.evaluate({"line": {"position": json.loads(other), "steps": []}, "seats": [pid]})
         assert ra["evals"][0]["win"] == rb["evals"][0]["win"]
         assert ra["evals"][0]["win"][str(pid)] is not None
 
@@ -202,7 +202,7 @@ def test_nulls_carry_a_reason(line):
     pos, texts = line
     with tempfile.TemporaryDirectory() as d:
         ev = Evaluator(ModelPolicy(MODEL, "cpu"), value_file(Path(d) / "v.pt", kinds=["human2"]), "cpu")
-        r = ev.evaluate({"line": {"position": pos, "steps": steps_of(texts)}, "at": [0], "seats": [1, 2, 7], "moves": 1,
+        r = ev.evaluate({"line": {"position": json.loads(pos), "steps": steps_of(texts)}, "at": [0], "seats": [1, 2, 7], "moves": 1,
                          "after": True})
     e = r["evals"][0]
     assert e["win"]["1"] is None and "domination-3-4p" in e["why"]["1"]
@@ -214,7 +214,7 @@ def test_an_unsupported_position_gives_nulls_not_an_error(evaluator, line):
     pos, texts = line
     d = json.loads(pos)
     d["players"][0]["tribe"] = 99
-    r = evaluator.evaluate({"line": {"position": json.dumps(d), "steps": []}, "at": [0], "moves": 3})
+    r = evaluator.evaluate({"line": {"position": d, "steps": []}, "at": [0], "moves": 3})
     for e in r["evals"]:
         assert e["win"] and all(w is None for w in e["win"].values())
         assert all("tribe" in why for why in e["why"].values())
@@ -226,7 +226,7 @@ def test_finished_and_eliminated_players_are_exact(evaluator):
     g = pe.Game.from_line(pos, texts)
     if not g.is_over():
         pytest.skip("the sampled game did not finish")
-    r = evaluator.evaluate({"line": {"position": pos, "steps": steps_of(texts)}, "seats": [1, 2]})
+    r = evaluator.evaluate({"line": {"position": json.loads(pos), "steps": steps_of(texts)}, "seats": [1, 2]})
     w = r["evals"][0]["win"]
     assert sorted(w.values()) == [0.0, 1.0] and w[str(g.winner_ids()[0])] == 1.0
 
@@ -237,7 +237,7 @@ def test_finished_and_eliminated_players_are_exact(evaluator):
 def test_one_request_for_many_points_equals_one_by_one(evaluator, line):
     pos, texts = line
     at = list(range(0, len(texts) + 1, 37))
-    base = {"line": {"position": pos, "steps": steps_of(texts)}, "moves": 2, "after": True, "played": True}
+    base = {"line": {"position": json.loads(pos), "steps": steps_of(texts)}, "moves": 2, "after": True, "played": True}
     many = evaluator.evaluate(base | {"at": at})["evals"]
     for i, e in zip(at, many):
         one = evaluator.evaluate(base | {"at": [i]})["evals"][0]

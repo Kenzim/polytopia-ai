@@ -1,4 +1,4 @@
-"""The `evaluate` request of the policy service (docs/interfaces.md section 1.2.3): win chances per player and the
+"""The `evaluate` request of the policy service (docs/interfaces.md section 1.3.1): win chances per player and the
 model's preferred moves along a web engine line.
 
 A line is a polytopia-position file and the steps played from it, each by its command text. The line is replayed
@@ -13,7 +13,6 @@ winners, 0 for the others) and 0 for a player already eliminated.
 
 from __future__ import annotations
 
-import json
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -24,6 +23,7 @@ import torch.nn.functional as F
 
 from .analysis import Calibration, ValueNet, calibrated_win, kind_of, load_value, stage_of
 from .policy import collate, observe_games
+from .serve import RequestError, parse_line
 
 NATURE = 255
 MAX_AT = 5000
@@ -34,7 +34,7 @@ POLICY_BATCH = 64
 UNSUPPORTED = "unsupported position: "
 
 
-class EvaluateError(Exception):
+class EvaluateError(RequestError):
     """A request `evaluate` refuses; the message goes to the client."""
 
 
@@ -83,7 +83,9 @@ class Evaluator:
 
     def evaluate(self, req: dict) -> dict:
         t0 = time.perf_counter()
-        position, steps = _line(req.get("line"))
+        position, steps = parse_line(req.get("line"))
+        if len(steps) > MAX_STEPS:
+            raise EvaluateError(f"'line.steps' holds {len(steps)} steps; at most {MAX_STEPS}")
         at = req.get("at")
         if at is None:
             at = [len(steps)]
@@ -260,22 +262,3 @@ class Evaluator:
                     j = next((i for i, t in enumerate(texts) if t == nxt), None)
                     p.moves.append({"text": nxt, "p": None if j is None else round(float(pr[j]), 4), "win": None,
                                     "played": True, "outside_top": True})
-
-
-def _line(line) -> tuple[str, list[str]]:
-    if not isinstance(line, dict):
-        raise EvaluateError("'line' must be an object with 'position' and 'steps'")
-    position = line.get("position")
-    if isinstance(position, dict):
-        position = json.dumps(position)
-    elif not isinstance(position, str):
-        raise EvaluateError("'line.position' must be a polytopia-position object")
-    steps = line.get("steps", [])
-    if not isinstance(steps, list) or len(steps) > MAX_STEPS:
-        raise EvaluateError(f"'line.steps' must be a list of at most {MAX_STEPS} steps")
-    texts = []
-    for i, st in enumerate(steps):
-        if not isinstance(st, dict) or not isinstance(st.get("text"), str):
-            raise EvaluateError(f"step {i}: each step must be an object with a 'text' string")
-        texts.append(st["text"])
-    return position, texts

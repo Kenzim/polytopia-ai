@@ -364,20 +364,15 @@ impl PyGame {
 
     /// A web engine line: the position, then each step played by its command text (`format!("{cmd:?}")`, the text
     /// the web's engine service records), whatever produced it. Raises `ValueError` naming the first step the engine
-    /// refuses (`step 12: ...`).
+    /// refuses (`step 12: ...`). `strict` as in `from_position`.
     #[staticmethod]
-    #[pyo3(signature = (position_json, steps, strict = true))]
-    fn from_line(py: Python<'_>, position_json: &str, steps: Vec<String>, strict: bool) -> PyResult<Self> {
-        let game = Self::from_position(py, position_json, strict)?;
-        for (i, text) in steps.iter().enumerate() {
-            game.play_text(text).map_err(|e| value_err(format!("step {i}: {e}")))?;
+    #[pyo3(signature = (text, steps, strict = true))]
+    fn from_line(py: Python<'_>, text: &str, steps: Vec<String>, strict: bool) -> PyResult<Self> {
+        let game = Self::from_position(py, text, strict)?;
+        for (i, step) in steps.iter().enumerate() {
+            game.play_text(step).map_err(|e| value_err(format!("step {i}: {e}")))?;
         }
         Ok(game)
-    }
-
-    /// The game as a polytopia-position file (`Engine::to_position`), the input of `from_position`.
-    fn position_json(&self) -> String {
-        self.0.lock().unwrap().e.to_position().to_string()
     }
 
     /// Play the command whose `format!("{cmd:?}")` is `text` (see `from_line`). Raises `ValueError` when the player to
