@@ -1,0 +1,14 @@
+model:rl1_b6c96_cpu: /kvm/polytopia/ai/models/rl1_b6c96_cpu/ckpt_final.pt (step 200), 1.42M params
+  model:rl1_b6c96_cpu vs retail:crazy: 0/400 games, 1s
+  model:rl1_b6c96_cpu vs retail:crazy: 55/400 games, 16s
+  model:rl1_b6c96_cpu vs retail:crazy: 144/400 games, 31s
+  model:rl1_b6c96_cpu vs retail:crazy: 212/400 games, 46s
+  model:rl1_b6c96_cpu vs retail:crazy: 287/400 games, 61s
+  model:rl1_b6c96_cpu vs retail:crazy: 360/400 games, 76s
+  model:rl1_b6c96_cpu vs retail:crazy: 394/400 games, 91s
+retail:crazy: +400 games
+
+result (model against each opponent; a draw is half a win):
+  model:rl1_b6c96_cpu vs retail:crazy: W-L-D 246-154-0 of 400, score 61.5%, capped 0, mean turns 29.4
+GPU peak allocated 35 MiB
+results: /kvm/tmp/calib_abg/rl1_crazy.jsonl   report: python tools/elo.py /kvm/tmp/calib_abg/rl1_crazy.jsonl

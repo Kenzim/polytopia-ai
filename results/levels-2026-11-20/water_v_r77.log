@@ -1,0 +1,34 @@
+model:wrl1_water_b6c96: /kvm/polytopia/ai/models/wrl1_water_b6c96/ckpt_final.pt (step 300)
+model:auto_r0077: /kvm/polytopia/ai/models/auto_r0077/ckpt_final.pt (step 300)
+  model:wrl1_water_b6c96 vs model:auto_r0077: 0/400 games, 1s
+  model:wrl1_water_b6c96 vs model:auto_r0077: 4/400 games, 31s
+  model:wrl1_water_b6c96 vs model:auto_r0077: 30/400 games, 61s
+  model:wrl1_water_b6c96 vs model:auto_r0077: 57/400 games, 91s
+  model:wrl1_water_b6c96 vs model:auto_r0077: 74/400 games, 121s
+  model:wrl1_water_b6c96 vs model:auto_r0077: 89/400 games, 151s
+  model:wrl1_water_b6c96 vs model:auto_r0077: 111/400 games, 181s
+  model:wrl1_water_b6c96 vs model:auto_r0077: 131/400 games, 211s
+  model:wrl1_water_b6c96 vs model:auto_r0077: 154/400 games, 241s
+  model:wrl1_water_b6c96 vs model:auto_r0077: 175/400 games, 271s
+  model:wrl1_water_b6c96 vs model:auto_r0077: 195/400 games, 301s
+  model:wrl1_water_b6c96 vs model:auto_r0077: 209/400 games, 331s
+  model:wrl1_water_b6c96 vs model:auto_r0077: 223/400 games, 361s
+  model:wrl1_water_b6c96 vs model:auto_r0077: 241/400 games, 391s
+  model:wrl1_water_b6c96 vs model:auto_r0077: 256/400 games, 422s
+  model:wrl1_water_b6c96 vs model:auto_r0077: 274/400 games, 452s
+  model:wrl1_water_b6c96 vs model:auto_r0077: 291/400 games, 482s
+  model:wrl1_water_b6c96 vs model:auto_r0077: 307/400 games, 512s
+  model:wrl1_water_b6c96 vs model:auto_r0077: 321/400 games, 542s
+  model:wrl1_water_b6c96 vs model:auto_r0077: 338/400 games, 572s
+  model:wrl1_water_b6c96 vs model:auto_r0077: 350/400 games, 602s
+  model:wrl1_water_b6c96 vs model:auto_r0077: 355/400 games, 632s
+  model:wrl1_water_b6c96 vs model:auto_r0077: 361/400 games, 662s
+  model:wrl1_water_b6c96 vs model:auto_r0077: 370/400 games, 692s
+  model:wrl1_water_b6c96 vs model:auto_r0077: 375/400 games, 722s
+  model:wrl1_water_b6c96 vs model:auto_r0077: 380/400 games, 752s
+  model:wrl1_water_b6c96 vs model:auto_r0077: 383/400 games, 782s
+  model:wrl1_water_b6c96 vs model:auto_r0077: 388/400 games, 812s
+  model:wrl1_water_b6c96 vs model:auto_r0077: 390/400 games, 842s
+  model:wrl1_water_b6c96 vs model:auto_r0077: 395/400 games, 872s
+  model:wrl1_water_b6c96 vs model:auto_r0077: 399/400 games, 902s
+model:wrl1_water_b6c96 vs model:auto_r0077: W-L-D 131-252-17 of 400, score 34.9%, capped 17

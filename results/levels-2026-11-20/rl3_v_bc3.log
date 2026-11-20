@@ -1,0 +1,13 @@
+model:rl3_b6c96/ckpt_u00480: /kvm/polytopia-ai-data/runs/rl3_b6c96/ckpt_u00480.pt (step 480)
+model:bc3_b6c96_v11: /kvm/polytopia-ai-data/runs/bc3_b6c96_v11/ckpt_final.pt (step 40000)
+  model:rl3_b6c96/ckpt_u00480 vs model:bc3_b6c96_v11: 0/400 games, 0s
+  model:rl3_b6c96/ckpt_u00480 vs model:bc3_b6c96_v11: 26/400 games, 30s
+  model:rl3_b6c96/ckpt_u00480 vs model:bc3_b6c96_v11: 72/400 games, 61s
+  model:rl3_b6c96/ckpt_u00480 vs model:bc3_b6c96_v11: 127/400 games, 91s
+  model:rl3_b6c96/ckpt_u00480 vs model:bc3_b6c96_v11: 182/400 games, 121s
+  model:rl3_b6c96/ckpt_u00480 vs model:bc3_b6c96_v11: 242/400 games, 151s
+  model:rl3_b6c96/ckpt_u00480 vs model:bc3_b6c96_v11: 282/400 games, 181s
+  model:rl3_b6c96/ckpt_u00480 vs model:bc3_b6c96_v11: 333/400 games, 211s
+  model:rl3_b6c96/ckpt_u00480 vs model:bc3_b6c96_v11: 381/400 games, 241s
+  model:rl3_b6c96/ckpt_u00480 vs model:bc3_b6c96_v11: 398/400 games, 271s
+model:rl3_b6c96/ckpt_u00480 vs model:bc3_b6c96_v11: W-L-D 385-15-0 of 400, score 96.2%, capped 0

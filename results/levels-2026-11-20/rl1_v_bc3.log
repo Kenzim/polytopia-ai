@@ -1,0 +1,19 @@
+model:rl1_b6c96_cpu: /kvm/polytopia/ai/models/rl1_b6c96_cpu/ckpt_final.pt (step 200)
+model:bc3_b6c96_v11: /kvm/polytopia/ai/models/bc3_b6c96_v11/ckpt_final.pt (step 40000)
+  model:rl1_b6c96_cpu vs model:bc3_b6c96_v11: 0/400 games, 0s
+  model:rl1_b6c96_cpu vs model:bc3_b6c96_v11: 10/400 games, 31s
+  model:rl1_b6c96_cpu vs model:bc3_b6c96_v11: 38/400 games, 61s
+  model:rl1_b6c96_cpu vs model:bc3_b6c96_v11: 79/400 games, 91s
+  model:rl1_b6c96_cpu vs model:bc3_b6c96_v11: 113/400 games, 121s
+  model:rl1_b6c96_cpu vs model:bc3_b6c96_v11: 148/400 games, 151s
+  model:rl1_b6c96_cpu vs model:bc3_b6c96_v11: 182/400 games, 181s
+  model:rl1_b6c96_cpu vs model:bc3_b6c96_v11: 215/400 games, 211s
+  model:rl1_b6c96_cpu vs model:bc3_b6c96_v11: 248/400 games, 241s
+  model:rl1_b6c96_cpu vs model:bc3_b6c96_v11: 278/400 games, 271s
+  model:rl1_b6c96_cpu vs model:bc3_b6c96_v11: 320/400 games, 301s
+  model:rl1_b6c96_cpu vs model:bc3_b6c96_v11: 342/400 games, 331s
+  model:rl1_b6c96_cpu vs model:bc3_b6c96_v11: 364/400 games, 361s
+  model:rl1_b6c96_cpu vs model:bc3_b6c96_v11: 387/400 games, 391s
+  model:rl1_b6c96_cpu vs model:bc3_b6c96_v11: 395/400 games, 421s
+  model:rl1_b6c96_cpu vs model:bc3_b6c96_v11: 399/400 games, 451s
+model:rl1_b6c96_cpu vs model:bc3_b6c96_v11: W-L-D 364-35-1 of 400, score 91.1%, capped 1

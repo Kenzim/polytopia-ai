@@ -1,0 +1,12 @@
+model:wrl1_water_b6c96: /kvm/polytopia/ai/models/wrl1_water_b6c96/ckpt_final.pt (step 300), 1.42M params
+  model:wrl1_water_b6c96 vs retail:crazy: 0/400 games, 1s
+  model:wrl1_water_b6c96 vs retail:crazy: 65/400 games, 16s
+  model:wrl1_water_b6c96 vs retail:crazy: 158/400 games, 31s
+  model:wrl1_water_b6c96 vs retail:crazy: 250/400 games, 46s
+  model:wrl1_water_b6c96 vs retail:crazy: 358/400 games, 61s
+retail:crazy: +400 games
+
+result (model against each opponent; a draw is half a win):
+  model:wrl1_water_b6c96 vs retail:crazy: W-L-D 342-57-1 of 400, score 85.6%, capped 1, mean turns 24.7
+GPU peak allocated 34 MiB
+results: /kvm/tmp/calib_abg/water_crazy.jsonl   report: python tools/elo.py /kvm/tmp/calib_abg/water_crazy.jsonl
