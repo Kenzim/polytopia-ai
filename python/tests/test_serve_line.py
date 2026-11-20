@@ -61,9 +61,11 @@ def test_a_turn_plays_legal_commands_to_the_end_of_the_turn(client):
     assert r["ok"], r
     texts = [c["text"] for c in r["cmds"]]
     assert texts and texts[-1] == "EndTurn"
+    assert not any(t.startswith("Stay {") for t in texts), "a Stay is the model's own; the web engine has none"
     assert all(0.0 <= c["p"] <= 1.0 and 0.0 <= c["value"] <= 1.0 for c in r["cmds"])
     g = from_line(line)
-    for t in texts:  # each in turn is a command the engine accepts by its text
+    for t in texts:  # each in turn is in the engine's own legal list, which the web plays texts against
+        assert t in g.legal_texts() or t == "EndTurn", t
         g.play_text(t)
     assert g.mover_id != DATA["player"] or g.is_over()
 

@@ -105,6 +105,9 @@ playing each step by its command text (`format!("{cmd:?}")`).
 - `turn` (`line` or blobs, `seat`, `temperature`, `max_commands` from 1 to 400, default 400) plays the model for
   `seat` on its own copy until it plays `EndTurn`, the game is over or another player is to move. The last command is
   forced to `EndTurn` at the retail cap of 400 commands a turn (counting the line's steps) or at `max_commands`.
+  A `Stay` the model chooses is played on its copy but left out of `cmds` (`stays` counts them): the engine's legal
+  list, which the website plays texts against, has no `Stay`, and leaving one out changes nothing (it only stops that
+  unit acting for the rest of the turn, and the model does not use the unit again).
   Answer: `cmds` (`[{"text", "p", "value"}]` in order), `policy_id`, `encoding`, `engine`, `think_ms`, `infer_ms`.
   A turn that outlasts the service's request limit (`--request-seconds`, 30 s) is answered with `ok: false`.
 - The website plays the texts on its own line and finishes the turn with the retail AI when one is refused (the

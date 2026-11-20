@@ -480,6 +480,7 @@ class PolicyServer:
         per_turn = line_steps or 0
         features = bool(getattr(self.policy, "features", False))
         cmds: list[dict] = []
+        stays = 0
         infer_ms = 0.0
         while True:
             left = deadline - time.perf_counter()
@@ -489,20 +490,24 @@ class PolicyServer:
             job = self.batcher.submit(obs, temperature, left)
             index, logp, value, _ = job.result
             infer_ms += job.infer_ms
-            if per_turn + 1 >= MAX_PER_TURN or len(cmds) + 1 >= max_commands:
+            if per_turn + 1 >= MAX_PER_TURN or per_turn - (line_steps or 0) + 1 >= max_commands:
                 ends = np.nonzero(obs["actions"][:, 0] == K_END_TURN)[0]
                 if len(ends) and int(ends[-1]) != index:
                     index, logp = int(ends[-1]), 0.0
             text = game.describe(index)
-            cmds.append({"text": text, "p": math.exp(logp), "value": value})
+            stay = text.startswith("Stay {")
+            if stay:
+                stays += 1  # played on this copy only: the web engine has no Stay, and skipping one changes nothing
+            else:
+                cmds.append({"text": text, "p": math.exp(logp), "value": value})
             game.step(index)
             per_turn += 1
-            if text == "EndTurn" or game.is_over() or game.mover_id != seat or len(cmds) >= max_commands:
+            if text == "EndTurn" or game.is_over() or game.mover_id != seat or per_turn - (line_steps or 0) >= max_commands:
                 break
         think_ms = (time.perf_counter() - t0) * 1000.0
         log.info("%s seat %d turn %d: %d commands, %.0f ms (%.0f ms in the model)", game_id, seat, game.turn,
                  len(cmds), think_ms, infer_ms)
-        return {"v": PROTOCOL, "ok": True, "cmds": cmds, "policy_id": self.policy.policy_id,
+        return {"v": PROTOCOL, "ok": True, "cmds": cmds, "stays": stays, "policy_id": self.policy.policy_id,
                 "encoding": self.pe.ENCODING_VERSION, "engine": self.pe.ENGINE_COMMIT, "think_ms": think_ms,
                 "infer_ms": infer_ms}
 
