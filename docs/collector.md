@@ -114,3 +114,56 @@ networks, a free GPU, `--infer-graphs`) or the pool is mostly model arms.
 A first version stepped the arms on a rayon pool and was 30 to 50% slower than Python in later rollouts: a rayon worker
 waiting in the `install` of the arm's own engine pool runs other queued jobs on top of itself, so a finished step of one
 arm waits for a slow retail turn of another. The workers are now plain threads (`Workers` in `collector.rs`).
+
+## 7. Per-decision cost and the profile-guided build (2026-11-20)
+
+`cargo run --release -p polyai-core --example bench_decision [GAMES] [TURNS] [PLAYERS]` plays retail AI games on one
+thread and, before every command, does the collector's work for that position: slot map, legal list, observation,
+action encoding, engine features, truth labels and a copy of the game. It prints the time of each part and a checksum
+of everything the parts produce, so a change that only makes them faster leaves the checksum line as it was. With
+`PART=<name> REPEAT=<n>` it then runs one part alone over every fourth position, the loop to point `perf` at.
+
+`tools/pgo_build.sh` builds the extension with a profile from that example (fat LTO, one codegen unit). With
+`OUT=<dir>` it writes `<dir>/polyai_engine.so` (put the directory first on `PYTHONPATH`); without it, it installs into
+the active virtualenv with `maturin develop --release`. It needs `rustup component add llvm-tools-preview` and stops
+if the instrumented and the optimised example print different checksums.
+
+Microseconds per decision, 20 standard-mix Might games to turn 30 (19,500 decisions, 106 legal moves on average), one
+core of the shared epyc host, lowest of five alternating runs. "Before" is ai `de9ff28` on engine `2e85b41`; "after" is
+this branch on engine `0a60918`; "PGO" is "after" built by `tools/pgo_build.sh`.
+
+| Part | before | after | PGO |
+|---|---|---|---|
+| legal list | 23.3 | 23.3 (unchanged; runs vary 22 to 27) | 19.7 |
+| observation (`encode`) | 34.7 | 20.9 | 18.5 |
+| action encoding | 5.1 | 4.3 | 3.5 |
+| engine features | 122.5 | 76.2 | 53.2 |
+| truth labels | 5.9 | 5.1 | 2.9 |
+| copy of the game | 9.7 | 5.5 | 4.3 |
+| sum of the above, with the slot map | 201 | 140 | 102 |
+| retail AI pick, per command | 343 | 252 | 194 |
+| apply, per command | 19.7 | 18.6 | 16.1 |
+
+The host was busy (load average about 100 on 96 cores), so the instruction counts of the `PART` loops (`perf stat`,
+user space, per call; they do not move with the load) are the firmer comparison: features 629k / 430k / 333k,
+observation 295k / 211k / 188k, copy 49.5k / 27.5k / 21.9k, retail AI pick with a copy 1,618k / 1,077k / 858k, and the
+legal list 113k / 113k / 93k.
+
+Collector, `tools/profile_collector.py --collector rust --games 256 --steps 8192 --threads 8 --warmup 1 --reps 3`
+(stand-in policy, default pool, cores 40 to 47), median of three alternating runs: the three reps take 30.6 s before,
+19.9 s after and 16.1 s with PGO (user CPU of the whole run 84.5 / 60 / 50 s).
+
+What changed: the features build the copy of the game for enemy movement only when a hostile attacker is in sight, and
+only the parts a move search reads; the move searches share the engine's unit grid and zone-of-control maps
+(`Engine::query_scope`); a unit's combat figures are worked out once for all its commands; hostile neighbours are
+counted once per tile. `encode` asks for resource visibility once per resource kind and takes the scores from one pass
+over the map. `ai_pick` checks the retail AI's pick with `Engine::is_legal` instead of building the whole legal list.
+The rest is in the engine (copy of the game, the retail AI's position ratings).
+
+Tried and left out: mimalloc as the extension's allocator. Game stepping gets about 10% faster, but a collector run
+then spends 8 to 15 s in the kernel instead of about 1 s and 5 to 8 s more outside game stepping (the large per-rollout
+buffers are returned to the system and faulted in again), so the reps took 22 to 27 s instead of 20 to 21 s.
+
+Not done: a legal list kept across decisions. The list is 23 of the 140 microseconds, every command changes the
+position it was made for, and an incremental update would need to know what each command can change for every other
+unit (fog, zone of control, borders, routes), which is where a behaviour difference would come from.
