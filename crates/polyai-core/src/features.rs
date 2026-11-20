@@ -321,7 +321,7 @@ impl<'a> Ctx<'a> {
         if self.threats[k].is_empty() {
             return (0, 0, 0);
         }
-        let mut cu = visible_combat_unit_from(self.e, actor.unit, tile, actor.cu.clone(), actor.has_fortify, |terrain| self.tech_bonus(terrain));
+        let mut cu = visible_combat_unit_from(self.e, actor.unit, tile, actor.cu, actor.has_fortify, |terrain| self.tech_bonus(terrain));
         cu.health = health;
         let (mut n, mut max, mut sum) = (0, 0, 0);
         for &h in &self.threats[k] {
