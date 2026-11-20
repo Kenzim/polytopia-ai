@@ -32,6 +32,8 @@ MAX_MOVES = 50
 MAX_STEPS = 200_000
 VALUE_BATCH = 256
 POLICY_BATCH = 64
+MAX_PLAYOUTS = 64
+MAX_PLAYOUT_STEPS = 2000
 UNSUPPORTED = "unsupported position: "
 
 
@@ -265,12 +267,14 @@ class Evaluator:
     # -- moves ------------------------------------------------------------------------------------------------------
 
     @torch.inference_mode()
-    def _policy_moves(self, points: list[_Point], steps: list[str], k: int, played: bool) -> None:
+    def _probs(self, games: list) -> list[np.ndarray]:
+        """The policy's probability over each game's legal list (in `legal_texts` order), batched."""
         model = self.policy.model
         feats_on = bool(model.cfg.features)
-        for s in range(0, len(points), POLICY_BATCH):
-            chunk = points[s:s + POLICY_BATCH]
-            obs = observe_games([p.game for p in chunk], features=feats_on)
+        out_probs: list[np.ndarray] = []
+        for s in range(0, len(games), POLICY_BATCH):
+            chunk = games[s:s + POLICY_BATCH]
+            obs = observe_games(chunk, features=feats_on)
             sel = np.arange(len(chunk))
             tiles, globals_, actions, mask = collate(obs, sel, self.device)
             feats = {}
@@ -280,18 +284,166 @@ class Evaluator:
             with torch.autocast(self.device.type, dtype=torch.bfloat16, enabled=self.device.type == "cuda"):
                 out = model(tiles, globals_, actions, mask, None, **feats)
             probs = F.softmax(out.policy_logits.float().masked_fill(~mask, float("-inf")), dim=1).cpu().numpy()
-            for row, p in enumerate(chunk):
-                texts = p.game.legal_texts()
-                pr = probs[row, :len(texts)]
-                order = np.argsort(-pr, kind="stable")[:k]
-                nxt = steps[p.at] if p.at < len(steps) else None
-                p.moves = [{"text": texts[i], "p": round(float(pr[i]), 4), "win": None, "played": texts[i] == nxt}
-                           for i in order]
-                if played and nxt is not None and not any(m["played"] for m in p.moves):
-                    j = next((i for i, t in enumerate(texts) if t == nxt), None)
-                    p.moves.append({"text": nxt, "p": None if j is None else round(float(pr[j]), 4), "win": None,
-                                    "played": True, "outside_top": True})
+            lens = np.diff(np.asarray(obs["act_off"]))
+            out_probs.extend(probs[row, :lens[row]] for row in range(len(chunk)))
+        return out_probs
 
+    def _policy_moves(self, points: list[_Point], steps: list[str], k: int, played: bool) -> None:
+        probs = self._probs([p.game for p in points])
+        for p, pr in zip(points, probs):
+            texts = p.game.legal_texts()
+            order = np.argsort(-pr, kind="stable")[:k]
+            nxt = steps[p.at] if p.at < len(steps) else None
+            p.moves = [{"text": texts[i], "p": round(float(pr[i]), 4), "win": None, "played": texts[i] == nxt}
+                       for i in order]
+            if played and nxt is not None and not any(m["played"] for m in p.moves):
+                j = next((i for i, t in enumerate(texts) if t == nxt), None)
+                p.moves.append({"text": nxt, "p": None if j is None else round(float(pr[j]), 4), "win": None,
+                                "played": True, "outside_top": True})
+
+    # -- search -----------------------------------------------------------------------------------------------------
+
+    def search(self, req: dict) -> dict:
+        """The deeper check (docs/analysis.md section 5): for the mover at one point, its candidate moves (the
+        policy's top `k` and the move played) each played out `playouts` times to the start of the mover's next turn
+        (the mover and people by the sampled policy, bots by the retail AI), the leaves scored by the calibrated
+        value from the mover's own view. Play-out j of every candidate uses the same random draws."""
+        t0 = time.perf_counter()
+        position, steps = parse_line(req.get("line"))
+        at = req.get("at", len(steps))
+        if isinstance(at, bool) or not isinstance(at, int) or not 0 <= at <= len(steps):
+            raise EvaluateError(f"'at' must be one step count from 0 to {len(steps)}")
+        k, n = req.get("k", 6), req.get("playouts", 16)
+        if isinstance(k, bool) or not isinstance(k, int) or not 1 <= k <= 20:
+            raise EvaluateError("'k' must be an integer from 1 to 20")
+        if isinstance(n, bool) or not isinstance(n, int) or not 1 <= n <= MAX_PLAYOUTS:
+            raise EvaluateError(f"'playouts' must be an integer from 1 to {MAX_PLAYOUTS}")
+        temperature = req.get("temperature", 1.0)
+        if isinstance(temperature, bool) or not isinstance(temperature, (int, float)) or not 0.05 <= temperature <= 5:
+            raise EvaluateError("'temperature' must be a number from 0.05 to 5")
+        seed = req.get("seed", 0)
+        if isinstance(seed, bool) or not isinstance(seed, int):
+            raise EvaluateError("'seed' must be an integer")
+        extra = req.get("candidates", [])
+        if not isinstance(extra, list) or not all(isinstance(t, str) for t in extra) or len(extra) > 20:
+            raise EvaluateError("'candidates' must be a list of at most 20 command texts")
+        try:
+            game = self.pe.Game.from_position(position)
+        except ValueError as e:
+            raise EvaluateError(str(e)) from None
+        root = self._replay(game, steps, [at], _turns(req.get("line"), len(steps)))[at]
+        base = {"at": at, "turn": root.turn, "mover": root.mover}
+        if root.broken is not None:
+            raise EvaluateError(root.broken)
+        if root.over or root.mover == NATURE:
+            raise EvaluateError("the game is over or Nature is to move at that point; there is nothing to search")
+        info = self._facts(root.game)
+        why: dict = {}
+        now: dict = {}
+        jobs: list[_ValueJob] = []
+        self._queue(root.game, root.mover, info, now, why, "win", jobs)
+        if "win" in why:
+            return base | {"win": None, "why": why["win"], "candidates": [], **self._ids(t0)}
+
+        texts = root.game.legal_texts()
+        pr = self._probs([root.game])[0]
+        nxt = steps[at] if at < len(steps) else None
+        order = [int(i) for i in np.argsort(-pr, kind="stable")[:k]]
+        cands = [texts[i] for i in order]
+        for t in ([nxt] if nxt is not None else []) + extra:
+            if t not in cands:
+                cands.append(t)
+        p_of = {t: float(pr[i]) for i, t in enumerate(texts)}
+        people = {pid for pid, _, human in root.game.players() if human}
+        policy_seats = people | {root.mover}
+
+        runs = []  # (candidate index, play-out index, game, rng)
+        bad: dict[int, str] = {}
+        for c, text in enumerate(cands):
+            for j in range(n):
+                g = root.game.clone()
+                try:
+                    g.play_text(text)
+                except ValueError as e:
+                    bad[c] = str(e)
+                    break
+                runs.append([c, j, g, np.random.default_rng([seed, j])])
+        self._play_out(runs, root.mover, root.turn, policy_seats, float(temperature))
+
+        leaf: dict[tuple[int, int], dict] = {}
+        for c, j, g, _ in runs:
+            out: dict = {}
+            alive = {pid: a for pid, a, _ in g.players()}
+            if g.is_over():
+                out["win"] = 1.0 if root.mover in set(g.winner_ids()) else 0.0
+            elif not alive.get(root.mover, False):
+                out["win"] = 0.0
+            else:
+                lw: dict = {}
+                self._queue(g, root.mover, info, out, lw, "win", jobs)
+                if "win" in lw:
+                    out["why"] = lw["win"]
+            leaf[(c, j)] = out
+        self._run_values(jobs)
+
+        played_c = cands.index(nxt) if nxt in cands else None
+        ref_c = played_c if played_c is not None else 0
+        results = []
+        for c, text in enumerate(cands):
+            r = {"text": text, "p": round(p_of[text], 4) if text in p_of else None, "played": text == nxt}
+            if c in bad:
+                results.append(r | {"win": None, "why": f"cannot play it: {bad[c]}"})
+                continue
+            w = np.array([leaf[(c, j)].get("win") for j in range(n)], dtype=object)
+            ref = np.array([leaf[(ref_c, j)].get("win") for j in range(n)], dtype=object)
+            ok = np.array([x is not None and y is not None for x, y in zip(w, ref)])
+            if not ok.any():
+                reason = next((leaf[(c, j)]["why"] for j in range(n) if "why" in leaf[(c, j)]), None)
+                results.append(r | {"win": None, "why": reason or "no leaf of this move has a calibrated number"})
+                continue
+            wv, rv = w[ok].astype(float), ref[ok].astype(float)
+            d = wv - rv
+            m = len(wv)
+            results.append(r | {
+                "win": round(float(wv.mean()), 4),
+                "se": round(float(wv.std(ddof=1) / np.sqrt(m)) if m > 1 else 0.0, 4),
+                "diff": round(float(d.mean()), 4),
+                "diff_se": round(float(d.std(ddof=1) / np.sqrt(m)) if m > 1 else 0.0, 4),
+                "better": round(float((d > 1e-9).mean()), 3),
+                "worse": round(float((d < -1e-9).mean()), 3),
+                "n": m,
+            })
+        return base | {"win": now["win"], "compared_to": cands[ref_c], "candidates": results, **self._ids(t0)}
+
+    def _ids(self, t0: float) -> dict:
+        return {"policy_id": self.policy.policy_id, "value_id": self.value_id, "engine": self.pe.ENGINE_COMMIT,
+                "think_ms": (time.perf_counter() - t0) * 1000.0}
+
+    def _play_out(self, runs: list, mover: int, turn: int, policy_seats: set, temperature: float) -> None:
+        """Step every run until the mover's next turn starts, the game ends or the mover is out; batched policy calls
+        for the seats in `policy_seats`, the retail AI (and Nature) for the rest."""
+        active = list(runs)
+        for _ in range(MAX_PLAYOUT_STEPS):
+            still, ask = [], []
+            for r in active:
+                g = r[2]
+                if g.is_over() or (int(g.turn) > turn and int(g.mover_id) == mover):
+                    continue
+                if not any(pid == mover and a for pid, a, _ in g.players()):
+                    continue
+                still.append(r)
+                if int(g.mover_id) in policy_seats:
+                    ask.append(r)
+                else:
+                    g.play_ai_move()
+            if not still:
+                return
+            if ask:
+                for r, pr in zip(ask, self._probs([r[2] for r in ask])):
+                    q = np.power(np.maximum(pr, 0), 1.0 / temperature)
+                    q = q / q.sum()
+                    r[2].step(int(r[3].choice(len(q), p=q)))
+            active = still
 
 def _turns(line: dict, n_steps: int) -> dict[int, str]:
     """`line.turns` (optional): `[{"at": step count, "position": <polytopia-position object>}]`, positions the game

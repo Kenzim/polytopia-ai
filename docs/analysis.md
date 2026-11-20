@@ -67,26 +67,29 @@ network's win chance q, fitted on the `fit` games. A (kind, stage) keeps its map
 
 RESULTS
 
-## 5. The deeper check (design)
+## 5. The deeper check (`search`, built 2026-11-20)
 
 The website's present deeper check plays every legal command out to the end of the game with the retail AI and
 compares final scores. With about six play-outs a move over 170 turns the noise is far larger than the differences
 between moves, so the ranking is close to random.
 
-Proposed instead, as a `search` request (or `evaluate` with `depth`), for finished games as with `after` (it plays on
-the true state):
+`search` (`interfaces.md` section 1.3.2, `Evaluator.search`) replaces it, for finished games as with `after` (it plays
+on the true state):
 
-1. Candidates: the policy's top k moves (k about 6) and the move played.
-2. For each candidate, n short play-outs (n about 16): the candidate, then the rest of the mover's turn by the policy,
-   then every other player's next turn (bots by the retail AI at their own level, which is their real behaviour; people
-   by the policy), up to the start of the mover's next turn. Play-outs use common random numbers: play-out j of
-   every candidate uses the same seeds, so the differences between candidates are paired.
+1. Candidates: the policy's top k moves (default 6), the move played, and any the caller names.
+2. For each candidate, n short play-outs (default 16): the candidate, then the rest of the mover's turn by the
+   sampled policy, then every other player's turn (bots by the retail AI at their own level, which is their real
+   behaviour; people by the policy), up to the start of the mover's next turn. Play-out j of every candidate uses the
+   same random draws, so the differences between candidates are paired. The retail AI is deterministic given the
+   state, so in a game against bots the spread comes from the mover's own rest of turn.
 3. Each leaf is scored by the calibrated analysis value from the mover's own view; where the gate gives no number,
    the search gives none either.
-4. Answer per candidate: the mean win chance, its standard error, the mean paired difference from the move played
-   with its standard error, and the share of paired play-outs in which the candidate does better. The UI can then say
-   "better than the move played by 4 points, give or take 1" or "no clear difference".
+4. Per candidate: the mean leaf win chance and its standard error, the mean paired difference from the move played
+   and its standard error, and the shares of play-outs in which it ends better or worse.
 
-Cost: all play-outs of all candidates step together, one batched policy call per step; about 100 steps for a round
-of four players. On the GPU that is well under a second a position; on the CPU a few seconds, which suits a request
-for one move at a time but not a whole game.
+Measured on the dev database's finished five-player game (one person, four Normal bots), CPU, 8 threads, k 6 and 16
+play-outs: 0.7 s at turn 0, 1.1 s at turn 5, 2.3 s at turn 8. At turn 0 the move played comes out best, the
+others 0.5 to 2.8 points behind with paired standard errors of 0.2 to 0.4 points; at turn 5 three candidates reach
+the same end-of-turn state and tie exactly, and an early `EndTurn` is 21 points worse. Mid-turn values move by a few
+points from command to command (the value is read from positions with part of the turn played), so differences
+below about two standard errors should be shown as "no clear difference".

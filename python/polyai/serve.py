@@ -378,7 +378,9 @@ class PolicyServer:
                 return self._turn(req, t0)
             if op == "evaluate":
                 return self._evaluate(req)
-            raise RequestError(f"unknown op {op!r}; use 'choose', 'turn', 'evaluate' or 'info'")
+            if op == "search":
+                return self._evaluate(req, search=True)
+            raise RequestError(f"unknown op {op!r}; use 'choose', 'turn', 'evaluate', 'search' or 'info'")
         except RequestError as e:
             return self._fail(str(e))
         except BaseException as e:  # noqa: BLE001  (a Rust panic arrives here too)
@@ -390,20 +392,21 @@ class PolicyServer:
     def _info(self) -> dict:
         return {"v": PROTOCOL, "ok": True, "policy_id": self.policy.policy_id, "encoding": self.pe.ENCODING_VERSION,
                 "engine": self.pe.ENGINE_COMMIT, "device": str(getattr(self.policy, "device", "?")),
-                "requests": self.requests, "ops": ["info", "choose", "turn"] + (["evaluate"] if self.evaluator else []),
+                "requests": self.requests, "ops": ["info", "choose", "turn"] + (["evaluate", "search"] if self.evaluator else []),
                 "value_id": getattr(self.evaluator, "value_id", None)}
 
-    def _evaluate(self, req: dict) -> dict:
+    def _evaluate(self, req: dict, search: bool = False) -> dict:
         from .evaluate import EvaluateError
 
         if self.evaluator is None:
             raise RequestError("this service does not answer 'evaluate' (it has no evaluator)")
         try:
             with self.evaluate_lock:
-                out = self.evaluator.evaluate(req)
+                out = self.evaluator.search(req) if search else self.evaluator.evaluate(req)
         except EvaluateError as e:
             raise RequestError(str(e)) from None
-        log.info("evaluate: %d points, %.0f ms", len(out["evals"]), out["think_ms"])
+        log.info("%s: %d results, %.0f ms", "search" if search else "evaluate",
+                 len(out["candidates"] if search else out["evals"]), out["think_ms"])
         return {"v": PROTOCOL, "ok": True} | out
 
     @staticmethod

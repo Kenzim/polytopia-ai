@@ -272,3 +272,39 @@ def test_stored_turn_positions_resume_the_replay(evaluator, line):
     assert [by[60]["win"], by[100]["win"]] == [e["win"] for e in good["evals"]]
     with pytest.raises(Exception, match="step 30"):
         evaluator.evaluate(base | {"line": {"position": json.loads(pos), "steps": steps_of(broken)}})
+
+
+# -- search -------------------------------------------------------------------------------------------------------------
+
+
+def test_search_compares_candidates_with_the_move_played(line):
+    pos, texts = line
+    with tempfile.TemporaryDirectory() as d:
+        policy = ModelPolicy(MODEL, "cpu")
+        ev = Evaluator(policy, value_file(Path(d) / "v.pt"), "cpu")
+        with PolicyServer(policy, Path(d) / "s.sock", evaluator=ev) as server:
+            c = PolicyClient(server.path, timeout=120)
+            assert "search" in c.info()["ops"]
+            req = {"v": 1, "op": "search", "line": {"position": json.loads(pos), "steps": steps_of(texts)}, "at": 40,
+                   "k": 3, "playouts": 4, "seed": 2}
+            r = c.request(req)
+            assert r["ok"], r
+            assert r["mover"] != 255 and 0 <= r["win"] <= 1 and r["compared_to"] == texts[40]
+            played = [x for x in r["candidates"] if x["played"]]
+            assert len(played) == 1 and played[0]["text"] == texts[40] and played[0]["diff"] == 0.0
+            assert 3 <= len(r["candidates"]) <= 4
+            for x in r["candidates"]:
+                assert 0 <= x["win"] <= 1 and x["n"] == 4 and x["se"] >= 0 and 0 <= x["better"] + x["worse"] <= 1
+            again = c.request(req)
+            assert [x["win"] for x in again["candidates"]] == [x["win"] for x in r["candidates"]]
+            for bad in ({"at": len(texts) + 1}, {"k": 0}, {"playouts": 1000}, {"temperature": 0}):
+                out = c.request(req | bad)
+                assert out["ok"] is False and out["error"], bad
+
+
+def test_search_gives_no_number_where_the_gate_gives_none(line):
+    pos, texts = line
+    with tempfile.TemporaryDirectory() as d:
+        ev = Evaluator(ModelPolicy(MODEL, "cpu"), value_file(Path(d) / "v.pt", kinds=["human2"]), "cpu")
+        r = ev.search({"line": {"position": json.loads(pos), "steps": steps_of(texts)}, "at": 10, "k": 2, "playouts": 2})
+    assert r["win"] is None and "domination-3-4p" in r["why"] and r["candidates"] == []

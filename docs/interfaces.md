@@ -148,18 +148,44 @@ order asked:
 | `moves` | only with `moves > 0`: `[{"text", "p", "win", "played"}]`, best first; `win` is null unless `after` (and then null with a `why` where the gate gives no number); a move added by `played` also has `"outside_top": true` (its `p` is null if the command is not in the legal list, e.g. a `Stay`). Empty when the game is over, Nature is to move or the position is unsupported |
 
 Errors give `ok: false` with an `error`: a malformed request or position, an `at` outside the line, and a step the
-engine refuses (`"step 12: not a legal command for player 2 now: ..."`).
+engine refuses (`"step 12: not a legal command for player 2 now: ..."`). A valid position that the encoding cannot
+hold (a tribe outside the 13, more than 8 players) is not an error: every `win` is null with the reason and `moves` is
+empty.
 
 `line.turns` (optional): `[{"at": step count, "position": <polytopia-position object>}]`, the positions the game
 was recorded in (the web keeps one at the start of every turn). The replay resumes from each of them. With `turns`, a
 step the engine refuses is not an error: the points from that step up to the next stored position get null with the
 reason, and the answer lists the refused step counts in `refused`. The web should send them for any game played on
 another engine build than the service's: game 1 of the dev database (five players, 2,767 commands) cannot be
-replayed from its start alone on engine 520c4db (step 1,449 is refused), but replays cleanly from its stored turns. A valid position that the encoding cannot
-hold (a tribe outside the 13, more than 8 players) is not an error: every `win` is null with the reason and `moves` is
-empty. The Python binding behind it is `Game.from_line(position_json, step_texts)` (and `from_position`,
+replayed from its start alone on engine 520c4db (step 1,449 is refused), but replays cleanly from its stored turns.
+
+The Python binding behind it is `Game.from_line(position_json, step_texts)` (and `from_position`,
 `play_text`, `legal_texts`, `encode_for(pid)`, `slot_kinds(pid)`, `players()`, `settings()`, `winner_ids()`,
 `position()`); `PolicyClient.evaluate(position, steps, at, seats, moves, after, played)` is the client.
+
+#### 1.3.2 `search`: the deeper check of one move (additive to v1, 2026-11-20)
+
+For one point of a finished game (it plays on the true state, as `after` does): the mover's candidate moves are each
+played out several times to the start of the mover's next turn and scored by the calibrated value, so moves can be
+compared with the one played (`analysis.md` section 5).
+
+Request: `{"v":1,"op":"search","line":<line, with turns as for evaluate>,"at":i,"k":6,"playouts":16,"seed":0,
+"temperature":1.0,"candidates":[text,...]}`. `at` is one step count (default the end of the line); `k` (1 to 20)
+policy top moves are the candidates, plus the move the line plays next (`steps[at]`) and any `candidates` texts.
+`playouts` 1 to 64. In a play-out the mover and every person seat are played by the policy sampled at
+`temperature`, bots and Nature by the retail AI; play-out j of every candidate uses the same random draws (`seed`, j),
+so differences are paired.
+
+Answer: `{"v":1,"ok":true,"at","turn","mover","win","compared_to","candidates":[...],"policy_id","value_id","engine",
+"think_ms"}`. `win` is the mover's win chance at the point itself. `compared_to` is the move played (or the policy's
+top move when the line ends there). Per candidate: `text`, `p` (policy probability), `played`, `win` (the mean win
+chance at the leaves: "play this, then the rest of the turn as the model would"), `se` (its standard error), `diff`
+and `diff_se` (the mean paired difference from `compared_to` and its standard error), `better` and `worse` (the
+share of paired play-outs in which the candidate ends higher or lower), and `n`. A candidate whose leaves have no
+calibrated number has `win: null` and a `why`; where the gate gives no number at the point itself, `win` is null with
+`why` and `candidates` is empty. Show `diff` with `diff_se` (for example "4 points better, give or take 1"), and
+call a difference clear only when it exceeds about two `diff_se`. The leaf `win` values are higher than the real
+game's values when the model plays the rest of the turn better than the person did; that lifts every candidate alike.
 
 ## 2. Live-game records
 
