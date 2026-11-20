@@ -270,12 +270,15 @@ def _check_heads(state: dict, path: str | Path) -> None:
         )
 
 
-def load_checkpoint(path: str | Path, map_location: str = "cpu", belief: bool = False) -> PolyNet:
+def load_checkpoint(path: str | Path, map_location: str = "cpu", belief: bool = False,
+                    weights_only: bool = False) -> PolyNet:
     """The model alone, for evaluation or play. `resume_state` loads the optimiser state as well.
 
     A checkpoint trained with belief heads loads everywhere: the heads are dropped unless `belief` is set (play and
-    self-play never use them), so the result is the same plain network as one trained without them."""
-    state = torch.load(path, map_location=map_location, weights_only=False)
+    self-play never use them), so the result is the same plain network as one trained without them. With
+    `weights_only` the file is read by torch's restricted unpickler (tensors, plain containers and numbers only), so a
+    file from outside cannot run code."""
+    state = torch.load(path, map_location=map_location, weights_only=weights_only)
     _check_heads(state, path)
     cfg = ModelConfig(**state["model_config"])
     weights = state["model"]

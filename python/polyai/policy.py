@@ -167,11 +167,13 @@ class ModelPolicy:
 
     `policy_id` is `<run>@<step>`: the run directory's name and the step the checkpoint was written at. Observations
     larger than `max_batch` positions go through the network in chunks. `seed` seeds the sampling generator.
-    `infer_seconds` and `decisions` count the time spent inside `choose` and the positions answered.
+    `infer_seconds` and `decisions` count the time spent inside `choose` and the positions answered. `weights_only`
+    reads the file with torch's restricted unpickler (for files from outside); `name` replaces the run directory's
+    name in `policy_id`.
     """
 
     def __init__(self, path: str | Path, device: str | torch.device = "cpu", max_batch: int = MAX_BATCH, seed: int = 0,
-                 tta: bool = False):
+                 tta: bool = False, weights_only: bool = False, name: str | None = None):
         from .train_bc import load_checkpoint
 
         self.tta = tta
@@ -179,11 +181,12 @@ class ModelPolicy:
         self.path = resolve_checkpoint(path)
         self.device = torch.device(device)
         self.max_batch = max_batch
-        self.model = load_checkpoint(self.path).to(self.device).to(memory_format=torch.channels_last).eval()
-        state = torch.load(self.path, map_location="cpu", weights_only=False)
+        self.model = load_checkpoint(self.path, weights_only=weights_only).to(self.device).to(
+            memory_format=torch.channels_last).eval()
+        state = torch.load(self.path, map_location="cpu", weights_only=weights_only)
         self.step = int(state.get("step", 0))
         self.encoding_version = int(state.get("encoding_version", S.ENCODING_VERSION))
-        self.run = self.path.parent.name or "ckpt"
+        self.run = name or self.path.parent.name or "ckpt"
         self.policy_id = f"{self.run}@{self.step}"
         self.generator = torch.Generator(device=self.device)
         self.generator.manual_seed(seed)

@@ -1,9 +1,12 @@
 """The policy service: one `Policy` on a Unix socket, for the headless client (docs/interfaces.md section 1.2).
 
     python -m polyai.serve --model /kvm/polytopia-ai-data/runs/NAME [--device cpu|cuda] [--socket PATH]
+    python -m polyai.serve --check FILE
 
 `--model` is a checkpoint file or a run directory (then `ckpt_final.pt`). The socket defaults to
-`/kvm/tmp/polyai/policy.sock` (mode 0600).
+`/kvm/tmp/polyai/policy.sock` (mode 0600). The service reads checkpoints with torch's restricted unpickler
+(`weights_only=True`). `--check FILE` only loads FILE that way and prints one JSON line (`ok`, `policy_id`, `step`,
+`encoding_version`, `features`, `params`, or `ok: false` and `error`); its exit status is 0 when the file loads.
 
 Protocol (version 1): each message is a 4-byte little-endian length and that many bytes of UTF-8 JSON; byte fields are
 base64. One request, one response, on a connection that may stay open. A `choose` request carries the server's
@@ -12,6 +15,14 @@ base64. One request, one response, on a connection that may stay open. A `choose
 policy, and answers with the chosen command as `RawCmd::to_bytes` in `raw`. Requests that arrive together are batched
 into one forward pass (per map size and temperature). Anything the service cannot do is answered with `ok: false` and
 an `error`; a bad request never takes the service down.
+
+A position can also be given as a web engine line instead of the blobs: `line` = `{"position": <polytopia-position
+object>, "steps": [{"text", "ai"}]}` with `seat` the engine player id to move. The game is rebuilt with
+`polyai_engine.Game.from_line`, which plays each step by its command text (`format!("{cmd:?}")`, the text the web's
+engine service records). A `choose` answer also carries the chosen command's `text`. `turn` (line or blobs, `seat`,
+`temperature`, `max_commands`) plays the model for `seat` on its own copy of the game until it ends its turn, the game
+is over or another player is to move, and answers with `cmds`: `[{"text", "p", "value"}]` in order. Either way the
+network sees only the mover's encoding, which keeps to what that player has explored (docs/encoding.md section 2).
 
 `PolicyClient` is the small blocking client the tests use.
 """
@@ -342,7 +353,9 @@ class PolicyServer:
                 return self._info()
             if op == "choose":
                 return self._choose(req, t0)
-            raise RequestError(f"unknown op {op!r}; use 'choose' or 'info'")
+            if op == "turn":
+                return self._turn(req, t0)
+            raise RequestError(f"unknown op {op!r}; use 'choose', 'turn' or 'info'")
         except RequestError as e:
             return self._fail(str(e))
         except BaseException as e:  # noqa: BLE001  (a Rust panic arrives here too)
@@ -356,32 +369,67 @@ class PolicyServer:
                 "engine": self.pe.ENGINE_COMMIT, "device": str(getattr(self.policy, "device", "?")),
                 "requests": self.requests}
 
-    def _choose(self, req: dict, t0: float) -> dict:
-        from .model import eval_pawns
-
-        game_id = req.get("game_id", "?")
-        if not isinstance(game_id, str):
-            raise RequestError("'game_id' must be a string")
+    @staticmethod
+    def _seat(req: dict) -> int:
         seat = req.get("seat")
         if isinstance(seat, bool) or not isinstance(seat, int) or not 0 <= seat <= 255:
             raise RequestError("'seat' must be an engine player id, an integer from 0 to 255")
-        per_turn = req.get("per_turn", 0)
-        if isinstance(per_turn, bool) or not isinstance(per_turn, int) or per_turn < 0:
-            raise RequestError("'per_turn' must be a non-negative integer")
+        return seat
+
+    @staticmethod
+    def _temperature(req: dict) -> float | None:
         temperature = req.get("temperature")
         if temperature is not None:
             if isinstance(temperature, bool) or not isinstance(temperature, (int, float)) \
                     or not math.isfinite(temperature) or temperature <= 0:
                 raise RequestError("'temperature' must be null (greedy) or a positive number")
             temperature = float(temperature)
-        initial, current = _decode_b64(req, "initial"), _decode_b64(req, "current")
+        return temperature
 
-        t1 = time.perf_counter()
+    def _game(self, req: dict, seat: int):
+        """(game, steps already played this turn) from the request's `line`, else its server blobs. The game is the
+        whole position; `seat` must be the player to move."""
+        line = req.get("line")
+        if line is None:
+            initial, current = _decode_b64(req, "initial"), _decode_b64(req, "current")
+            with self.rebuild_slots:
+                try:
+                    return self.pe.Game.from_server(initial, current, seat), None
+                except ValueError as e:
+                    raise RequestError(str(e)) from None
+        if not isinstance(line, dict) or not isinstance(line.get("position"), dict):
+            raise RequestError("'line' must be an object with a 'position' object and a 'steps' list")
+        steps = line.get("steps", [])
+        if not isinstance(steps, list) or not all(isinstance(s, dict) and isinstance(s.get("text"), str) for s in steps):
+            raise RequestError("'line.steps' must be a list of objects with a 'text' string")
+        texts = [s["text"] for s in steps]
         with self.rebuild_slots:
             try:
-                game = self.pe.Game.from_server(initial, current, seat)
+                game = self.pe.Game.from_line(json.dumps(line["position"], separators=(",", ":")), texts)
             except ValueError as e:
                 raise RequestError(str(e)) from None
+        if game.is_over():
+            raise RequestError("the game is over")
+        if game.mover_id != seat:
+            raise RequestError(f"it is player {game.mover_id}'s turn, not seat {seat}'s")
+        return game, len(texts)
+
+    def _choose(self, req: dict, t0: float) -> dict:
+        from .model import eval_pawns
+
+        game_id = req.get("game_id", "?")
+        if not isinstance(game_id, str):
+            raise RequestError("'game_id' must be a string")
+        seat = self._seat(req)
+        per_turn = req.get("per_turn")
+        if per_turn is not None and (isinstance(per_turn, bool) or not isinstance(per_turn, int) or per_turn < 0):
+            raise RequestError("'per_turn' must be a non-negative integer")
+        temperature = self._temperature(req)
+
+        t1 = time.perf_counter()
+        game, line_steps = self._game(req, seat)
+        if per_turn is None:
+            per_turn = line_steps or 0
         obs = observe_games([game], features=bool(getattr(self.policy, "features", False)))
         n_legal = len(obs["actions"])
         t2 = time.perf_counter()
@@ -396,14 +444,16 @@ class PolicyServer:
                     forced = f"per_turn {per_turn}: the turn is ended after {MAX_PER_TURN} commands"
                     index = int(ends[-1])
                     logp = 0.0  # a forced move is certain
+        desc = game.describe(index)
+        top_out = [{"index": i, "desc": game.describe(i), "p": p} for i, p in top]
         try:
-            raw = game.raw_command(index)
-            desc = game.describe(index)
-            top_out = [{"index": i, "desc": game.describe(i), "p": p} for i, p in top]
+            raw = base64.b64encode(game.raw_command(index)).decode()
         except ValueError as e:
-            raise RequestError(f"the chosen move has no retail encoding: {e}") from None
+            if line_steps is None:  # a server game needs the retail bytes; a web line plays the text
+                raise RequestError(f"the chosen move has no retail encoding: {e}") from None
+            raw = None
         resp = {
-            "v": PROTOCOL, "ok": True, "raw": base64.b64encode(raw).decode(), "desc": desc, "index": index,
+            "v": PROTOCOL, "ok": True, "raw": raw, "desc": desc, "text": desc, "index": index,
             "n_legal": n_legal, "logp": logp, "value": value, "eval": float(eval_pawns(value)), "top": top_out,
             "policy_id": self.policy.policy_id, "encoding": self.pe.ENCODING_VERSION, "engine": self.pe.ENGINE_COMMIT,
             "rebuild_ms": (t2 - t1) * 1000.0, "infer_ms": job.infer_ms,
@@ -414,6 +464,47 @@ class PolicyServer:
         log.info("%s seat %d turn %d: %s (%d legal, p=%.2f, value %.2f) %.0f ms", game_id, seat, game.turn, desc,
                  n_legal, math.exp(logp), value, resp["think_ms"])
         return resp
+
+    def _turn(self, req: dict, t0: float) -> dict:
+        """The model's commands for `seat` until it ends its turn, the game is over or another player is to move."""
+        game_id = req.get("game_id", "?")
+        if not isinstance(game_id, str):
+            raise RequestError("'game_id' must be a string")
+        seat = self._seat(req)
+        temperature = self._temperature(req)
+        max_commands = req.get("max_commands", MAX_PER_TURN)
+        if isinstance(max_commands, bool) or not isinstance(max_commands, int) or not 1 <= max_commands <= MAX_PER_TURN:
+            raise RequestError(f"'max_commands' must be an integer from 1 to {MAX_PER_TURN}")
+        deadline = t0 + self.request_timeout
+        game, line_steps = self._game(req, seat)
+        per_turn = line_steps or 0
+        features = bool(getattr(self.policy, "features", False))
+        cmds: list[dict] = []
+        infer_ms = 0.0
+        while True:
+            left = deadline - time.perf_counter()
+            if left <= 0:
+                raise RequestError(f"the turn took longer than {self.request_timeout:g} s")
+            obs = observe_games([game], features=features)
+            job = self.batcher.submit(obs, temperature, left)
+            index, logp, value, _ = job.result
+            infer_ms += job.infer_ms
+            if per_turn + 1 >= MAX_PER_TURN or len(cmds) + 1 >= max_commands:
+                ends = np.nonzero(obs["actions"][:, 0] == K_END_TURN)[0]
+                if len(ends) and int(ends[-1]) != index:
+                    index, logp = int(ends[-1]), 0.0
+            text = game.describe(index)
+            cmds.append({"text": text, "p": math.exp(logp), "value": value})
+            game.step(index)
+            per_turn += 1
+            if text == "EndTurn" or game.is_over() or game.mover_id != seat or len(cmds) >= max_commands:
+                break
+        think_ms = (time.perf_counter() - t0) * 1000.0
+        log.info("%s seat %d turn %d: %d commands, %.0f ms (%.0f ms in the model)", game_id, seat, game.turn,
+                 len(cmds), think_ms, infer_ms)
+        return {"v": PROTOCOL, "ok": True, "cmds": cmds, "policy_id": self.policy.policy_id,
+                "encoding": self.pe.ENCODING_VERSION, "engine": self.pe.ENGINE_COMMIT, "think_ms": think_ms,
+                "infer_ms": infer_ms}
 
 
 # ---------------------------------------------------------------------------------------------------------------
@@ -471,6 +562,25 @@ class PolicyClient:
             "per_turn": per_turn, "temperature": temperature,
         })
 
+    def choose_line(self, game_id: str, seat: int, line: dict, temperature: float | None = None) -> dict:
+        return self.request({"v": PROTOCOL, "op": "choose", "game_id": game_id, "seat": seat, "line": line,
+                             "temperature": temperature})
+
+    def turn(self, game_id: str, seat: int, line: dict, temperature: float | None = None,
+             max_commands: int = MAX_PER_TURN) -> dict:
+        return self.request({"v": PROTOCOL, "op": "turn", "game_id": game_id, "seat": seat, "line": line,
+                             "temperature": temperature, "max_commands": max_commands})
+
+
+def check(path: str | Path) -> dict:
+    """Load a checkpoint the way the service does (restricted unpickler, CPU) and describe it, or say why it fails."""
+    try:
+        policy = ModelPolicy(path, "cpu", weights_only=True)
+    except (Exception, SystemExit) as e:  # noqa: BLE001  (load_checkpoint reports old files with SystemExit)
+        return {"ok": False, "error": f"{type(e).__name__}: {e}"}
+    return {"ok": True, "policy_id": policy.policy_id, "step": policy.step, "encoding_version": policy.encoding_version,
+            "features": policy.features, "params": sum(p.numel() for p in policy.model.parameters())}
+
 
 # ---------------------------------------------------------------------------------------------------------------
 # Command line
@@ -481,7 +591,11 @@ def main(argv: list[str] | None = None) -> int:
     import torch
 
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--model", required=True, help="checkpoint file or run directory (ckpt_final.pt)")
+    what = ap.add_mutually_exclusive_group(required=True)
+    what.add_argument("--model", help="checkpoint file or run directory (ckpt_final.pt)")
+    what.add_argument("--check", metavar="FILE", help="only load FILE as the service would and print what it is")
+    ap.add_argument("--name", help="name of the model in policy_id (default: the run directory's name)")
+    ap.add_argument("--request-seconds", type=float, default=30.0, help="time limit of one request (a whole turn)")
     ap.add_argument("--device", default="cpu", help="cpu or cuda (default cpu)")
     ap.add_argument("--socket", default=DEFAULT_SOCKET, help=f"Unix socket path (default {DEFAULT_SOCKET})")
     ap.add_argument("--threads", type=int, default=4, help="torch threads (at most 8)")
@@ -493,6 +607,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("-v", "--verbose", action="store_true", help="log every request")
     a = ap.parse_args(argv)
 
+    if a.check:
+        torch.set_num_threads(1)
+        out = check(a.check)
+        print(json.dumps(out), flush=True)
+        return 0 if out["ok"] else 1
     logging.basicConfig(stream=sys.stderr, format="%(asctime)s %(levelname)s %(message)s")
     log.setLevel(logging.INFO if a.verbose else logging.WARNING)
     torch.set_num_threads(max(1, min(a.threads, 8)))
@@ -503,8 +622,9 @@ def main(argv: list[str] | None = None) -> int:
         if device.index is None:
             device = torch.device("cuda", torch.cuda.current_device())
         check_gpu_memory(a.gpu_gb, device)
-    policy = ModelPolicy(a.model, device, seed=a.seed, tta=a.tta)
-    server = PolicyServer(policy, a.socket, window_ms=a.batch_ms, max_jobs=a.max_batch)
+    policy = ModelPolicy(a.model, device, seed=a.seed, tta=a.tta, weights_only=True, name=a.name)
+    server = PolicyServer(policy, a.socket, window_ms=a.batch_ms, max_jobs=a.max_batch,
+                          request_timeout=a.request_seconds)
     server.bind()
     signal.signal(signal.SIGTERM, lambda *_: server.closing.set())
     print(f"{policy.policy_id} ({policy.path}) on {a.device}, listening on {server.path}", flush=True)

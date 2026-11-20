@@ -93,6 +93,28 @@ Client rules:
 - Our account is identified by `seat`; the policy sees only what that seat has explored (the encoding applies fog
   from the state; the full server state never reaches the model's inputs).
 
+### 1.3 For the website: engine lines and whole turns
+
+The website keeps its games as engine lines (`{"position": <polytopia-position>, "steps": [{"text", "ai"}]}`, the
+web's `engine-service`). Any request that takes a position may carry `line` instead of `initial` and `current`;
+`seat` is then the engine player id to move. The service rebuilds the game with `polyai_engine.Game.from_line`,
+playing each step by its command text (`format!("{cmd:?}")`).
+
+- `choose` with `line` answers as above plus `text`, the chosen command's text (`raw` is null when the command has
+  no retail encoding).
+- `turn` (`line` or blobs, `seat`, `temperature`, `max_commands` from 1 to 400, default 400) plays the model for
+  `seat` on its own copy until it plays `EndTurn`, the game is over or another player is to move. The last command is
+  forced to `EndTurn` at the retail cap of 400 commands a turn (counting the line's steps) or at `max_commands`.
+  Answer: `cmds` (`[{"text", "p", "value"}]` in order), `policy_id`, `encoding`, `engine`, `think_ms`, `infer_ms`.
+  A turn that outlasts the service's request limit (`--request-seconds`, 30 s) is answered with `ok: false`.
+- The website plays the texts on its own line and finishes the turn with the retail AI when one is refused (the
+  service and the website were built from different engine commits) or the service fails.
+
+The service reads checkpoints with `torch.load(weights_only=True)`. `python -m polyai.serve --check FILE` loads a
+file that way and prints one JSON line (`ok`, `policy_id`, `step`, `encoding_version`, `features`, `params`, or `ok:
+false` and `error`); the website runs it on every uploaded checkpoint. `--name NAME` sets the run part of
+`policy_id`.
+
 ## 2. Live-game records
 
 ### 2.1 What the client stores (raw, `client/` owns the files)
