@@ -118,6 +118,42 @@ file that way and prints one JSON line (`ok`, `policy_id`, `step`, `encoding_ver
 false` and `error`); the website runs it on every uploaded checkpoint. `--name NAME` sets the run part of
 `policy_id`.
 
+#### 1.3.1 `evaluate`: win chances and preferred moves along a line (additive to v1, 2026-11-20)
+
+For the website's game analysis (`polyai.evaluate`, design and gate in `analysis.md`). The service answers it when
+started with an evaluator (the default; `--no-evaluate` turns it off) and `info` then lists `"evaluate"` in `ops` and
+gives `value_id`. `--value CKPT` names the analysis value checkpoint (`polyai.train_value`); without one every win
+chance is null.
+
+Request:
+
+| key | type | meaning |
+|---|---|---|
+| `v`, `op` | | `1`, `"evaluate"` |
+| `line` | object | the engine line as above (required; no blobs). Every step is played by its `text` (`EndTurn` is always accepted), whatever `ai` says. Unlike `choose` and `turn` there is no `seat`, and the line may end in a finished game |
+| `at` | list of int or null | step counts: evaluate the position after the first `i` steps (0 = the position itself). Default: the end of the line. Up to 5000 values; the line is replayed once and the network calls are batched over all of them |
+| `seats` | list of int or null | engine player ids; null = every player still alive at that point |
+| `moves` | int | `k > 0` adds the mover's `k` most likely legal commands by policy probability (at most 50) |
+| `after` | bool | add the mover's win chance after each listed move (plays it on the true state, so the result can reflect what scouting would reveal; only for finished games) |
+| `played` | bool | add the command the line plays next (`steps[i]`) when it is outside the top `k`, flagged |
+
+Answer: `{"v":1,"ok":true,"policy_id","value_id","engine","think_ms","evals":[...]}`, one entry per `at` value in the
+order asked:
+
+| key | meaning |
+|---|---|
+| `at`, `turn`, `mover` | the step count, the game turn and the engine id of the player to move there (255 is Nature) |
+| `win` | `{"<pid>": p or null}`: the chance that this player wins the game by its own rule, read from that player's own fogged view only. Exact where the game has ended (1 for the winners, 0 for the others) and 0 for an eliminated player |
+| `why` | `{"<pid>": reason}` for every null in `win` (a kind of game or stage that failed the calibration gate, an unsupported position, no value loaded, not a player) |
+| `moves` | only with `moves > 0`: `[{"text", "p", "win", "played"}]`, best first; `win` is null unless `after` (and then null with a `why` where the gate gives no number); a move added by `played` also has `"outside_top": true` (its `p` is null if the command is not in the legal list, e.g. a `Stay`). Empty when the game is over, Nature is to move or the position is unsupported |
+
+Errors give `ok: false` with an `error`: a malformed request or position, an `at` outside the line, and a step the
+engine refuses (`"step 12: not a legal command for player 2 now: ..."`). A valid position that the encoding cannot
+hold (a tribe outside the 13, more than 8 players) is not an error: every `win` is null with the reason and `moves` is
+empty. The Python binding behind it is `Game.from_line(position_json, step_texts)` (and `from_position`,
+`play_text`, `legal_texts`, `encode_for(pid)`, `slot_kinds(pid)`, `players()`, `settings()`, `winner_ids()`,
+`position()`); `PolicyClient.evaluate(position, steps, at, seats, moves, after, played)` is the client.
+
 ## 2. Live-game records
 
 ### 2.1 What the client stores (raw, `client/` owns the files)

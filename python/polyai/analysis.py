@@ -53,6 +53,8 @@ def kind_of(mode: int, n_players: int, kinds: np.ndarray) -> str:
     people = int((k == KIND_PERSON).sum())
     bots = int((k >= 2).sum())
     if bots == 0:
+        if n_players <= 1:
+            return "solo"
         return "human2" if n_players == 2 and people == 2 else f"people{n_players}"
     group = "2p" if n_players <= 2 else ("3-4p" if n_players <= 4 else "5-8p")
     return f"{MODE_NAMES.get(int(mode), str(mode))}-{group}"
@@ -125,6 +127,8 @@ class Calibration:
         r = self.reasons.get(kind)
         if r is not None and r[stage]:
             return r[stage]
+        if kind == "solo":
+            return "a game with one player has no opponent, so there is no chance of winning to give"
         if kind not in self.params:
             return f"no calibrated win chance for this kind of game ({kind})"
         return f"the win chance failed the calibration gate for {kind} games at turns {STAGE_NAMES[stage]}"

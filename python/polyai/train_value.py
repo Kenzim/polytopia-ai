@@ -29,8 +29,8 @@ import torch.nn.functional as F
 
 from .analysis import STAGE_NAMES, Calibration, ValueNet, load_value, save_value
 from .data import transform_tiles, valid_symmetries
-from .value_gate import (calibrated, concat, fit_calibration, format_table, gate, load_splits, predict_logits,
-                         strip_buckets)
+from .value_gate import (calibrated, concat, fit_calibration, format_table, gate, load_splits, parse_keep,
+                         predict_logits, strip_buckets)
 
 KEYS = ("tiles", "globals", "slot_kind", "mover", "winner")
 
@@ -94,7 +94,7 @@ def train(net: ValueNet, train_shards: list[dict], fit_shards: list[dict], a, de
         torch.nn.utils.clip_grad_norm_(net.parameters(), 1.0)
         opt.step()
         sched.step()
-        run = 0.98 * run + 0.02 * float(loss) if step > 1 else float(loss)
+        run = 0.98 * run + 0.02 * loss.item() if step > 1 else loss.item()
         if step % a.eval_every == 0 or step == a.steps:
             fl = eval_loss(net, probe, device)
             net.train()
@@ -162,6 +162,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     ap.add_argument("--gpu-gb", type=float, default=4.0)
     ap.add_argument("--report", help="folder for gate.md and gate.json of the test split")
+    ap.add_argument("--keep", nargs="*", help="PREFIX=SHARE of the training rows kept per game key prefix (e.g. web=0.15)")
+    ap.add_argument("--eval-keep", nargs="*", help="PREFIX=SHARE of the fit and test rows kept (e.g. web=0.3)")
     a = ap.parse_args(argv)
     device = torch.device(a.device)
     if device.type == "cuda":
@@ -172,7 +174,9 @@ def main(argv: list[str] | None = None) -> int:
     if bool(a.init) == bool(a.init_value):
         raise SystemExit("give one of --init and --init-value")
     net = load_value(a.init_value, device)[0] if a.init_value else ValueNet.from_policy(load_checkpoint(a.init)).to(device)
-    splits = load_splits(a.rows, ("train", "fit", "test") if a.steps > 0 else ("fit", "test"))
+    tk, ek = parse_keep(a.keep), parse_keep(a.eval_keep)
+    splits = load_splits(a.rows, ("train", "fit", "test") if a.steps > 0 else ("fit", "test"),
+                         keep={"train": tk, "fit": ek, "test": ek})
     fit_shards, test_shards = splits["fit"], splits["test"]
     info = {}
     if a.steps > 0:

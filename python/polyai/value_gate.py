@@ -49,30 +49,61 @@ def load_rows(dirs: list[str | Path], split: str | None = None, decided: bool = 
     return load_splits(dirs, (split,), decided)[split]
 
 
-def load_splits(dirs: list[str | Path], splits: tuple, decided: bool = True) -> dict:
-    """`load_rows` for several splits (None: all rows) in one pass over the files: {split: [shard dicts]}."""
+def parse_keep(specs: list[str] | None) -> dict[str, float]:
+    """`["web=0.2", "human=1"]` -> {game key prefix: share of rows kept}."""
+    out = {}
+    for s in specs or []:
+        k, v = s.split("=", 1)
+        out[k] = float(v)
+    return out
+
+
+def load_splits(dirs: list[str | Path], splits: tuple, decided: bool = True,
+                keep: dict[str | None, dict[str, float]] | None = None) -> dict:
+    """`load_rows` for several splits (None: all rows) in one pass over the files: {split: [shard dicts]}.
+    `keep[split]` maps a game key prefix (before the `:`) to the share of its rows kept, drawn at random per row
+    (the same rows on every load)."""
     out: dict = {s: [] for s in splits}
     files = sorted(f for d in dirs for f in Path(d).rglob("value-*.npz"))
     if not files:
         raise SystemExit(f"no value-*.npz under {dirs}")
-    cache: dict[str, int] = {}
-    for f in files:
-        z = np.load(f)
-        arrays = {k: z[k] for k in z.files if k != "version"}
-        keys = arrays["game_key"]
-        sp = np.array([cache.setdefault(k, split_of_key(k)) for k in keys.tolist()], np.int8)
+    keep = keep or {}
+
+    def one(f: Path) -> dict:
+        got: dict = {}
+        with np.load(f) as z:
+            keys = z["game_key"]
+            winner = z["winner"]
+            sp = np.array([split_of_key(k) for k in keys.tolist()], np.int8)
+            draw = np.random.default_rng(int.from_bytes(hashlib.sha1(f.name.encode()).digest()[:4], "little")).random(len(keys))
+            prefix = np.char.partition(keys.astype(str), ":")[:, 0]
+            sels = {}
+            for split in splits:
+                sel = np.ones(len(keys), bool)
+                if split is not None:
+                    sel &= sp == SPLITS[split]
+                if decided:
+                    sel &= winner >= 0
+                for pre, frac in keep.get(split, {}).items():
+                    sel &= ~((prefix == pre) & (draw >= frac))
+                if sel.any():
+                    sels[split] = sel
+            if not sels:
+                return got
+            arrays = {k: z[k] for k in z.files if k != "version"}
         kind = kinds_of(arrays["mode"], arrays["n_players"], arrays["slot_kind"])
-        for split in splits:
-            keep = np.ones(len(keys), bool)
-            if split is not None:
-                keep &= sp == SPLITS[split]
-            if decided:
-                keep &= arrays["winner"] >= 0
-            if not keep.any():
-                continue
-            a = {k: v[keep] for k, v in arrays.items()}
-            a["split"], a["kind"] = sp[keep], kind[keep]
-            out[split].append(a)
+        for split, sel in sels.items():
+            a = {k: v[sel] for k, v in arrays.items()}
+            a["split"], a["kind"] = sp[sel], kind[sel]
+            got[split] = a
+        return got
+
+    from concurrent.futures import ThreadPoolExecutor
+
+    with ThreadPoolExecutor(max_workers=12) as pool:
+        for got in pool.map(one, files):
+            for split, a in got.items():
+                out[split].append(a)
     return out
 
 
@@ -258,13 +289,14 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--policy", nargs="*", default=[], help="NAME=CKPT: a policy network's raw value head")
     ap.add_argument("--value", nargs="*", default=[], help="NAME=CKPT: an analysis value checkpoint")
     ap.add_argument("--split", default="test", choices=list(SPLITS))
+    ap.add_argument("--keep", nargs="*", help="PREFIX=SHARE: keep that share of the rows of games keyed PREFIX:... (e.g. web=0.3)")
     ap.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     ap.add_argument("--batch", type=int, default=1024)
     ap.add_argument("--out", help="JSON report")
     ap.add_argument("--md", help="Markdown tables")
     a = ap.parse_args(argv)
     device = torch.device(a.device)
-    shards = load_rows(a.rows, a.split)
+    shards = load_splits(a.rows, (a.split,), keep={a.split: parse_keep(a.keep)})[a.split]
     rows = concat(shards)
     print(f"{len(rows['winner'])} rows of {len(set(rows['game_key'].tolist()))} games ({a.split})", flush=True)
     full, tables = {}, []
