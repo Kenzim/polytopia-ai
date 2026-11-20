@@ -250,3 +250,25 @@ def test_one_request_for_many_points_equals_one_by_one(evaluator, line):
             assert abs(a["p"] - b["p"]) < 2e-3
             assert (a["win"] is None) == (b["win"] is None)
             assert a["win"] is None or abs(a["win"] - b["win"]) < 2e-3
+
+
+def test_stored_turn_positions_resume_the_replay(evaluator, line):
+    pos, texts = line
+    g = pe.Game.from_position(pos)
+    mid = None
+    for i, t in enumerate(texts):
+        if i == 60:
+            mid = g.position()
+        g.play_text(t)
+    broken = texts[:30] + ["Research { tech: 999 }"] + texts[31:]
+    turns = [{"at": 0, "position": json.loads(pos)}, {"at": 60, "position": json.loads(mid)}]
+    base = {"line": {"position": json.loads(pos), "steps": steps_of(broken), "turns": turns}, "at": [10, 40, 60, 100]}
+    r = evaluator.evaluate(base)
+    assert r["refused"] == [30]
+    by = {e["at"]: e for e in r["evals"]}
+    assert all(w is not None for w in by[10]["win"].values())
+    assert all(w is None for w in by[40]["win"].values()) and all("step 30" in w for w in by[40]["why"].values())
+    good = evaluator.evaluate({"line": {"position": json.loads(pos), "steps": steps_of(texts)}, "at": [60, 100]})
+    assert [by[60]["win"], by[100]["win"]] == [e["win"] for e in good["evals"]]
+    with pytest.raises(Exception, match="step 30"):
+        evaluator.evaluate(base | {"line": {"position": json.loads(pos), "steps": steps_of(broken)}})

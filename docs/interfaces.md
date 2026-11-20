@@ -148,7 +148,14 @@ order asked:
 | `moves` | only with `moves > 0`: `[{"text", "p", "win", "played"}]`, best first; `win` is null unless `after` (and then null with a `why` where the gate gives no number); a move added by `played` also has `"outside_top": true` (its `p` is null if the command is not in the legal list, e.g. a `Stay`). Empty when the game is over, Nature is to move or the position is unsupported |
 
 Errors give `ok: false` with an `error`: a malformed request or position, an `at` outside the line, and a step the
-engine refuses (`"step 12: not a legal command for player 2 now: ..."`). A valid position that the encoding cannot
+engine refuses (`"step 12: not a legal command for player 2 now: ..."`).
+
+`line.turns` (optional): `[{"at": step count, "position": <polytopia-position object>}]`, the positions the game
+was recorded in (the web keeps one at the start of every turn). The replay resumes from each of them. With `turns`, a
+step the engine refuses is not an error: the points from that step up to the next stored position get null with the
+reason, and the answer lists the refused step counts in `refused`. The web should send them for any game played on
+another engine build than the service's: game 1 of the dev database (five players, 2,767 commands) cannot be
+replayed from its start alone on engine 520c4db (step 1,449 is refused), but replays cleanly from its stored turns. A valid position that the encoding cannot
 hold (a tribe outside the 13, more than 8 players) is not an error: every `win` is null with the reason and `moves` is
 empty. The Python binding behind it is `Game.from_line(position_json, step_texts)` (and `from_position`,
 `play_text`, `legal_texts`, `encode_for(pid)`, `slot_kinds(pid)`, `players()`, `settings()`, `winner_ids()`,

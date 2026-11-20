@@ -13,6 +13,7 @@ winners, 0 for the others) and 0 for a player already eliminated.
 
 from __future__ import annotations
 
+import json
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -57,6 +58,8 @@ class _Point:
     turn: int
     mover: int
     over: bool
+    broken: str | None = None
+    refused: int = -1
     win: dict = field(default_factory=dict)
     why: dict = field(default_factory=dict)
     moves: list = field(default_factory=list)
@@ -103,6 +106,7 @@ class Evaluator:
             raise EvaluateError("'after' and 'played' must be true or false")
 
         unsupported = None
+        turns = _turns(req.get("line"), len(steps))
         try:
             game = self.pe.Game.from_position(position)
         except ValueError as e:
@@ -111,11 +115,16 @@ class Evaluator:
             unsupported = str(e)[len(UNSUPPORTED):]
             game = self.pe.Game.from_position(position, strict=False)
 
-        points = self._replay(game, steps, sorted(set(at)))
+        points = self._replay(game, steps, sorted(set(at)), turns, strict=unsupported is None)
         info = self._facts(game)
         jobs: list[_ValueJob] = []
         policy_points: list[_Point] = []
         for p in points.values():
+            if p.broken is not None:
+                for pid in seats if seats is not None else [pid for pid, _, _ in game.players()]:
+                    p.win[str(pid)] = None
+                    p.why[str(pid)] = p.broken
+                continue
             self._seat_values(p, seats, info, unsupported, jobs)
             if k > 0 and not p.over and p.mover != NATURE and unsupported is None:
                 policy_points.append(p)
@@ -132,22 +141,42 @@ class Evaluator:
             if k > 0:
                 e["moves"] = p.moves
             evals.append(e)
-        return {"policy_id": self.policy.policy_id, "value_id": self.value_id, "engine": self.pe.ENGINE_COMMIT,
-                "think_ms": (time.perf_counter() - t0) * 1000.0, "evals": evals}
+        out = {"policy_id": self.policy.policy_id, "value_id": self.value_id, "engine": self.pe.ENGINE_COMMIT,
+               "think_ms": (time.perf_counter() - t0) * 1000.0, "evals": evals}
+        refused = sorted({p.refused for p in points.values() if p.broken is not None})
+        if refused:
+            out["refused"] = refused
+        return out
 
     # -- replay -----------------------------------------------------------------------------------------------------
 
-    def _replay(self, game, steps: list[str], ats: list[int]) -> dict[int, _Point]:
+    def _replay(self, game, steps: list[str], ats: list[int], turns: dict[int, str], strict: bool = True) -> dict[int, _Point]:
+        """The position at every step count of `ats`. Where `turns` holds a stored position for a step count, the
+        replay continues from it. Without `turns` a refused step is an error; with them, the points from a refused
+        step up to the next stored position are marked broken."""
         points, want, last = {}, set(ats), ats[-1]
+        broken: tuple[int, str] | None = None
         for i in range(last + 1):
+            if i in turns and (i > 0 or broken is not None):
+                try:
+                    game = self.pe.Game.from_position(turns[i], strict=strict)
+                except ValueError as e:
+                    raise EvaluateError(f"line.turns at {i}: {e}") from None
+                broken = None
             if i in want:
                 g = game.clone()
-                points[i] = _Point(i, g, int(g.turn), int(g.mover_id), bool(g.is_over()))
-            if i < last:
+                p = _Point(i, g, int(g.turn), int(g.mover_id), bool(g.is_over()))
+                if broken is not None:
+                    p.refused, p.broken = broken
+                points[i] = p
+            if i < last and broken is None:
                 try:
                     game.play_text(steps[i])
                 except ValueError as e:
-                    raise EvaluateError(f"step {i}: {e}") from None
+                    if not turns:
+                        raise EvaluateError(f"step {i}: {e}") from None
+                    broken = (i, f"step {i} cannot be replayed on engine {self.pe.ENGINE_COMMIT} ({e}); no number until "
+                                 "the next stored turn position")
         return points
 
     @staticmethod
@@ -262,3 +291,21 @@ class Evaluator:
                     j = next((i for i, t in enumerate(texts) if t == nxt), None)
                     p.moves.append({"text": nxt, "p": None if j is None else round(float(pr[j]), 4), "win": None,
                                     "played": True, "outside_top": True})
+
+
+def _turns(line: dict, n_steps: int) -> dict[int, str]:
+    """`line.turns` (optional): `[{"at": step count, "position": <polytopia-position object>}]`, positions the game
+    was recorded in (the web keeps one at the start of every turn), as {step count: position JSON text}."""
+    turns = line.get("turns") if isinstance(line, dict) else None
+    if turns is None:
+        return {}
+    if not isinstance(turns, list) or len(turns) > MAX_STEPS:
+        raise EvaluateError("'line.turns' must be a list of {\"at\": step count, \"position\": object}")
+    out = {}
+    for j, t in enumerate(turns):
+        if not isinstance(t, dict) or isinstance(t.get("at"), bool) or not isinstance(t.get("at"), int) \
+                or not 0 <= t["at"] <= n_steps or not isinstance(t.get("position"), dict):
+            raise EvaluateError(f"'line.turns' entry {j} must be {{\"at\": a step count from 0 to {n_steps}, "
+                                "\"position\": a polytopia-position object}")
+        out[t["at"]] = json.dumps(t["position"], separators=(",", ":"))
+    return out
