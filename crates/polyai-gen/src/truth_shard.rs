@@ -7,8 +7,9 @@
 //! |---|---|---|
 //! | truth | int16 | [N, H, W, TRUTH_K] |
 //! | truth_mask | uint8 | [N, H, W] |
+//! | truth_g | float32 | [N, TRUTH_G] (only when scalars were pushed: `polyai-human --truth`) |
 
-use polyai_core::truth::{Truth, TRUTH_K};
+use polyai_core::truth::{Truth, TRUTH_G, TRUTH_K};
 use std::io::Write;
 use std::path::Path;
 use zip::write::SimpleFileOptions;
@@ -21,11 +22,18 @@ pub struct TruthBuf {
     n: usize,
     labels: Vec<i16>,
     mask: Vec<u8>,
+    scalars: Vec<f32>,
 }
 
 impl TruthBuf {
     pub fn new(h: usize, w: usize) -> Self {
-        Self { h, w, n: 0, labels: vec![], mask: vec![] }
+        Self { h, w, n: 0, labels: vec![], mask: vec![], scalars: vec![] }
+    }
+
+    /// The scalar truth (`truth_globals`) of the position pushed last; pushed for every position or for none.
+    #[allow(dead_code)]
+    pub fn push_scalars(&mut self, g: &[f32; TRUTH_G]) {
+        self.scalars.extend_from_slice(g);
     }
 
     pub fn push(&mut self, t: &Truth) {
@@ -35,17 +43,22 @@ impl TruthBuf {
         self.mask.extend_from_slice(&t.mask);
     }
 
-    /// Add `truth` and `truth_mask` to the finished shard at `path`.
+    /// Add `truth` and `truth_mask` (and `truth_g` when scalars were pushed) to the finished shard at `path`.
     pub fn append_to(&self, path: &Path) -> std::io::Result<()> {
         let file = std::fs::OpenOptions::new().read(true).write(true).open(path)?;
         let mut zip = ZipWriter::new_append(file).map_err(std::io::Error::other)?;
         let opts = SimpleFileOptions::default().compression_method(CompressionMethod::Deflated).compression_level(Some(3)).large_file(true);
         let labels: Vec<u8> = self.labels.iter().flat_map(|v| v.to_le_bytes()).collect();
         let (n, h, w) = (self.n, self.h, self.w);
-        for (name, descr, shape, body) in [
+        let mut entries = vec![
             ("truth", "<i2", vec![n, h, w, TRUTH_K], labels),
             ("truth_mask", "|u1", vec![n, h, w], self.mask.clone()),
-        ] {
+        ];
+        if !self.scalars.is_empty() {
+            assert_eq!(self.scalars.len(), n * TRUTH_G, "scalar truth for some positions only");
+            entries.push(("truth_g", "<f4", vec![n, TRUTH_G], self.scalars.iter().flat_map(|v| v.to_le_bytes()).collect()));
+        }
+        for (name, descr, shape, body) in entries {
             zip.start_file(format!("{name}.npy"), opts).map_err(std::io::Error::other)?;
             zip.write_all(&npy(descr, &shape, &body))?;
         }
@@ -99,13 +112,14 @@ mod tests {
             let mut mask = vec![0u8; h * w];
             mask[1] = 1;
             tb.push(&Truth { h, w, labels, mask });
+            tb.push_scalars(&[f32::from(i), 2.5]);
         }
         let path = std::env::temp_dir().join(format!("truth_shard_{}.npz", std::process::id()));
         shard.write(&path).unwrap();
         tb.append_to(&path).unwrap();
         let mut z = zip::ZipArchive::new(std::fs::File::open(&path).unwrap()).unwrap();
         let names: Vec<String> = z.file_names().map(String::from).collect();
-        for k in ["tiles.npy", "winner.npy", "truth.npy", "truth_mask.npy"] {
+        for k in ["tiles.npy", "winner.npy", "truth.npy", "truth_mask.npy", "truth_g.npy"] {
             assert!(names.iter().any(|n| n == k), "{k} missing from {names:?}");
         }
         let mut read = |name: &str| {
@@ -124,6 +138,10 @@ mod tests {
         let (header, body) = read("truth_mask.npy");
         assert!(header.contains("'|u1'") && header.contains("(2, 2, 3)"), "{header}");
         assert_eq!(body, vec![0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0]);
+        let (header, body) = read("truth_g.npy");
+        assert!(header.contains("'<f4'") && header.contains("(2, 2)"), "{header}");
+        let want: Vec<u8> = [0f32, 2.5, 1.0, 2.5].iter().flat_map(|v| v.to_le_bytes()).collect();
+        assert_eq!(body, want);
         std::fs::remove_file(&path).unwrap();
     }
 }

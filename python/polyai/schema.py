@@ -191,7 +191,8 @@ TRUTH_CHANNELS: list[tuple[str, int]] = [
 TRUTH_NAMES = [n for n, _ in TRUTH_CHANNELS]
 TRUTH_VOCABS = [v for _, v in TRUTH_CHANNELS]
 TRUTH_K = len(TRUTH_CHANNELS)
-# Scalar truth per position (`VecEnv(truth=True)` key `truth_g` float32[B, TRUTH_G], RL only, not in shards): the other
+# Scalar truth per position (`VecEnv(truth=True)` key `truth_g` float32[B, TRUTH_G]; in shards only as the extra key
+# `truth_g` that `polyai-human --truth` writes, which `data.Shard` does not load): the other
 # players' cities in total and their techs per player, as the engine has them. Regression targets, divided by TRUTH_G_SCALE.
 TRUTH_G_NAMES = ["opp_cities", "opp_techs"]
 TRUTH_G = len(TRUTH_G_NAMES)

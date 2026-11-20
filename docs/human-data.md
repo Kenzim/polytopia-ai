@@ -158,10 +158,13 @@ the raw directory it:
 - for clean games writes one position before every command of every human seat (a seat not marked `auto_play`), all
   seats, encoded exactly like `polyai-gen` positions, with the legal list and the engine AI's candidate scores;
 - labels: winner only by elimination (or capitals for Might), else `winner = -1` and `capped = 1`
-  (`Outcome::of`; points never decide); `final_scores` logged;
+  (`Outcome::of`; points never decide); `final_scores` logged. With `--resign-wins` a two-seat game the engine leaves
+  undecided in which exactly one seat resigned or was kicked is labelled won by the other seat (off by default, so the
+  training shards keep their labels);
 - writes `source=3`, `ours=0`, `behaviour_logp=NaN`, no policy, `difficulty=-1`, `game_key=human:<id>`, `seed` a hash
-  of the id. Kind 35 commands (no engine command, no effect on any verified replay) are counted as `no_command`, not as
-  unmapped.
+  of the id. Kind 35 commands (resign or kick; not applied to the engine, no effect on any verified replay) are counted
+  as `no_command`, not as unmapped, and their players are listed in the meta line as `resigned`;
+- with `--truth` adds `truth`, `truth_mask` and `truth_g` (docs/belief.md) to every shard, for a privileged critic.
 
 `tools/human_report.py` loads every shard with `polyai.data.Shard` and checks `chosen` inside its legal list, source 3,
 the `human:` key prefix, winner/capped agreement and that the shard games are the clean games of `meta.jsonl`, then
@@ -180,7 +183,16 @@ nice -n 10 cargo test --release -p polyai-human
 ```
 
 It rewrites `human-*.npz` in the output directory each run (stale shards are removed first), so rerunning after more
-games arrive is safe; all rows are kept by default (`--keep 4` keeps one in four like the generator).
+games arrive is safe; all rows are kept by default (`--keep 4` keeps one in four like the generator). `--part I/N`
+converts every N-th game starting at the I-th, so N runs, each with its own `--out`, share the work.
+
+### Calibration set (2026-11-20)
+
+For `polyai.calibrate` (docs/rl.md) all 12,488 fetched games were converted into `$H/calib/p00` to `p11` with
+`--resign-wins --truth --keep 2 --part I/12` (12 processes, about 3 minutes): 10,622 clean, 852 unsupported tribe, 930
+skipped (old save versions), 82 dirty, 2 with too many players. 8,884 of the 10,615 clean two-player games (all Might
+but 56) have a winner, every one of them by resignation or kick, none by an elimination the engine sees; they hold
+1,786,775 positions and last 15 turns at the median (7 to 25 for the middle 90%).
 
 ### Check on local blobs (2026-11-01)
 

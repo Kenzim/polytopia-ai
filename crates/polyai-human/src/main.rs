@@ -12,7 +12,13 @@
 //! out. `difficulty` is -1 (a human), `ours` is 0 and there is no behaviour policy (NaN).
 //!
 //! Labels (docs/encoding.md section 5): the winner only by elimination (or capitals for Might), otherwise `winner = -1`
-//! and `capped = 1`; points never decide a game. `final_scores` are logged as the engine computes them.
+//! and `capped = 1`; points never decide a game. `final_scores` are logged as the engine computes them. With
+//! `--resign-wins`, a two-seat game the engine leaves undecided in which exactly one seat resigned (or was kicked) is
+//! labelled won by the other seat.
+//!
+//! `--truth` adds the keys `truth`, `truth_mask` and `truth_g` (what lies under the mover's fog, docs/belief.md) to
+//! every shard. `--part I/N` converts only every N-th game, starting at the I-th (0-based) of the sorted ids, so N
+//! runs with their own `--out` cover the games in parallel.
 //!
 //! Scope: the 12 normal tribes plus Cymanti (`polyai_core::TRIBES`). A game with any other tribe is skipped and counted.
 
@@ -22,7 +28,10 @@ mod npz;
 #[path = "../../polyai-gen/src/shard.rs"]
 #[allow(dead_code)]
 mod shard;
+#[path = "../../polyai-gen/src/truth_shard.rs"]
+mod truth_shard;
 
+use polyai_core::truth::{truth, truth_globals, Truth, TRUTH_G};
 use polyai_core::*;
 use polytopia_sim::engine::replay::SaveFile;
 use polytopia_sim::engine::{Engine, NATURE};
@@ -30,15 +39,17 @@ use shard::{Labels, Origin, Row, ShardBuf, K_CAND, MAX_SLOTS};
 use std::collections::HashMap;
 use std::io::Write;
 use std::path::{Path, PathBuf};
+use truth_shard::TruthBuf;
 
 /// The command kind of the end-match command (not a decision).
 const END_MATCH: u16 = 22;
-/// Kind 35 (two bytes and a flag) has no engine command and no effect on the replays the engine is verified on (it
-/// sits just before the last end-turn of every regression game); it is counted, not treated as an unmapped command.
+/// Kind 35 is the resign command (resigning player, kicker, kicked flag). It is not applied to the engine here (no
+/// effect on the replays the engine is verified on); it is counted, not treated as an unmapped command, and its player
+/// is recorded in `resigned`.
 const NO_COMMAND: u16 = 35;
 
 const USAGE: &str = "usage: polyai-human --raw DIR --out DIR [--meta FILE] [--keep K] [--shard-size P] [--limit N] \
-                     [--seats FILE] [--key-prefix P]";
+                     [--seats FILE] [--key-prefix P] [--resign-wins] [--truth] [--part I/N]";
 
 /// `--seats FILE`: one game per line, `<id> <player>[,<player>...]`; only listed games are replayed and only the
 /// listed players' moves are recorded (for games where every seat is a person to the server, such as our own).
@@ -78,6 +89,7 @@ struct Meta {
     end_match: usize,
     no_command: usize,
     after_end: usize,
+    resigned: Vec<u8>,
     rows: usize,
     left_out: Vec<String>,
 }
@@ -107,7 +119,7 @@ impl Meta {
         format!(
             "{{\"id\":{},\"status\":{},\"reason\":{},\"mode\":{},\"height\":{},\"width\":{},\"players\":{},\"humans\":{},\
              \"tribes\":{},\"turn_limit\":{},\"turns\":{},\"over\":{},\"capped\":{},\"winners\":{},\"commands\":{},\
-             \"unmapped\":{},\"illegal\":{},\"off_turn\":{},\"end_match\":{},\"no_command\":{},\"after_end\":{},\"rows\":{},\"left_out\":[{}]}}",
+             \"unmapped\":{},\"illegal\":{},\"off_turn\":{},\"end_match\":{},\"no_command\":{},\"after_end\":{},\"resigned\":{},\"rows\":{},\"left_out\":[{}]}}",
             esc(&self.id),
             esc(&self.status),
             esc(&self.reason),
@@ -129,6 +141,7 @@ impl Meta {
             self.end_match,
             self.no_command,
             self.after_end,
+            list(&self.resigned),
             self.rows,
             left.join(",")
         )
@@ -156,17 +169,23 @@ fn kept(seed: i32, index: usize, keep: u32) -> bool {
 }
 
 type Rows = Vec<(Row, Labels)>;
+/// The truth labels and scalars of the rows, in the same order; empty without `--truth`.
+type Truths = Vec<(Truth, [f32; TRUTH_G])>;
 
 /// Replay one game. `Err` is a skip with its reason; the meta is filled either way as far as it got.
 /// `only`: when given, the recorded seats are these player ids instead of every seat not marked `auto_play`.
+/// `resign_wins`, `with_truth`: see `--resign-wins` and `--truth` in the module documentation.
+#[allow(clippy::too_many_arguments)]
 fn replay(
     id: &str,
     initial: &[u8],
     current: &[u8],
     keep: u32,
     only: Option<&[u8]>,
+    resign_wins: bool,
+    with_truth: bool,
     m: &mut Meta,
-) -> Result<(Rows, i32), String> {
+) -> Result<(Rows, Truths, i32), String> {
     let save = SaveFile::parse_server(initial, current).map_err(|e| format!("cannot decode the blobs: {e}"))?;
     let mut e = Engine::from_state(save.initial.clone());
     let s = &e.s.settings;
@@ -201,6 +220,7 @@ fn replay(
     let human = |p: u8| seats.iter().any(|s| s.0 == p && s.2);
     let seed = seed_of(id);
     let mut rows: Vec<Row> = Vec::new();
+    let mut truths: Truths = Vec::new();
     for (i, raw) in save.commands.iter().enumerate() {
         if raw.kind == 20 || raw.player == NATURE {
             continue;
@@ -211,6 +231,10 @@ fn replay(
                 m.end_match += 1;
             } else if raw.kind == NO_COMMAND {
                 m.no_command += 1;
+                let p = raw.n as u8;
+                if seats.iter().any(|s| s.0 == p) && !m.resigned.contains(&p) {
+                    m.resigned.push(p);
+                }
             } else {
                 m.unmapped += 1;
                 m.left_out.push(format!("{i} kind {} player {} (unmapped)", raw.kind, raw.player));
@@ -233,6 +257,9 @@ fn replay(
                 }
                 Some(chosen) if kept(seed, i, keep) => {
                     let obs = encode(&e, me, &slots, &legal);
+                    if with_truth {
+                        truths.push((truth(&e, me, &slots), truth_globals(&e, me)));
+                    }
                     let actions = legal
                         .iter()
                         .map(|c| encode_command(&e, &slots, c).expect("legal command encodes"))
@@ -275,6 +302,10 @@ fn replay(
     m.over = o.over;
     m.capped = o.capped || o.is_draw();
     m.winners = if m.capped { Vec::new() } else { o.winners.clone() };
+    if let Some(w) = resign_winner(resign_wins, &order, &m.winners, &m.resigned) {
+        m.capped = false;
+        m.winners = vec![w];
+    }
     let out: Rows = rows
         .into_iter()
         .map(|r| {
@@ -304,13 +335,31 @@ fn replay(
         return Err(format!("not a clean replay: {} illegal, {} unmapped commands", m.illegal, m.unmapped));
     }
     m.rows = out.len();
-    Ok((out, seed))
+    Ok((out, truths, seed))
 }
 
-fn flush(bufs: &mut HashMap<(usize, usize), ShardBuf>, key: (usize, usize), out: &Path, n: &mut usize) {
+/// The winner `--resign-wins` gives: the other seat of a two-seat game with no winner where exactly one seat resigned.
+fn resign_winner(on: bool, seats: &[u8], winners: &[u8], resigned: &[u8]) -> Option<u8> {
+    if !on || seats.len() != 2 || !winners.is_empty() || resigned.len() != 1 {
+        return None;
+    }
+    seats.iter().copied().find(|&s| s != resigned[0])
+}
+
+fn flush(
+    bufs: &mut HashMap<(usize, usize), ShardBuf>,
+    tbufs: &mut HashMap<(usize, usize), TruthBuf>,
+    key: (usize, usize),
+    out: &Path,
+    n: &mut usize,
+) {
+    let t = tbufs.remove(&key);
     if let Some(b) = bufs.remove(&key).filter(|b| b.len() > 0) {
         let path = out.join(format!("human-{:05}-{}x{}.npz", *n, key.0, key.1));
         b.write(&path).expect("write the shard");
+        if let Some(t) = t {
+            t.append_to(&path).expect("write the truth keys");
+        }
         eprintln!("wrote {} ({} positions)", path.display(), b.len());
         *n += 1;
     }
@@ -320,10 +369,19 @@ fn main() {
     let (mut raw, mut out, mut meta): (Option<PathBuf>, Option<PathBuf>, Option<PathBuf>) = (None, None, None);
     let (mut keep, mut shard_size, mut limit) = (1u32, 50_000usize, usize::MAX);
     let (mut seats, mut prefix): (Option<HashMap<String, Vec<u8>>>, String) = (None, "human".into());
+    let (mut resign_wins, mut with_truth, mut part) = (false, false, (0usize, 1usize));
     let mut args = std::env::args().skip(1);
     while let Some(a) = args.next() {
         let mut val = || args.next().unwrap_or_else(|| panic!("{a} needs a value"));
         match a.as_str() {
+            "--resign-wins" => resign_wins = true,
+            "--truth" => with_truth = true,
+            "--part" => {
+                let v = val();
+                let (i, n) = v.split_once('/').expect("--part I/N");
+                part = (i.parse().expect("--part I/N"), n.parse().expect("--part I/N"));
+                assert!(part.0 < part.1, "--part I/N needs I < N");
+            }
             "--raw" => raw = Some(val().into()),
             "--out" => out = Some(val().into()),
             "--meta" => meta = Some(val().into()),
@@ -358,9 +416,11 @@ fn main() {
         .filter(|id| seats.as_ref().is_none_or(|s| s.contains_key(id)))
         .collect();
     ids.sort();
+    let mut ids: Vec<String> = ids.into_iter().skip(part.0).step_by(part.1).collect();
     ids.truncate(limit);
     let mut meta_out = std::io::BufWriter::new(std::fs::File::create(&meta).expect("create the meta file"));
     let mut bufs: HashMap<(usize, usize), ShardBuf> = HashMap::new();
+    let mut tbufs: HashMap<(usize, usize), TruthBuf> = HashMap::new();
     let mut shards = 0;
     // A panic inside the engine on a strange game is a skip, not the end of the run.
     std::panic::set_hook(Box::new(|_| {}));
@@ -371,7 +431,7 @@ fn main() {
             (Ok(i), Ok(c)) => {
                 let mm = &mut m;
                 let only = seats.as_ref().and_then(|s| s.get(id)).map(Vec::as_slice);
-                std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| replay(id, &i, &c, keep, only, mm)))
+                std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| replay(id, &i, &c, keep, only, resign_wins, with_truth, mm)))
                     .unwrap_or_else(|p| {
                         let why = p
                             .downcast_ref::<String>()
@@ -384,7 +444,7 @@ fn main() {
             _ => Err("cannot read the blobs".into()),
         };
         match result {
-            Ok((rows, seed)) => {
+            Ok((rows, truths, seed)) => {
                 m.status = "ok".into();
                 let key = (m.height, m.width);
                 let game_key = format!("{prefix}:{id}");
@@ -399,8 +459,15 @@ fn main() {
                     };
                     buf.push_with(seed, r, l, &origin);
                 }
+                if with_truth {
+                    let tb = tbufs.entry(key).or_insert_with(|| TruthBuf::new(key.0, key.1));
+                    for (t, g) in &truths {
+                        tb.push(t);
+                        tb.push_scalars(g);
+                    }
+                }
                 if buf.len() >= shard_size {
-                    flush(&mut bufs, key, &out, &mut shards);
+                    flush(&mut bufs, &mut tbufs, key, &out, &mut shards);
                 }
             }
             Err(reason) => {
@@ -426,7 +493,7 @@ fn main() {
     }
     let keys: Vec<_> = bufs.keys().copied().collect();
     for key in keys {
-        flush(&mut bufs, key, &out, &mut shards);
+        flush(&mut bufs, &mut tbufs, key, &out, &mut shards);
     }
     meta_out.flush().expect("flush the meta file");
 }
@@ -440,6 +507,15 @@ mod tests {
         assert!((0..100).all(|i| kept(7, i, 1)));
         let n = (0..4000).filter(|&i| kept(7, i, 4)).count();
         assert!((800..1200).contains(&n), "{n}");
+    }
+
+    #[test]
+    fn resign_wins_only_labels_an_undecided_two_seat_game_with_one_resigner() {
+        assert_eq!(resign_winner(true, &[1, 2], &[], &[2]), Some(1));
+        assert_eq!(resign_winner(false, &[1, 2], &[], &[2]), None);
+        assert_eq!(resign_winner(true, &[1, 2], &[2], &[2]), None);
+        assert_eq!(resign_winner(true, &[1, 2], &[], &[1, 2]), None);
+        assert_eq!(resign_winner(true, &[1, 2, 3], &[], &[2]), None);
     }
 
     #[test]

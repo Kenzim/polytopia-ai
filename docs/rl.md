@@ -117,6 +117,36 @@ play as before; its own value head still trains, on the critic's returns. The cr
 `--resume`) and as `critic_final.pt`. Metrics add `critic_loss`, `critic_value_mean`, `policy_value_mean` and
 `critic_policy_value_corr`.
 
+### Calibration on human games (`polyai.calibrate`)
+
+`python -m polyai.calibrate --shards DIR... --model NAME=CKPT...` runs the value head of policy checkpoints, and
+privileged critics (`critic_final.pt`, on shards with the truth keys), over finished games and reports how often the
+sides given probability p won. A sample is one side of one game in one window of game turns (the mean estimate over
+that side's positions); the report has the Brier score, log loss, accuracy, expected calibration error (ECE) and the
+win share per probability bucket, per model and window. `--players 2` (the default) needs the `meta.jsonl` of
+`polyai-human`.
+
+Measured 2026-11-20 on the calibration set of docs/human-data.md (8,859 two-player human games, 1,786,775 positions,
+winner by resignation), for round 77 and the three arms trained from it for 300 updates (`ctrl` as the live loop,
+`turn` with `--credit-per-turn`, `crit` with `--credit-per-turn --priv-critic`, and the critic of `crit`):
+
+| Model | Turn 0: Brier | Turn 0: share given >= 0.8, and won | Turns 11-15: ECE | Turns 11-15: given >= 0.8 (mean), won |
+|---|---|---|---|---|
+| round 77 | 0.327 | 37%, 50.3% | 0.043 | 0.92, 93.6% |
+| ctrl | 0.266 | 0%, n/a | 0.104 | 0.91, 98.0% |
+| turn | 0.334 | 49%, 49.4% | 0.038 | 0.91, 94.9% |
+| crit (policy) | 0.285 | 1%, 54.7% | 0.036 | 0.90, 94.8% |
+| crit (critic) | 0.349 | 62%, 51.0% | 0.152 | 0.93, 81.6% |
+
+A coin flip has Brier 0.25. No estimate means anything in the first five turns of a game between equals: the learner
+wins 65 to 75% of its training games (over half the pool is weaker opponents) and only its own rows are trained on, so
+every model gives the mover 0.55 to 0.85 from either seat, and the sides given 0.8 or more win half the time. From
+turn 11 the policy value heads of round 77, `turn` and `crit` are calibrated and right about the winner in 80 to 88%
+of the samples; `ctrl` is too low there (sides given 0.4 to 0.6 win 69 to 79%). The privileged critic is the worst of
+the five at every stage and overconfident throughout (sides given 0.93 win 82% at turns 11 to 15), so it fails the
+check "sides given over 80% at the start win about 90%". A value estimate for play between equals needs symmetric
+training games (self-play rows of both seats), not only the learner's rows against the pool.
+
 ## Metrics (`kind: update`)
 
 `update`, `learner_policy_id`, `learner_decisions`, `opponent_decisions`, `games_finished`, `capped_games`,
