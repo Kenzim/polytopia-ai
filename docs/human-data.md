@@ -162,7 +162,10 @@ the raw directory it:
 - writes `source=3`, `ours=0`, `behaviour_logp=NaN`, no policy, `difficulty=-1`, `game_key=human:<id>`, `seed` a hash
   of the id. Kind 35 commands (resign or kick; not applied to the engine, no effect on any verified replay) are counted
   as `no_command`, not as unmapped, and their players are listed in the meta line as `resigned`;
-- with `--truth` adds `truth`, `truth_mask` and `truth_g` (docs/belief.md) to every shard, for a privileged critic.
+- with `--truth` adds `truth`, `truth_mask` and `truth_g` (docs/belief.md) to every shard, for a privileged critic;
+- with `--features` adds `f_tiles`, `f_globals` and `f_actions` (docs/encoding.md section 12), as `polyai-gen
+  --features` writes them, one row per kept position in the order of the shard rows, for models trained with
+  `--features`. Without it the shards are byte for byte as before. The value rows carry no features.
 
 `tools/human_report.py` loads every shard with `polyai.data.Shard` and checks `chosen` inside its legal list, source 3,
 the `human:` key prefix, winner/capped agreement and that the shard games are the clean games of `meta.jsonl`, then
@@ -191,6 +194,9 @@ For `polyai.calibrate` (docs/rl.md) all 12,488 fetched games were converted into
 skipped (old save versions), 82 dirty, 2 with too many players. 8,884 of the 10,615 clean two-player games (all Might
 but 56) have a winner, every one of them by resignation or kick, none by an elimination the engine sees; they hold
 1,786,775 positions and last 15 turns at the median (7 to 25 for the middle 90%).
+
+The same set with `--features` added is `$H/calib_f/p00` to `p11` (same games and positions), the one to give models
+trained with `--features`, which `polyai.calibrate` cannot check on `calib` (no `f_tiles`, `f_globals`).
 
 ### Check on local blobs (2026-11-01)
 

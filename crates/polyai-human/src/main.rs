@@ -17,7 +17,9 @@
 //! labelled won by the other seat.
 //!
 //! `--truth` adds the keys `truth`, `truth_mask` and `truth_g` (what lies under the mover's fog, docs/belief.md) to
-//! every shard. `--part I/N` converts only every N-th game, starting at the I-th (0-based) of the sorted ids, so N
+//! every shard. `--features` adds `f_tiles`, `f_globals` and `f_actions` (the engine features, docs/encoding.md
+//! section 12) the same way, as `polyai-gen --features` writes them. `--part I/N` converts only every N-th game,
+//! starting at the I-th (0-based) of the sorted ids, so N
 //! runs with their own `--out` cover the games in parallel.
 //!
 //! `--value-rows DIR` also writes value shards (`polyai-gen/src/value_shard.rs`) to `DIR`: before one command in
@@ -32,11 +34,15 @@ mod npz;
 #[path = "../../polyai-gen/src/shard.rs"]
 #[allow(dead_code)]
 mod shard;
+#[path = "../../polyai-gen/src/feat_shard.rs"]
+mod feat_shard;
 #[path = "../../polyai-gen/src/truth_shard.rs"]
 mod truth_shard;
 #[path = "../../polyai-gen/src/value_shard.rs"]
 mod value_shard;
 
+use feat_shard::FeatBuf;
+use polyai_core::features::{features, Features};
 use polyai_core::truth::{truth, truth_globals, Truth, TRUTH_G};
 use polyai_core::*;
 use polytopia_sim::engine::replay::SaveFile;
@@ -56,7 +62,7 @@ const END_MATCH: u16 = 22;
 const NO_COMMAND: u16 = 35;
 
 const USAGE: &str = "usage: polyai-human --raw DIR --out DIR [--meta FILE] [--keep K] [--shard-size P] [--limit N] \
-                     [--seats FILE] [--key-prefix P] [--resign-wins] [--truth] [--part I/N] [--value-rows DIR] [--value-keep K]";
+                     [--seats FILE] [--key-prefix P] [--resign-wins] [--truth] [--features] [--part I/N] [--value-rows DIR] [--value-keep K]";
 /// Mixed into the game's seed so the value rows sample other positions than the shards.
 const VALUE_SALT: i32 = 0x5a17;
 
@@ -183,6 +189,10 @@ fn kept(seed: i32, index: usize, keep: u32) -> bool {
 type Rows = Vec<(Row, Labels)>;
 /// The truth labels and scalars of the rows, in the same order; empty without `--truth`.
 type Truths = Vec<(Truth, [f32; TRUTH_G])>;
+/// The engine features of the rows, in the same order; empty without `--features`.
+type Feats = Vec<Features>;
+/// What `replay` returns for a clean game: the rows with their labels, truths, features, the seed and the value views.
+type Replayed = (Rows, Truths, Feats, i32, Vec<SeatView>);
 
 /// A value row before the game's winner is known.
 struct SeatView {
@@ -217,7 +227,7 @@ fn relative_winner(order: &[u8], seat: u8, winners: &[u8]) -> i8 {
 
 /// Replay one game. `Err` is a skip with its reason; the meta is filled either way as far as it got.
 /// `only`: when given, the recorded seats are these player ids instead of every seat not marked `auto_play`.
-/// `resign_wins`, `with_truth`: see `--resign-wins` and `--truth` in the module documentation.
+/// `resign_wins`, `with_truth`, `with_features`: see `--resign-wins`, `--truth` and `--features` in the module documentation.
 #[allow(clippy::too_many_arguments)]
 fn replay(
     id: &str,
@@ -227,9 +237,10 @@ fn replay(
     only: Option<&[u8]>,
     resign_wins: bool,
     with_truth: bool,
+    with_features: bool,
     value_keep: u32,
     m: &mut Meta,
-) -> Result<(Rows, Truths, i32, Vec<SeatView>), String> {
+) -> Result<Replayed, String> {
     let save = SaveFile::parse_server(initial, current).map_err(|e| format!("cannot decode the blobs: {e}"))?;
     let mut e = Engine::from_state(save.initial.clone());
     let s = &e.s.settings;
@@ -267,6 +278,7 @@ fn replay(
     let seed = seed_of(id);
     let mut rows: Vec<Row> = Vec::new();
     let mut truths: Truths = Vec::new();
+    let mut feats: Feats = Vec::new();
     let mut views: Vec<SeatView> = Vec::new();
     for (i, raw) in save.commands.iter().enumerate() {
         if raw.kind == 20 || raw.player == NATURE {
@@ -309,6 +321,9 @@ fn replay(
                     let obs = encode(&e, me, &slots, &legal);
                     if with_truth {
                         truths.push((truth(&e, me, &slots), truth_globals(&e, me)));
+                    }
+                    if with_features {
+                        feats.push(features(&e, me, &slots, &legal));
                     }
                     let actions = legal
                         .iter()
@@ -385,7 +400,7 @@ fn replay(
         return Err(format!("not a clean replay: {} illegal, {} unmapped commands", m.illegal, m.unmapped));
     }
     m.rows = out.len();
-    Ok((out, truths, seed, views))
+    Ok((out, truths, feats, seed, views))
 }
 
 /// The winner `--resign-wins` gives: the other seat of a two-seat game with no winner where exactly one seat resigned.
@@ -399,16 +414,21 @@ fn resign_winner(on: bool, seats: &[u8], winners: &[u8], resigned: &[u8]) -> Opt
 fn flush(
     bufs: &mut HashMap<(usize, usize), ShardBuf>,
     tbufs: &mut HashMap<(usize, usize), TruthBuf>,
+    fbufs: &mut HashMap<(usize, usize), FeatBuf>,
     key: (usize, usize),
     out: &Path,
     n: &mut usize,
 ) {
     let t = tbufs.remove(&key);
+    let f = fbufs.remove(&key);
     if let Some(b) = bufs.remove(&key).filter(|b| b.len() > 0) {
         let path = out.join(format!("human-{:05}-{}x{}.npz", *n, key.0, key.1));
         b.write(&path).expect("write the shard");
         if let Some(t) = t {
             t.append_to(&path).expect("write the truth keys");
+        }
+        if let Some(f) = f {
+            f.append_to(&path).expect("write the feature keys");
         }
         eprintln!("wrote {} ({} positions)", path.display(), b.len());
         *n += 1;
@@ -428,7 +448,7 @@ fn main() {
     let (mut raw, mut out, mut meta): (Option<PathBuf>, Option<PathBuf>, Option<PathBuf>) = (None, None, None);
     let (mut keep, mut shard_size, mut limit) = (1u32, 50_000usize, usize::MAX);
     let (mut seats, mut prefix): (Option<HashMap<String, Vec<u8>>>, String) = (None, "human".into());
-    let (mut resign_wins, mut with_truth, mut part) = (false, false, (0usize, 1usize));
+    let (mut resign_wins, mut with_truth, mut with_features, mut part) = (false, false, false, (0usize, 1usize));
     let (mut value_out, mut value_keep): (Option<PathBuf>, u32) = (None, 8);
     let mut args = std::env::args().skip(1);
     while let Some(a) = args.next() {
@@ -438,6 +458,7 @@ fn main() {
             "--value-rows" => value_out = Some(val().into()),
             "--value-keep" => value_keep = val().parse().expect("--value-keep K"),
             "--truth" => with_truth = true,
+            "--features" => with_features = true,
             "--part" => {
                 let v = val();
                 let (i, n) = v.split_once('/').expect("--part I/N");
@@ -483,6 +504,7 @@ fn main() {
     let mut meta_out = std::io::BufWriter::new(std::fs::File::create(&meta).expect("create the meta file"));
     let mut bufs: HashMap<(usize, usize), ShardBuf> = HashMap::new();
     let mut tbufs: HashMap<(usize, usize), TruthBuf> = HashMap::new();
+    let mut fbufs: HashMap<(usize, usize), FeatBuf> = HashMap::new();
     let mut shards = 0;
     let mut vbufs: HashMap<(usize, usize), ValueBuf> = HashMap::new();
     let mut vshards = 0;
@@ -505,7 +527,7 @@ fn main() {
             (Ok(i), Ok(c)) => {
                 let mm = &mut m;
                 let only = seats.as_ref().and_then(|s| s.get(id)).map(Vec::as_slice);
-                std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| replay(id, &i, &c, keep, only, resign_wins, with_truth, vkeep, mm)))
+                std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| replay(id, &i, &c, keep, only, resign_wins, with_truth, with_features, vkeep, mm)))
                     .unwrap_or_else(|p| {
                         let why = p
                             .downcast_ref::<String>()
@@ -518,7 +540,7 @@ fn main() {
             _ => Err("cannot read the blobs".into()),
         };
         match result {
-            Ok((rows, truths, seed, views)) => {
+            Ok((rows, truths, feats, seed, views)) => {
                 m.status = "ok".into();
                 let key = (m.height, m.width);
                 let game_key = format!("{prefix}:{id}");
@@ -561,8 +583,14 @@ fn main() {
                         tb.push_scalars(g);
                     }
                 }
+                if with_features {
+                    let fb = fbufs.entry(key).or_insert_with(|| FeatBuf::new(key.0, key.1));
+                    for f in &feats {
+                        fb.push(f);
+                    }
+                }
                 if buf.len() >= shard_size {
-                    flush(&mut bufs, &mut tbufs, key, &out, &mut shards);
+                    flush(&mut bufs, &mut tbufs, &mut fbufs, key, &out, &mut shards);
                 }
             }
             Err(reason) => {
@@ -588,7 +616,7 @@ fn main() {
     }
     let keys: Vec<_> = bufs.keys().copied().collect();
     for key in keys {
-        flush(&mut bufs, &mut tbufs, key, &out, &mut shards);
+        flush(&mut bufs, &mut tbufs, &mut fbufs, key, &out, &mut shards);
     }
     if let Some(dir) = &value_out {
         let keys: Vec<_> = vbufs.keys().copied().collect();
@@ -608,6 +636,37 @@ mod tests {
         assert!((0..100).all(|i| kept(7, i, 1)));
         let n = (0..4000).filter(|&i| kept(7, i, 4)).count();
         assert!((800..1200).contains(&n), "{n}");
+    }
+
+    #[test]
+    fn the_feature_rows_line_up_with_the_kept_rows() {
+        let raw = Path::new("/kvm/polytopia-ai-data/human/raw");
+        let Ok(dir) = std::fs::read_dir(raw) else { return };
+        let mut ids: Vec<String> = dir
+            .flatten()
+            .filter_map(|f| f.file_name().to_string_lossy().strip_suffix("_init.bin").map(str::to_string))
+            .collect();
+        ids.sort();
+        let mut checked = 0;
+        for id in ids.iter().take(40) {
+            let (Ok(i), Ok(c)) = (std::fs::read(raw.join(format!("{id}_init.bin"))), std::fs::read(raw.join(format!("{id}_cur.bin")))) else { continue };
+            let mut m = Meta::default();
+            let run = |features: bool, m: &mut Meta| {
+                std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| replay(id, &i, &c, 2, None, true, true, features, 0, m)))
+            };
+            let Ok(Ok((rows, truths, feats, _, _))) = run(true, &mut m) else { continue };
+            assert_eq!(feats.len(), rows.len());
+            assert_eq!(truths.len(), rows.len());
+            for ((r, _), f) in rows.iter().zip(&feats) {
+                assert_eq!(f.actions.len(), r.actions.len() * polyai_core::features::A_F);
+                assert_eq!((f.h * f.w * polyai_core::features::T_F), f.tiles.len());
+            }
+            let Ok(Ok((plain, _, none, _, _))) = run(false, &mut Meta::default()) else { panic!("replay differs") };
+            assert!(none.is_empty());
+            assert_eq!(plain.len(), rows.len());
+            checked += 1;
+        }
+        assert!(checked > 0 || ids.is_empty());
     }
 
     #[test]
