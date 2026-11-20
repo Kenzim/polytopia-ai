@@ -8,6 +8,7 @@ Usage (from ai, with PYTHONPATH=python):
     python tools/profile_collector.py [--collector python|rust] [--games 512] [--steps 16384] [--threads 14]
         [--mode might] [--n-players 2:55,3:25,4:20] [--pool-weights ...] [--snapshots 4] [--warmup 1] [--reps 2]
         [--ckpt CKPT --device cuda --gpu-gb 1.5 --infer-graphs --infer-compile] [--max-lead 4] [--min-infer 0] [--seed 0]
+        [--features]
 Prints decisions per second for each rep.
 """
 import argparse
@@ -42,11 +43,13 @@ ap.add_argument("--max-batch", type=int, default=256)
 ap.add_argument("--gpu-gb", type=float, default=0.0, help="cap this process's GPU memory (0: no cap)")
 ap.add_argument("--infer-graphs", action="store_true")
 ap.add_argument("--infer-compile", action="store_true")
+ap.add_argument("--features", action="store_true", help="collect the engine features too, as the training loop does")
 a = ap.parse_args()
 
 extra = {"pool_weights": a.pool_weights} if a.pool_weights else {}
 cfg = RLConfig(mode=a.mode, games=a.games, rollout_steps=a.steps, threads=a.threads, n_players=a.n_players,
-               max_lead=a.max_lead, min_infer=a.min_infer, max_batch=a.max_batch, device=a.device, **extra)
+               max_lead=a.max_lead, min_infer=a.min_infer, max_batch=a.max_batch, device=a.device, features=a.features,
+               **extra)
 if a.ckpt:
     import torch
 
