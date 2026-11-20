@@ -347,7 +347,7 @@ impl<'a> Spread<'a> {
     fn each(&mut self, from: &[Wc], range: i32, mut f: impl FnMut(usize)) {
         let (w, h) = (self.w, self.h);
         let on_board = |c: &Wc| c.x >= 0 && c.y >= 0 && (c.x as usize) < w && (c.y as usize) < h;
-        if w == 0 || w > 64 || range < 0 || range > 63 || !from.iter().all(on_board) {
+        if w == 0 || w > 64 || !(0..=63).contains(&range) || !from.iter().all(on_board) {
             // The plain walk, for a board too wide for the masks and for a tile off the board.
             if self.seen.is_empty() {
                 self.seen = vec![0; self.explored.len()];
