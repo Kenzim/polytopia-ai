@@ -25,13 +25,13 @@ train=("${TRAIN_GAMES:-16}" "${TRAIN_TURNS:-30}" "${TRAIN_PLAYERS:-2:55,3:25,4:2
 export CARGO_PROFILE_RELEASE_LTO=fat CARGO_PROFILE_RELEASE_CODEGEN_UNITS=1
 
 CARGO_TARGET_DIR=$TARGET/pgo-gen RUSTFLAGS="-Cprofile-generate=$DATA/raw $RUSTFLAGS_EXTRA" \
-  cargo build --release -p polyai-core --example bench_decision --features polytopia-sim/mimalloc
+  cargo build --release -p polyai-core --example bench_decision
 "$TARGET/pgo-gen/release/examples/bench_decision" "${train[@]}" | tee "$DATA/gen.txt"
 "$PD" merge -o "$DATA/merged.profdata" "$DATA/raw"
 
 export RUSTFLAGS="-Cprofile-use=$DATA/merged.profdata $RUSTFLAGS_EXTRA"
 export CARGO_TARGET_DIR=$TARGET/pgo
-cargo build --release -p polyai-core --example bench_decision --features polytopia-sim/mimalloc
+cargo build --release -p polyai-core --example bench_decision
 "$TARGET/pgo/release/examples/bench_decision" "${train[@]}" | tee "$DATA/use.txt"
 [ "$(grep '^checksums' "$DATA/gen.txt")" = "$(grep '^checksums' "$DATA/use.txt")" ] || { echo "checksums differ between the two builds"; exit 1; }
 if [ -n "$OUT" ]; then
