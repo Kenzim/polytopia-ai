@@ -155,6 +155,10 @@ fn run_part(part: &str, e: &Engine) {
         "truth" => {
             std::hint::black_box((truth(e, me, &slots), truth_globals(e, me)));
         }
+        "retail_ai" => {
+            let mut x = e.clone();
+            std::hint::black_box(ai_pick(&mut x, 0));
+        }
         "apply" => {
             let mut x = e.clone();
             let legal = x.legal_commands();

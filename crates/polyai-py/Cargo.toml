@@ -11,7 +11,8 @@ crate-type = ["cdylib"]
 
 [dependencies]
 polyai-core = { path = "../polyai-core" }
-polytopia-sim.workspace = true
+# mimalloc as the extension's allocator: the collector's worker threads allocate and free small buffers all the time.
+polytopia-sim = { workspace = true, features = ["mimalloc"] }
 pyo3 = { version = "0.25", features = ["extension-module"] }
 numpy = "0.25"
 rayon = "1"
