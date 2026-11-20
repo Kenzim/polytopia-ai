@@ -59,8 +59,10 @@ class RustCollector(Collector):
     def __init__(self, cfg: RLConfig, pe, learner: NetPolicy, pool: Pool, rng: np.random.Generator,
                  executor: ThreadPoolExecutor, games_log=None):
         super().__init__(cfg, pe, learner, pool, rng, executor, games_log)
+        # the value-opp arguments only when on, so a module built before them still runs without the option
+        vopp = {"value_opp": True, "value_opp_frac": cfg.value_opp_frac} if cfg.value_opp > 0 else {}
         self.core = pe.RolloutCore(executor._max_workers, cfg.max_lead, cfg.min_infer, cfg.gather_ms, cfg.pad_sizes,
-                                   cfg.gamma, cfg.lam, cfg.drop_capped, cfg.credit_per_turn)
+                                   cfg.gamma, cfg.lam, cfg.drop_capped, cfg.credit_per_turn, **vopp)
         self._arm_list: list[RustArm] = []
         self._names = {0: "learner"}  # policy index of the core -> pool entry
 
@@ -140,6 +142,9 @@ class RustCollector(Collector):
     def _flush(self, arm: Arm, slot: int, outcome: float, terminal: bool) -> None:
         pass  # GAE runs in the core when the game ends
 
+    def _flush_opp(self, arm: Arm, slot: int, f: dict) -> None:
+        pass  # the core holds the opponents' rows and releases them when the game ends
+
     def tick(self) -> None:
         events, batches = self.core.next_round()
         self._handle(events)
@@ -180,3 +185,6 @@ class RustCollector(Collector):
         self.core.cut()
         self.t_step = self.core.counters()[2]
         self.stores = {hw: RustStore(d) for hw, d in self.core.take_stores()}
+        if self.cfg.value_opp > 0:
+            self.opp_data = dict(self.core.take_opp_stores())
+            self.opp_pending = self.core.opp_pending()

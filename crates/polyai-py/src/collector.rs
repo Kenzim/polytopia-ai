@@ -185,6 +185,89 @@ impl Store {
     }
 }
 
+/// splitmix64, the hash behind `keep_value_row`.
+fn splitmix64(x: u64) -> u64 {
+    let mut z = x.wrapping_add(0x9E37_79B9_7F4A_7C15);
+    z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+    z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+    z ^ (z >> 31)
+}
+
+/// Whether the `k`-th opponent decision of the game with `seed`, made by `seat`, is kept as a value row
+/// (`polyai.rl.keep_value_row`, same arithmetic).
+fn keep_value_row(seed: i32, seat: i8, k: u64, frac: f64) -> bool {
+    if frac >= 1.0 {
+        return true;
+    }
+    let x = splitmix64(splitmix64(i64::from(seed) as u64) ^ (u64::from(seat as u8) << 56) ^ k);
+    ((x >> 11) as f64 / (1u64 << 53) as f64) < frac
+}
+
+/// Opponents' positions on boards of one size for the value loss only (`polyai.rl.ValueStore`): observations without
+/// the legal lists, the seat, the game turn and, once the game has ended, the return target (that seat's result).
+#[derive(Default)]
+struct ValueRows {
+    h: usize,
+    w: usize,
+    n: usize,
+    with_features: bool,
+    tiles: Vec<i16>,
+    globals: Vec<f32>,
+    f_tiles: Vec<i16>,
+    f_globals: Vec<f32>,
+    seat: Vec<i8>,
+    turn: Vec<i16>,
+    ret: Vec<f32>,
+}
+
+impl ValueRows {
+    fn push(&mut self, p: &Pending) {
+        if self.n == 0 {
+            (self.h, self.w, self.with_features) = (p.obs.h, p.obs.w, p.feats.is_some());
+        }
+        self.n += 1;
+        self.tiles.extend_from_slice(&p.obs.tiles);
+        self.globals.extend_from_slice(&p.obs.globals);
+        if let Some(f) = &p.feats {
+            self.f_tiles.extend_from_slice(&f.tiles);
+            self.f_globals.extend_from_slice(&f.globals);
+        }
+        self.seat.push(p.seat);
+        self.turn.push(p.turn);
+    }
+
+    /// Append the rows of a finished game, each with the return `ret_of(seat)`.
+    fn append(&mut self, rows: ValueRows, ret_of: impl Fn(i8) -> f32) {
+        if self.n == 0 {
+            (self.h, self.w, self.with_features) = (rows.h, rows.w, rows.with_features);
+        }
+        self.n += rows.n;
+        self.tiles.extend(rows.tiles);
+        self.globals.extend(rows.globals);
+        self.f_tiles.extend(rows.f_tiles);
+        self.f_globals.extend(rows.f_globals);
+        self.ret.extend(rows.seat.iter().map(|&s| ret_of(s)));
+        self.seat.extend(rows.seat);
+        self.turn.extend(rows.turn);
+    }
+
+    /// The keys, dtypes and shapes of `ValueStore.finalize()`.
+    fn into_dict<'py>(self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
+        let d = PyDict::new(py);
+        let (n, h, w) = (self.n, self.h, self.w);
+        d.set_item("tiles", tiles_array(py, self.tiles, &[n, h, w, F_TILE])?)?;
+        d.set_item("globals", PyArray1::from_vec(py, self.globals).reshape([n, G_DIM])?)?;
+        if self.with_features {
+            d.set_item("f_tiles", tiles_array(py, self.f_tiles, &[n, h, w, features::T_F])?)?;
+            d.set_item("f_globals", PyArray1::from_vec(py, self.f_globals).reshape([n, features::G_F])?)?;
+        }
+        d.set_item("seat", PyArray1::from_vec(py, self.seat))?;
+        d.set_item("turn", PyArray1::from_vec(py, self.turn))?;
+        d.set_item("ret", PyArray1::from_vec(py, self.ret))?;
+        Ok(d)
+    }
+}
+
 struct ArmState {
     env: Arc<Mutex<EnvInner>>,
     /// The learner's seat in a retail arm; `None` for a model arm (the seat is drawn per game).
@@ -201,6 +284,10 @@ struct ArmState {
     traj: Vec<Vec<u32>>,
     /// Index in `Core::stores` of the store each slot's trajectory lives in.
     traj_store: Vec<usize>,
+    /// `value_opp`: per slot, the opponents' rows held until the game ends (across rollouts), and the count of the
+    /// game's opponent decisions so far (the `k` of `keep_value_row`).
+    opp_rows: Vec<ValueRows>,
+    opp_seen: Vec<u64>,
 }
 
 impl ArmState {
@@ -304,6 +391,11 @@ struct Core {
     n_traj: i64,
     /// In order of first use, as the Python collector's dict of `SizeStore`s.
     stores: Vec<Store>,
+    /// Hold the opponents' positions of model arms and release them as value rows when their games end.
+    value_opp: bool,
+    value_opp_frac: f64,
+    /// The value rows of the games finished in this rollout, per board size in order of first use.
+    opp_stores: Vec<ValueRows>,
     n_learner: usize,
     n_opp: usize,
     t_wait: f64,
@@ -382,6 +474,19 @@ impl Core {
             } else {
                 0.0
             };
+            arm.opp_seen[slot] = 0;
+            let rows = std::mem::take(&mut arm.opp_rows[slot]);
+            if rows.n > 0 && !(f.capped && drop_capped) {
+                let draw = f.capped || f.winners.is_empty();
+                let si = match self.opp_stores.iter().position(|s| (s.h, s.w) == (rows.h, rows.w)) {
+                    Some(i) => i,
+                    None => {
+                        self.opp_stores.push(ValueRows::default());
+                        self.opp_stores.len() - 1
+                    }
+                };
+                self.opp_stores[si].append(rows, |s| if draw { 0.5 } else if f.winners.contains(&(s as usize)) { 1.0 } else { 0.0 });
+            }
             if f.capped && drop_capped {
                 arm.traj[slot].clear();
             } else {
@@ -641,6 +746,15 @@ impl Core {
                         self.n_learner += 1;
                     } else {
                         self.n_opp += 1;
+                        if self.value_opp {
+                            let arm = &mut self.arms[ai];
+                            let k = arm.opp_seen[slot];
+                            arm.opp_seen[slot] += 1;
+                            let seed = guards[ai].as_ref().unwrap().slots[slot].setup.seed;
+                            if keep_value_row(seed, p.seat, k, self.value_opp_frac) {
+                                arm.opp_rows[slot].push(p);
+                            }
+                        }
                     }
                 }
             }
@@ -706,9 +820,9 @@ pub struct PyCore(Mutex<Core>);
 #[pymethods]
 impl PyCore {
     #[new]
-    #[pyo3(signature = (workers, max_lead, min_infer, gather_ms, pad_sizes, gamma, lam, drop_capped, per_turn=false))]
+    #[pyo3(signature = (workers, max_lead, min_infer, gather_ms, pad_sizes, gamma, lam, drop_capped, per_turn=false, value_opp=false, value_opp_frac=1.0))]
     #[allow(clippy::too_many_arguments)]
-    fn new(workers: usize, max_lead: u64, min_infer: usize, gather_ms: f64, pad_sizes: bool, gamma: f64, lam: f64, drop_capped: bool, per_turn: bool) -> PyResult<Self> {
+    fn new(workers: usize, max_lead: u64, min_infer: usize, gather_ms: f64, pad_sizes: bool, gamma: f64, lam: f64, drop_capped: bool, per_turn: bool, value_opp: bool, value_opp_frac: f64) -> PyResult<Self> {
         let (tx, rx) = channel();
         let workers = Workers::new(workers.clamp(1, MAX_THREADS));
         Ok(PyCore(Mutex::new(Core {
@@ -727,6 +841,9 @@ impl PyCore {
             drop_capped,
             n_traj: 0,
             stores: Vec::new(),
+            value_opp,
+            value_opp_frac,
+            opp_stores: Vec::new(),
             n_learner: 0,
             n_opp: 0,
             t_wait: 0.0,
@@ -753,6 +870,8 @@ impl PyCore {
             steps: 0,
             traj: vec![Vec::new(); cap],
             traj_store: vec![0; cap],
+            opp_rows: (0..cap).map(|_| ValueRows::default()).collect(),
+            opp_seen: vec![0; cap],
         });
         c.arms.len() - 1
     }
@@ -832,6 +951,7 @@ impl PyCore {
     fn begin_rollout(&self) {
         let mut c = self.0.lock().unwrap();
         c.stores.clear();
+        c.opp_stores.clear();
         c.n_learner = 0;
         c.n_opp = 0;
         c.t_wait = 0.0;
@@ -886,6 +1006,18 @@ impl PyCore {
     fn take_stores<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyList>> {
         let stores = std::mem::take(&mut self.0.lock().unwrap().stores);
         PyList::new(py, stores.into_iter().map(|st| Ok(((st.h, st.w), st.into_dict(py)?))).collect::<PyResult<Vec<_>>>()?)
+    }
+
+    /// `value_opp`: the value rows of the games finished in this rollout per board size, as `ValueStore.finalize()`
+    /// returns them, in order of first use (emptied).
+    fn take_opp_stores<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyList>> {
+        let stores = std::mem::take(&mut self.0.lock().unwrap().opp_stores);
+        PyList::new(py, stores.into_iter().map(|st| Ok(((st.h, st.w), st.into_dict(py)?))).collect::<PyResult<Vec<_>>>()?)
+    }
+
+    /// `value_opp`: the opponents' rows held for games still in play.
+    fn opp_pending(&self) -> usize {
+        self.0.lock().unwrap().arms.iter().flat_map(|a| a.opp_rows.iter()).map(|r| r.n).sum()
     }
 }
 
