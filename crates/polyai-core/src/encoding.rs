@@ -157,6 +157,16 @@ pub fn encode(e: &Engine, me: u8, slots: &SlotMap, legal: &[Command]) -> Obs {
     }
     let can_act: std::collections::HashSet<u32> = legal.iter().filter_map(command_unit).collect();
     let clamp = |v: i32, vocab: i16| -> i16 { if v >= 0 && v < i32::from(vocab) { v as i16 } else { 0 } };
+    // Whether the mover can see a resource depends on the resource alone: asked once per kind, not once per tile.
+    let mut resource_seen: Vec<(i32, bool)> = Vec::new();
+    let mut resource_visible = |resource: i32| match resource_seen.iter().find(|r| r.0 == resource) {
+        Some(r) => r.1,
+        None => {
+            let seen = e.resource_visible_to(resource, me);
+            resource_seen.push((resource, seen));
+            seen
+        }
+    };
 
     for k in 0..n {
         let row = &mut tiles[k * F_TILE..(k + 1) * F_TILE];
@@ -167,7 +177,10 @@ pub fn encode(e: &Engine, me: u8, slots: &SlotMap, legal: &[Command]) -> Obs {
         let t = &e.s.map.tiles[k];
         row[C_TERRAIN] = clamp(t.terrain, CAT_VOCABS[C_TERRAIN]);
         row[C_CLIMATE] = clamp(t.climate, CAT_VOCABS[C_CLIMATE]);
-        row[C_RESOURCE] = e.get_resource(t.coordinates, me).map_or(0, |r| clamp(r, CAT_VOCABS[C_RESOURCE]));
+        // `Engine::get_resource` for an explored tile.
+        if t.resource != 0 && t.improvement == 0 && resource_visible(t.resource) {
+            row[C_RESOURCE] = clamp(t.resource, CAT_VOCABS[C_RESOURCE]);
+        }
         row[C_OWNER] = slots.tile_value(t.owner);
         row[C_IMPROVEMENT] = clamp(t.improvement, CAT_VOCABS[C_IMPROVEMENT]);
         row[C_CAPITAL_OF] = slots.tile_value(t.capital_of);
@@ -239,7 +252,10 @@ fn encode_globals(e: &Engine, me: u8, slots: &SlotMap) -> Vec<f32> {
     let sc = G_SCALARS;
     g[sc] = player.map_or(0, |p| p.currency) as f32 / 10.0;
     g[sc + 1] = e.income(me) as f32 / 10.0;
-    g[sc + 2] = e.score(me) as f32 / 1000.0;
+    // `Engine::score` of every player from one pass over the map.
+    let scores = e.all_scores();
+    let score = |id: u8| e.s.players.iter().position(|p| p.id == id).map_or_else(|| e.score(id), |i| scores[i]);
+    g[sc + 2] = score(me) as f32 / 1000.0;
     g[sc + 3] = turn / 50.0;
     // The turn limit of a Domination game is a compute cap that players do not have, so the model never sees it:
     // both values stay 0 (encoding.md section 3, version 2).
@@ -270,7 +286,7 @@ fn encode_globals(e: &Engine, me: u8, slots: &SlotMap) -> Vec<f32> {
         if let Some(i) = e.player(id).and_then(|p| tribe_index(p.tribe)) {
             g[b + 3 + i] = 1.0;
         }
-        g[b + 16] = e.score(id) as f32 / 1000.0;
+        g[b + 16] = score(id) as f32 / 1000.0;
         g[b + 17] = e.city_count(id) as f32 / 8.0;
         let rel = polytopia_sim::rules::diplomacy::get_relation(&e.s, me, id).state;
         let r = match rel {

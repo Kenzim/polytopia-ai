@@ -17,7 +17,7 @@ pub fn ai_pick(e: &mut Engine, per_turn: u32) -> Command {
     if per_turn + 1 > MAX_PER_TURN {
         return Command::EndTurn;
     }
-    if !matches!(cmd, Command::EndTurn | Command::Stay { .. }) && !e.legal_commands().contains(&cmd) {
+    if !matches!(cmd, Command::EndTurn | Command::Stay { .. }) && !e.is_legal(&cmd) {
         return Command::EndTurn;
     }
     cmd
