@@ -1,0 +1,13 @@
+model:abj_league: /kvm/polytopia-ai-data/ab/runs/abj_league/ckpt_final.pt (step 300), 1.43M params
+  model:abj_league vs retail:crazy: 0/400 games, 0s
+  model:abj_league vs retail:crazy: 60/400 games, 15s
+  model:abj_league vs retail:crazy: 156/400 games, 30s
+  model:abj_league vs retail:crazy: 240/400 games, 45s
+  model:abj_league vs retail:crazy: 333/400 games, 60s
+  model:abj_league vs retail:crazy: 380/400 games, 75s
+retail:crazy: +400 games
+
+result (model against each opponent; a draw is half a win):
+  model:abj_league vs retail:crazy: W-L-D 356-44-0 of 400, score 89.0%, capped 0, mean turns 24.0
+GPU peak allocated 37 MiB
+results: /kvm/polytopia-ai-data/ab/eval-abj/league_crazy.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/ab/eval-abj/league_crazy.jsonl

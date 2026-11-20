@@ -98,6 +98,7 @@ tournament play.
 | 20 Nov | A/Bs of sampling at temperature 0.5 in training, and of `--overlap` | Both worse than the features control; not adopted |
 | 20 Nov | A/B of value training on the opponents' positions too (`--value-opp`) | Worse, 37.0% against its control; not adopted |
 | 20 Nov | A/B without the KL anchor to the imitation model | Worse, 43.4% against its control; the anchor stays |
+| 20 Nov | A/Bs of a pool without the weak built-in levels, an exploiter of round 77, and league training with it | Pool worse (41.0%); league 51.9%, within noise; the exploiter beats every other arm |
 
 The champions in order, each measured against the one before it over 400 games:
 
@@ -138,15 +139,19 @@ Each row is a 300-update run compared with a control from the same starting mode
 | `--overlap`: play the next rollout during the update, with weights one update old (with features) | 44.6% | Worse; not adopted |
 | Value training on the opponents' positions too (`--value-opp 2.0`, a quarter of them, with features) | 37.0% | Worse; the value became timid and the policy weaker |
 | No KL anchor to the imitation model (`--kl-coef 0`, with features) | 43.4% | Worse; the anchor helps even though its distance stopped growing |
+| No Easy, Normal or Hard built-in AI in the pool, self-play raised from 0.45 to 0.65 (with features) | 41.0% | Worse |
+| Exploiter: one against one only, against a frozen round 77 only (with features) | 56.4% | Level with round 77 (49.2%) but beats every other arm of the day; being tested apart |
+| League: that exploiter in the pool at 0.15, taken from self-play (with features) | 51.9% | Within noise; 52.2% against round 77, the control 45.5% |
 
 Reports with the method and the full tables: `docs/arena.md`, `docs/rl.md`, `docs/belief.md`, `docs/features-ab.md`,
 `docs/search.md`, `docs/human-data.md`, `docs/loss_autopsy.md`, `docs/autoloop.md`, `docs/collector.md`.
 
 ## Where it stands and what is open
 
-**Training is flat.** Rounds 78 to 97 all failed the gate, averaging 46.3% against round 77 (best 53.9%, round 97),
-while their scores against Crazy kept rising, to 89.5% on average. A lower gate would not help: the candidates are
-losing. What the diagnostics of 20 November show:
+**Training is flat.** Rounds 78 to 101 all failed the gate, averaging 46.5% against round 77 (best 53.9%, round 97),
+while their scores against Crazy kept rising, to 89.4% on average. A lower gate would not help: the candidates are
+losing. Engine features, on in the loop from round 98, have not moved it: rounds 98 to 101 average 47.4%, and round
+101, the eighth round of its line, scored 38.6%. What the diagnostics of 20 November show:
 
 - A control run from round 77 scores 48.6%, 40.8%, 51.2% and 46.1% against it at updates 20, 60, 140 and 300. There
   is no steady slide, only a level a few points below round 77 from the start.
@@ -162,6 +167,13 @@ losing. What the diagnostics of 20 November show:
   against its control, so the anchor is not what holds training back.
 - Round 77's promotion was not luck: it scores 55.1% against round 75 again on fresh maps. Round 95 scores 49.9%
   against round 75, so the 18 rounds since have drifted back to round 75's level.
+- Who the learner plays matters more than the other settings tried. More self-play (0.65 in place of 0.45, without
+  the Easy, Normal and Hard levels) scored 41.0% against the control. An exploiter trained one against one against
+  a frozen round 77 alone never learned to beat it (49.2%; its sampled win rate rose only from 47% to 54% in 300
+  updates), yet it beat every other arm of the day: the control 56.4%, the self-play arm 57.9%, the league arm
+  53.9%. Either a fixed strong opponent teaches more than copies of the learner, or one-against-one training suits
+  a one-against-one gate. Putting the exploiter in the pool (league training) scored 51.9% against the control and
+  52.2% against round 77 (control 45.5%): the best arm of the day, but within noise.
 
 **The value head cannot yet support search.** On human games it is well calibrated from turn 11 (sides it gives
 about 90% win 94%), but in the first five turns it gives 55 to 85% to whoever is to move. The cause is in the
@@ -182,9 +194,10 @@ no search; the site offers nothing weaker. Training with 8 of those games always
 to head (38.9% against its control) and no better against the site. An opponent that wins 97% of games is too strong
 to learn from by reinforcement alone.
 
-Next, in order: an exploiter
-trained to beat the champion and added to the pool (league training as in AlphaStar), then throughput (the GPU is
-about 40% busy during training).
+Next, in order: the A/B running overnight on 20 to 21 November, which separates the exploiter's two changes (the
+loop's pool with round 77 in place of self-play; the loop's pool with one-against-one games only), runs the control
+on a second seed to measure how much one run varies, and continues the exploiter for 600 updates; then throughput
+(the GPU is about 40% busy during training).
 
 ## Running it
 

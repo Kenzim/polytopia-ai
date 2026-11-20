@@ -1,0 +1,27 @@
+model:abj_league: /kvm/polytopia-ai-data/ab/runs/abj_league/ckpt_final.pt (step 300)
+model:abg_ctrl: /kvm/polytopia-ai-data/ab/runs/abg_ctrl/ckpt_final.pt (step 300)
+  model:abj_league vs model:abg_ctrl: 0/400 games, 0s
+  model:abj_league vs model:abg_ctrl: 10/400 games, 30s
+  model:abj_league vs model:abg_ctrl: 45/400 games, 60s
+  model:abj_league vs model:abg_ctrl: 76/400 games, 91s
+  model:abj_league vs model:abg_ctrl: 99/400 games, 121s
+  model:abj_league vs model:abg_ctrl: 119/400 games, 151s
+  model:abj_league vs model:abg_ctrl: 141/400 games, 181s
+  model:abj_league vs model:abg_ctrl: 169/400 games, 211s
+  model:abj_league vs model:abg_ctrl: 194/400 games, 241s
+  model:abj_league vs model:abg_ctrl: 208/400 games, 271s
+  model:abj_league vs model:abg_ctrl: 231/400 games, 301s
+  model:abj_league vs model:abg_ctrl: 260/400 games, 331s
+  model:abj_league vs model:abg_ctrl: 278/400 games, 361s
+  model:abj_league vs model:abg_ctrl: 299/400 games, 391s
+  model:abj_league vs model:abg_ctrl: 312/400 games, 421s
+  model:abj_league vs model:abg_ctrl: 328/400 games, 451s
+  model:abj_league vs model:abg_ctrl: 339/400 games, 481s
+  model:abj_league vs model:abg_ctrl: 349/400 games, 511s
+  model:abj_league vs model:abg_ctrl: 357/400 games, 541s
+  model:abj_league vs model:abg_ctrl: 371/400 games, 571s
+  model:abj_league vs model:abg_ctrl: 377/400 games, 601s
+  model:abj_league vs model:abg_ctrl: 386/400 games, 631s
+  model:abj_league vs model:abg_ctrl: 394/400 games, 661s
+  model:abj_league vs model:abg_ctrl: 398/400 games, 691s
+model:abj_league vs model:abg_ctrl: W-L-D 204-189-7 of 400, score 51.9%, capped 7

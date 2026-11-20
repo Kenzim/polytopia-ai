@@ -1,0 +1,29 @@
+model:abi_expl: /kvm/polytopia-ai-data/ab/runs/abi_expl/ckpt_final.pt (step 300)
+model:abg_ctrl: /kvm/polytopia-ai-data/ab/runs/abg_ctrl/ckpt_final.pt (step 300)
+  model:abi_expl vs model:abg_ctrl: 0/400 games, 0s
+  model:abi_expl vs model:abg_ctrl: 7/400 games, 30s
+  model:abi_expl vs model:abg_ctrl: 38/400 games, 60s
+  model:abi_expl vs model:abg_ctrl: 68/400 games, 90s
+  model:abi_expl vs model:abg_ctrl: 91/400 games, 121s
+  model:abi_expl vs model:abg_ctrl: 104/400 games, 151s
+  model:abi_expl vs model:abg_ctrl: 126/400 games, 181s
+  model:abi_expl vs model:abg_ctrl: 147/400 games, 211s
+  model:abi_expl vs model:abg_ctrl: 175/400 games, 241s
+  model:abi_expl vs model:abg_ctrl: 188/400 games, 271s
+  model:abi_expl vs model:abg_ctrl: 209/400 games, 301s
+  model:abi_expl vs model:abg_ctrl: 237/400 games, 331s
+  model:abi_expl vs model:abg_ctrl: 253/400 games, 361s
+  model:abi_expl vs model:abg_ctrl: 276/400 games, 391s
+  model:abi_expl vs model:abg_ctrl: 297/400 games, 421s
+  model:abi_expl vs model:abg_ctrl: 312/400 games, 451s
+  model:abi_expl vs model:abg_ctrl: 327/400 games, 481s
+  model:abi_expl vs model:abg_ctrl: 342/400 games, 511s
+  model:abi_expl vs model:abg_ctrl: 355/400 games, 541s
+  model:abi_expl vs model:abg_ctrl: 361/400 games, 571s
+  model:abi_expl vs model:abg_ctrl: 371/400 games, 601s
+  model:abi_expl vs model:abg_ctrl: 379/400 games, 631s
+  model:abi_expl vs model:abg_ctrl: 382/400 games, 661s
+  model:abi_expl vs model:abg_ctrl: 385/400 games, 691s
+  model:abi_expl vs model:abg_ctrl: 391/400 games, 721s
+  model:abi_expl vs model:abg_ctrl: 398/400 games, 751s
+model:abi_expl vs model:abg_ctrl: W-L-D 222-171-7 of 400, score 56.4%, capped 7

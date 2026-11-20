@@ -1,0 +1,29 @@
+model:abi_expl: /kvm/polytopia-ai-data/ab/runs/abi_expl/ckpt_final.pt (step 300)
+model:abj_league: /kvm/polytopia-ai-data/ab/runs/abj_league/ckpt_final.pt (step 300)
+  model:abi_expl vs model:abj_league: 0/400 games, 0s
+  model:abi_expl vs model:abj_league: 15/400 games, 30s
+  model:abi_expl vs model:abj_league: 51/400 games, 60s
+  model:abi_expl vs model:abj_league: 74/400 games, 90s
+  model:abi_expl vs model:abj_league: 96/400 games, 121s
+  model:abi_expl vs model:abj_league: 117/400 games, 151s
+  model:abi_expl vs model:abj_league: 127/400 games, 181s
+  model:abi_expl vs model:abj_league: 139/400 games, 211s
+  model:abi_expl vs model:abj_league: 157/400 games, 241s
+  model:abi_expl vs model:abj_league: 180/400 games, 271s
+  model:abi_expl vs model:abj_league: 205/400 games, 301s
+  model:abi_expl vs model:abj_league: 225/400 games, 331s
+  model:abi_expl vs model:abj_league: 242/400 games, 361s
+  model:abi_expl vs model:abj_league: 269/400 games, 391s
+  model:abi_expl vs model:abj_league: 289/400 games, 421s
+  model:abi_expl vs model:abj_league: 309/400 games, 451s
+  model:abi_expl vs model:abj_league: 324/400 games, 481s
+  model:abi_expl vs model:abj_league: 340/400 games, 511s
+  model:abi_expl vs model:abj_league: 348/400 games, 541s
+  model:abi_expl vs model:abj_league: 356/400 games, 571s
+  model:abi_expl vs model:abj_league: 365/400 games, 601s
+  model:abi_expl vs model:abj_league: 373/400 games, 631s
+  model:abi_expl vs model:abj_league: 379/400 games, 661s
+  model:abi_expl vs model:abj_league: 385/400 games, 691s
+  model:abi_expl vs model:abj_league: 392/400 games, 721s
+  model:abi_expl vs model:abj_league: 396/400 games, 751s
+model:abi_expl vs model:abj_league: W-L-D 208-177-15 of 400, score 53.9%, capped 15

@@ -1,0 +1,7 @@
+model:abg_ctrl: /kvm/polytopia-ai-data/ab/runs/abg_ctrl/ckpt_final.pt (step 300), 1.43M params
+retail:crazy: +0 games
+
+result (model against each opponent; a draw is half a win):
+  model:abg_ctrl vs retail:crazy: W-L-D 360-40-0 of 400, score 90.0%, capped 0, mean turns 24.4
+GPU peak allocated 6 MiB
+results: /kvm/polytopia-ai-data/ab/eval-abj/ctrl_crazy.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/ab/eval-abj/ctrl_crazy.jsonl

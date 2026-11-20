@@ -1,0 +1,19 @@
+model:abi_pool: /kvm/polytopia-ai-data/ab/runs/abi_pool/ckpt_final.pt (step 300), 1.43M params
+  model:abi_pool vs retail:crazy: 0/400 games, 0s
+  model:abi_pool vs retail:crazy: 12/400 games, 15s
+  model:abi_pool vs retail:crazy: 67/400 games, 30s
+  model:abi_pool vs retail:crazy: 116/400 games, 46s
+  model:abi_pool vs retail:crazy: 175/400 games, 61s
+  model:abi_pool vs retail:crazy: 222/400 games, 76s
+  model:abi_pool vs retail:crazy: 262/400 games, 91s
+  model:abi_pool vs retail:crazy: 318/400 games, 106s
+  model:abi_pool vs retail:crazy: 374/400 games, 121s
+  model:abi_pool vs retail:crazy: 389/400 games, 136s
+  model:abi_pool vs retail:crazy: 398/400 games, 151s
+  model:abi_pool vs retail:crazy: 399/400 games, 166s
+retail:crazy: +400 games
+
+result (model against each opponent; a draw is half a win):
+  model:abi_pool vs retail:crazy: W-L-D 349-50-1 of 400, score 87.4%, capped 1, mean turns 25.4
+GPU peak allocated 36 MiB
+results: /kvm/polytopia-ai-data/ab/eval-abi/pool_crazy.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/ab/eval-abi/pool_crazy.jsonl

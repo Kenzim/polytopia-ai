@@ -1,0 +1,25 @@
+model:abj_league: /kvm/polytopia-ai-data/ab/runs/abj_league/ckpt_final.pt (step 300)
+model:auto_r0077: /kvm/polytopia-ai-data/runs/auto_r0077/ckpt_final.pt (step 300)
+  model:abj_league vs model:auto_r0077: 0/400 games, 0s
+  model:abj_league vs model:auto_r0077: 15/400 games, 30s
+  model:abj_league vs model:auto_r0077: 59/400 games, 60s
+  model:abj_league vs model:auto_r0077: 87/400 games, 90s
+  model:abj_league vs model:auto_r0077: 117/400 games, 120s
+  model:abj_league vs model:auto_r0077: 138/400 games, 151s
+  model:abj_league vs model:auto_r0077: 161/400 games, 181s
+  model:abj_league vs model:auto_r0077: 197/400 games, 211s
+  model:abj_league vs model:auto_r0077: 217/400 games, 241s
+  model:abj_league vs model:auto_r0077: 247/400 games, 271s
+  model:abj_league vs model:auto_r0077: 270/400 games, 301s
+  model:abj_league vs model:auto_r0077: 288/400 games, 331s
+  model:abj_league vs model:auto_r0077: 310/400 games, 361s
+  model:abj_league vs model:auto_r0077: 327/400 games, 391s
+  model:abj_league vs model:auto_r0077: 338/400 games, 421s
+  model:abj_league vs model:auto_r0077: 344/400 games, 451s
+  model:abj_league vs model:auto_r0077: 362/400 games, 481s
+  model:abj_league vs model:auto_r0077: 373/400 games, 511s
+  model:abj_league vs model:auto_r0077: 377/400 games, 541s
+  model:abj_league vs model:auto_r0077: 385/400 games, 571s
+  model:abj_league vs model:auto_r0077: 388/400 games, 601s
+  model:abj_league vs model:auto_r0077: 397/400 games, 631s
+model:abj_league vs model:auto_r0077: W-L-D 201-183-16 of 400, score 52.2%, capped 16

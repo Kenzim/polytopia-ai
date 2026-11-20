@@ -86,9 +86,9 @@ bindings as `abd_feat`, which is their control (48.4% against round 77, 88.2% ag
 | `abf_t05o` | `--temperature 0.5 --opp-temperature 0.5` | 47.2% (52.2% against `abf_t05`) | 43.5% | 87.5% |
 | `abf_ovl` | `--overlap` | 44.6% | 47.4% | 86.8% |
 
-## The value-opp A/B of 20 November
+## The A/Bs of 20 November against `abg_ctrl`
 
-Two 300-update runs from `auto_r0077` with `--features`, seed 900, the live loop's settings, on ai 47167b5 with the
+300-update runs from `auto_r0077` with `--features`, seed 900, the live loop's settings, on ai 47167b5 with the
 profile-guided bindings of engine 80a68d0. Round 77 scored 88.8% against Crazy in this set.
 
 | Folder | Option | Against `abg_ctrl` | Against round 77 | Against Crazy |
@@ -97,6 +97,9 @@ profile-guided bindings of engine 80a68d0. Round 77 scored 88.8% against Crazy i
 | `abg_vopp` | `--value-opp 2.0 --value-opp-frac 0.25` | 37.0% | 35.9% | 85.5% |
 | `abh_kl0` | `--kl-coef 0 --kl-coef-end 0` (no anchor to the imitation model) | 43.4% | 38.8% | 87.0% |
 | `abh_pool` | `--pool-weights retail:crazy=0.05,bc=0.10,bpolait=0.20,self=0.65`. Not the intended test: the left-out entries kept their defaults (easy 0.05, normal 0.15, hard 0.15), so it played more of the weak built-in levels than the control | 41.5% (49.2% against `abh_kl0`) | 42.6% | 89.8% |
+| `abi_pool` | `--pool-weights retail:easy=0,retail:normal=0,retail:hard=0,retail:crazy=0.05,bc=0.10,bpolait=0.20,self=0.65` (the intended smaller pool) | 41.0% | 41.4% | 87.4% |
+| `abi_expl` | An exploiter: `--n-players 2:100`, a pool of round 77 alone (`champ=1.0`, every other entry 0, `--extra-opponents champ=` round 77) | 56.4% (57.9% against `abi_pool`, 53.9% against `abj_league`) | 49.2% | 87.5% |
+| `abj_league` | The loop's pool with `self=0.30` and `expl=0.15`, the exploiter `abi_expl` as an extra opponent | 51.9% | 52.2% | 89.0% |
 
 ## Analysis value networks
 
