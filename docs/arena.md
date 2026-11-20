@@ -185,19 +185,16 @@ Continents and Pangea. Against Hard (92.5%) the same two tribes and Dryland, plu
 and Xin-xi. Seat 1 is a little weaker than seat 0 against both (72.0% against 79.5% versus Crazy, intervals
 overlapping). These are the first targets for the exploiter, set plays and live-loss review.
 
-#### bengreff's cell: 1v1 Might, Lakes, Small (2026-10-29)
+#### Championship-format cell: 1v1 Might, Lakes, Small (2026-10-29)
 
 `--sizes small --presets lakes --mode might`, 200 seeds x 2 seats, greedy, model at Normal. Results:
-`/kvm/polytopia-ai-data/arena/bengreff/`.
+`results/arena/lakes-small/`.
 
 | model | vs retail:hard | vs retail:crazy |
 |---|---|---|
 | rl3 u480 | 391-9-0, 97.8% (95.8 to 98.8) | 357-43-0, 89.2% (85.8 to 91.9) |
 
-bengreff report 94% (188/200) after their human fine-tune and 98% (196/200) for self-play generation 7, against
-Crazy on this cell (`docs/research.md` 2.1). Not directly comparable: their engine is the game's own compiled code at
-game version 123 and their seat and handicap rules differ, so read this as "the same band", not a ranking. Lakes is
-one of our strongest presets; the weak ones are Dryland and Archipelago.
+Lakes is one of our strongest presets; the weak ones are Dryland and Archipelago.
 
 ### Older results (suite v1: Small, Continents, 50 turns, adjudicated on score)
 

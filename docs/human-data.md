@@ -1,7 +1,7 @@
 # Human game data: sources, fetch path, replay pipeline (2026-11-01)
 
-Plan item `human-corpus`. Research rec 2: bengreff's bot went from about 10% to 94% against Crazy after fine-tuning on
-7,732 human championship games. Kenzi approved fetching other players' finished games for training on 2026-11-01
+Plan item `human-corpus` (research recommendation 2): fine-tune on games between strong human players, a better
+teacher than the built-in AI. Kenzi approved fetching other players' finished games for training on 2026-11-01
 (ledger decision b6d05b58), at a modest request rate.
 
 **Status: the replay and shard half is built and tested; the fetch half is blocked on a client change and on a source of
@@ -12,11 +12,9 @@ game ids (section 3). No human games are in the corpus yet.**
 - `api/game/get_game_view_model {GameId}` and `api/game/spectate_game {GameId}` return a `GameViewModel`: the initial and
   current state blobs (the current blob holds the whole command stack) plus `GameSettingsJson` and `GameContext`
   (`client/docs/server-api.md:341,449,454`, `client/docs/models.md:455`).
-- Non-participants can fetch finished games: bengreff's public `py/fetch_replays.py` does exactly this with a logged-in
-  client's token, trying `get_game_view_model` first and `spectate_game` if that fails (error 1005 "can't load game"
-  ends the attempt), and reports 27,548 ids tried, 7,822 downloaded, 19,726 refused, mostly older games that had
-  expired. Expect most games older than a few months to be gone; fetch newest first. (Read from their public repo; not
-  yet confirmed by a call of ours.)
+- Non-participants can fetch finished games with a logged-in client's token: `get_game_view_model` first and
+  `spectate_game` if that fails (error 1005 "can't load game" ends the attempt). Expect most games older than a few
+  months to have expired on the server; fetch newest first.
 - The blobs replay in our engine: `SaveFile::parse_server` reads them, and `re/` replayed 5 share-link games with 0
   illegal commands (`re/docs/HANDOFF.md:81`).
 
@@ -25,7 +23,7 @@ game ids (section 3). No human games are in the corpus yet.**
 | source | ids | status |
 |---|---|---|
 | Weekly leaderboard `ReplayGameId` (`client/docs/models.md:1547`, via `api/game/get_weekly_challenge_data {Date, HighscoreEntryCount}`) | top weekly scores, one game per player per week | needs a client call (section 3). These are single-player weekly challenges against the AI, a fixed map and a turn limit, not player-versus-player games. |
-| Challengermode tournaments (bengreff's `py/cm_replays.py`) | every match played through the game's Challengermode integration reports statistics including `ReplayLink` (the share link), mode, map size and tribes; a bracket walk gives all of a tournament's games | needs a Challengermode API application's refresh key, which we do not have. This is where their 7,732 games came from. The game server's own `TournamentViewModel` and member models carry no game ids. |
+| Challengermode tournaments | every match played through the game's Challengermode integration reports statistics including `ReplayLink` (the share link), mode, map size and tribes; a bracket walk gives all of a tournament's games | needs a Challengermode API application's refresh key, which we do not have. The game server's own `TournamentViewModel` and member models carry no game ids. |
 | Share links posted by the community (`share.polytopia.io/g/<id>`, also in YouTube descriptions) | a handful | manual. One is on disk: `ac49fec4` in `re/share/`. |
 | Our own live games | `client/games/` | already shardified with `source=2`, not repeated here |
 
@@ -258,8 +256,8 @@ Agreement of our models with BPolait on all 22 games of 15 Nov (8,236 positions,
   or Kenzi.
 - Games with more than 8 players (the share-link game has 10) cannot be encoded; the Championship format (1v1) is
   unaffected.
-- Whether `get_game_view_model` works for non-participants of recent games is taken from bengreff's code, not yet seen
-  from ours. The first fetch run should be a handful of ids and read the error codes before going wider.
+- Whether `get_game_view_model` works for non-participants of recent games had not been seen from our own client when
+  this was written. The first fetch run should be a handful of ids and read the error codes before going wider.
 - Human-versus-human games in the Championship format are the prize (1v1 Might on Lakes Small, 14x14); the replayed
   setup mix should be read from `meta.jsonl` once a first batch exists, before choosing the fine-tune mix
   (`human-finetune`).
