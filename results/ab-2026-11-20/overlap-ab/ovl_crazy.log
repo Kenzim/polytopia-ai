@@ -1,0 +1,19 @@
+model:abf_ovl: /kvm/polytopia-ai-data/ab/runs/abf_ovl/ckpt_final.pt (step 300), 1.43M params
+  model:abf_ovl vs retail:crazy: 0/400 games, 0s
+  model:abf_ovl vs retail:crazy: 21/400 games, 16s
+  model:abf_ovl vs retail:crazy: 56/400 games, 31s
+  model:abf_ovl vs retail:crazy: 96/400 games, 46s
+  model:abf_ovl vs retail:crazy: 131/400 games, 61s
+  model:abf_ovl vs retail:crazy: 158/400 games, 76s
+  model:abf_ovl vs retail:crazy: 186/400 games, 91s
+  model:abf_ovl vs retail:crazy: 231/400 games, 106s
+  model:abf_ovl vs retail:crazy: 281/400 games, 121s
+  model:abf_ovl vs retail:crazy: 320/400 games, 136s
+  model:abf_ovl vs retail:crazy: 372/400 games, 151s
+  model:abf_ovl vs retail:crazy: 393/400 games, 166s
+retail:crazy: +400 games
+
+result (model against each opponent; a draw is half a win):
+  model:abf_ovl vs retail:crazy: W-L-D 347-53-0 of 400, score 86.8%, capped 0, mean turns 25.2
+GPU peak allocated 36 MiB
+results: /kvm/polytopia-ai-data/ab/eval-ovl/ovl_crazy.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/ab/eval-ovl/ovl_crazy.jsonl

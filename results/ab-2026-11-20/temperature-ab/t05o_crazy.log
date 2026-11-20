@@ -1,0 +1,20 @@
+model:abf_t05o: /kvm/polytopia-ai-data/ab/runs/abf_t05o/ckpt_final.pt (step 300), 1.43M params
+  model:abf_t05o vs retail:crazy: 0/400 games, 1s
+  model:abf_t05o vs retail:crazy: 10/400 games, 16s
+  model:abf_t05o vs retail:crazy: 34/400 games, 31s
+  model:abf_t05o vs retail:crazy: 75/400 games, 46s
+  model:abf_t05o vs retail:crazy: 109/400 games, 61s
+  model:abf_t05o vs retail:crazy: 153/400 games, 76s
+  model:abf_t05o vs retail:crazy: 188/400 games, 91s
+  model:abf_t05o vs retail:crazy: 205/400 games, 106s
+  model:abf_t05o vs retail:crazy: 230/400 games, 121s
+  model:abf_t05o vs retail:crazy: 269/400 games, 136s
+  model:abf_t05o vs retail:crazy: 313/400 games, 151s
+  model:abf_t05o vs retail:crazy: 356/400 games, 166s
+  model:abf_t05o vs retail:crazy: 391/400 games, 181s
+retail:crazy: +400 games
+
+result (model against each opponent; a draw is half a win):
+  model:abf_t05o vs retail:crazy: W-L-D 350-50-0 of 400, score 87.5%, capped 0, mean turns 24.4
+GPU peak allocated 37 MiB
+results: /kvm/polytopia-ai-data/ab/eval-abf/t05o_crazy.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/ab/eval-abf/t05o_crazy.jsonl

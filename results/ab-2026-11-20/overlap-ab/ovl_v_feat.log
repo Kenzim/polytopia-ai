@@ -1,0 +1,42 @@
+model:abf_ovl: /kvm/polytopia-ai-data/ab/runs/abf_ovl/ckpt_final.pt (step 300)
+model:abd_feat: /kvm/polytopia-ai-data/ab/runs/abd_feat/ckpt_final.pt (step 300)
+  model:abf_ovl vs model:abd_feat: 0/400 games, 0s
+  model:abf_ovl vs model:abd_feat: 4/400 games, 31s
+  model:abf_ovl vs model:abd_feat: 15/400 games, 61s
+  model:abf_ovl vs model:abd_feat: 27/400 games, 91s
+  model:abf_ovl vs model:abd_feat: 47/400 games, 121s
+  model:abf_ovl vs model:abd_feat: 63/400 games, 151s
+  model:abf_ovl vs model:abd_feat: 76/400 games, 181s
+  model:abf_ovl vs model:abd_feat: 87/400 games, 211s
+  model:abf_ovl vs model:abd_feat: 98/400 games, 241s
+  model:abf_ovl vs model:abd_feat: 116/400 games, 271s
+  model:abf_ovl vs model:abd_feat: 130/400 games, 302s
+  model:abf_ovl vs model:abd_feat: 144/400 games, 332s
+  model:abf_ovl vs model:abd_feat: 155/400 games, 362s
+  model:abf_ovl vs model:abd_feat: 171/400 games, 392s
+  model:abf_ovl vs model:abd_feat: 184/400 games, 422s
+  model:abf_ovl vs model:abd_feat: 200/400 games, 452s
+  model:abf_ovl vs model:abd_feat: 212/400 games, 482s
+  model:abf_ovl vs model:abd_feat: 220/400 games, 512s
+  model:abf_ovl vs model:abd_feat: 234/400 games, 542s
+  model:abf_ovl vs model:abd_feat: 248/400 games, 572s
+  model:abf_ovl vs model:abd_feat: 261/400 games, 602s
+  model:abf_ovl vs model:abd_feat: 269/400 games, 632s
+  model:abf_ovl vs model:abd_feat: 284/400 games, 662s
+  model:abf_ovl vs model:abd_feat: 298/400 games, 693s
+  model:abf_ovl vs model:abd_feat: 313/400 games, 723s
+  model:abf_ovl vs model:abd_feat: 325/400 games, 753s
+  model:abf_ovl vs model:abd_feat: 331/400 games, 783s
+  model:abf_ovl vs model:abd_feat: 339/400 games, 813s
+  model:abf_ovl vs model:abd_feat: 345/400 games, 843s
+  model:abf_ovl vs model:abd_feat: 356/400 games, 873s
+  model:abf_ovl vs model:abd_feat: 365/400 games, 903s
+  model:abf_ovl vs model:abd_feat: 368/400 games, 933s
+  model:abf_ovl vs model:abd_feat: 372/400 games, 963s
+  model:abf_ovl vs model:abd_feat: 379/400 games, 993s
+  model:abf_ovl vs model:abd_feat: 382/400 games, 1023s
+  model:abf_ovl vs model:abd_feat: 388/400 games, 1053s
+  model:abf_ovl vs model:abd_feat: 389/400 games, 1083s
+  model:abf_ovl vs model:abd_feat: 391/400 games, 1113s
+  model:abf_ovl vs model:abd_feat: 398/400 games, 1143s
+model:abf_ovl vs model:abd_feat: W-L-D 175-218-7 of 400, score 44.6%, capped 7

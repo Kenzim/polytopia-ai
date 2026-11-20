@@ -75,6 +75,17 @@ Two 300-update runs from `auto_r0077`, seed 900, the live loop's settings, on th
 | `abe_ctrl` | none (the control) | | 43.9% | 88.8% | 4 of 200 |
 | `abe_site` | `--polytopai-games 8 --polytopai-level 1` | 38.9% | 34.8% | 86.0% | 5 of 200 |
 
+## The temperature and overlap A/Bs of 20 November
+
+Three 300-update runs from `auto_r0077` with `--features`, seed 900, the live loop's settings, on the same code and
+bindings as `abd_feat`, which is their control (48.4% against round 77, 88.2% against Crazy in this set).
+
+| Folder | Option | Against `abd_feat` | Against round 77 | Against Crazy |
+|---|---|---|---|---|
+| `abf_t05` | `--temperature 0.5` (the learner samples at 0.5) | 39.6% | 39.0% | 88.5% |
+| `abf_t05o` | `--temperature 0.5 --opp-temperature 0.5` | 47.2% (52.2% against `abf_t05`) | 43.5% | 87.5% |
+| `abf_ovl` | `--overlap` | 44.6% | 47.4% | 86.8% |
+
 ## Analysis value networks
 
 Not policies: win chance networks for the website's game analysis (`docs/analysis.md`), read from one player's own

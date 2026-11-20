@@ -1,0 +1,7 @@
+model:abd_feat: /kvm/polytopia-ai-data/ab/runs/abd_feat/ckpt_final.pt (step 300), 1.43M params
+retail:crazy: +0 games
+
+result (model against each opponent; a draw is half a win):
+  model:abd_feat vs retail:crazy: W-L-D 353-47-0 of 400, score 88.2%, capped 0, mean turns 24.5
+GPU peak allocated 6 MiB
+results: /kvm/polytopia-ai-data/ab/eval-abf/feat_crazy.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/ab/eval-abf/feat_crazy.jsonl

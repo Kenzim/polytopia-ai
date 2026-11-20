@@ -95,6 +95,7 @@ tournament play.
 | 20 Nov | A/B of engine features, and of the advantage filter switched off | Features beat the control 55.4% and are on in the loop from round 98; the filter stays on |
 | 20 Nov | A/B of 8 games at a time against the PolytopAI website's bot during training | Worse: 38.9% against its control, and no better against the site (5 wins in 200 against 4) |
 | 20 Nov | Faster collector code and a profile-guided build of the engine bindings | In the loop from round 99, which runs from its own checkout |
+| 20 Nov | A/Bs of sampling at temperature 0.5 in training, and of `--overlap` | Both worse than the features control; not adopted |
 
 The champions in order, each measured against the one before it over 400 games:
 
@@ -131,6 +132,8 @@ Each row is a 300-update run compared with a control from the same starting mode
 | Credit that fades once per game turn, not per command | 45.9% | Not adopted |
 | Per-turn credit plus a critic that sees under the fog | 41.8% | Not adopted; its value estimates are also the worst calibrated |
 | 8 games at a time against the PolytopAI website's bot (6.7% of the learner's decisions) | 38.9% | Worse; the learner lost 97% of those games, which teach little and may crowd the advantage filter |
+| Sampling at temperature 0.5 in training: the learner only, or learner and model opponents (with features) | 39.6% and 47.2% | Worse, and no better |
+| `--overlap`: play the next rollout during the update, with weights one update old (with features) | 44.6% | Worse; not adopted |
 
 Reports with the method and the full tables: `docs/arena.md`, `docs/rl.md`, `docs/belief.md`, `docs/features-ab.md`,
 `docs/search.md`, `docs/human-data.md`, `docs/loss_autopsy.md`, `docs/autoloop.md`, `docs/collector.md`.
@@ -147,7 +150,11 @@ losing. What the diagnostics of 20 November show:
   optimises sampled play, the gate measures top-move play, and the two have come apart.
 - Round 77 playing its top move beats itself sampling at temperature 1.0 by 57.6%, and is level with itself
   sampling at 0.5 (49.8%). Training samples at 1.0, so the learner and the model opponents in its pool play
-  noticeably worse in training than the model plays live. An A/B of training at temperature 0.5 is queued.
+  noticeably worse in training than the model plays live. Training at temperature 0.5 did not help, though: the
+  learner alone at 0.5 scored 39.6% against its control, and learner and model opponents at 0.5 scored 47.2%.
+- The policy's distance from the imitation model it is anchored to (`kl_bc`, the KL penalty at 0.02) rose from
+  about 1.0 in rounds 1 to 54 to about 1.35 by rounds 66 to 75 and has stayed there since, the same time the gate
+  stopped passing. The anchor may be capping how far training can move the policy; an A/B without it is running.
 - Round 77's promotion was not luck: it scores 55.1% against round 75 again on fresh maps. Round 95 scores 49.9%
   against round 75, so the 18 rounds since have drifted back to round 75's level.
 
@@ -169,7 +176,8 @@ no search; the site offers nothing weaker. Training with 8 of those games always
 to head (38.9% against its control) and no better against the site. An opponent that wins 97% of games is too strong
 to learn from by reinforcement alone.
 
-Next, in order: the temperature and overlap A/Bs (running), value training on both seats, an exploiter
+Next, in order: the A/Bs running now (value training on both seats, no KL anchor, a pool without the weaker
+built-in AI levels, which cost about 60% of collection CPU), an exploiter
 trained to beat the champion and added to the pool (league training as in AlphaStar), then throughput (the GPU is
 about 40% busy during training).
 
