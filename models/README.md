@@ -53,3 +53,14 @@ Three 300-update runs from `auto_r0077` with the loop's settings and seed 900.
 | `abc_ctrl` | none (the control) | | 46.1% | 88.8% |
 | `abc_turn` | `--credit-per-turn` | 45.9% | 43.5% | 88.8% |
 | `abc_crit` | `--credit-per-turn --priv-critic`; `critic_final.pt` is the critic that sees under the fog | 41.8% | 43.1% | 85.0% |
+
+## The A/B of 20 November
+
+Two more 300-update runs from `auto_r0077` with the same settings and seed, trained on the RTX 4090 laptop and
+matched against the control `abc_ctrl` of 19 November. In this second set of matches the control scored 45.6%
+against round 77 and 86.8% against Crazy, and round 77 scored 87.8% against Crazy.
+
+| Folder | Option | Against `abc_ctrl` | Against round 77 | Against Crazy |
+|---|---|---|---|---|
+| `abd_feat` | `--features` (1.43 million parameters) | 55.4% | 48.4% | 88.2% |
+| `abd_noadv` | `--adv-filter 1.0` (the filter off) | 47.5% (45.8% against `abd_feat`) | 42.1% | 89.8% |

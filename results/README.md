@@ -12,7 +12,7 @@ python tools/cells.py ...                                      # per-tribe and p
 
 | Folder | Content | Written up in |
 |---|---|---|
-| `autoloop/` | `history.jsonl`: every decided round of the training loop with its gate, its Crazy guard and the decision. `promotions.jsonl`: the promotions. `config.json`: the loop's settings on 20 November 2026. `champions/`: each champion's 200 games against Crazy on the guard's fixed seeds | `docs/autoloop.md` |
+| `autoloop/` | `history.jsonl`: every decided round of the training loop with its gate, its Crazy guard and the decision. `promotions.jsonl`: the promotions. `config.json`: the loop's settings from round 98 (20 November 2026, engine features on). `champions/`: each champion's 200 games against Crazy on the guard's fixed seeds | `docs/autoloop.md` |
 | `arena/suite-v2/` | The built-in AI ladder and the first imitation model on the 1v1 suite | `docs/arena.md` |
 | `arena/rr*`, `arena/all*`, `arena/mcts*` | The first tables on the old suite (Small maps, 50 turns) | `docs/arena.md`, "Older results" |
 | `arena/bc4/`, `arena/rl1/`, `arena/rl3/`, `arena/rl4*/`, `arena/b10_vs_rl3/`, `arena/wide_big/` | Imitation and Domination self-play models, larger networks, big-map runs | `docs/arena.md` |
@@ -26,6 +26,7 @@ python tools/cells.py ...                                      # per-tribe and p
 | `arena/bpolait/` | Log of the first BPolait imitation | `docs/human-data.md` |
 | `value-rank/` | The value-rank test: realised results of candidate turns | `docs/search.md` |
 | `ab-2026-11-19/` | The three-arm A/B from round 77: `run.sh` is the training command, `matches/` the ten 400-game matches, `plateau-diagnostics/` the six matches of 20 November on why rounds stopped passing the gate | `docs/rl.md`, top-level README |
+| `ab-2026-11-20/` | The features and advantage-filter arms from round 77: `run.sh` is the training command (the arm's option added at the end), `matches.sh` the match script, `matches/` the ten 400-game matches, `temperature/` round 77's top move against round 77 sampling at temperature 1.0 and 0.5 | Top-level README, `models/README.md` |
 | `calibration/` | Output of `polyai.calibrate` for round 77 and the three A/B arms on 8,859 human games: Brier score, calibration error and win share per probability bucket and game stage. Aggregates only, no games | `docs/rl.md` |
 | `polytopai/` | Round 77, top move, against the PolytopAI website's bot at its easier setting: one line per game and the summary (score, speed, how often the two legal lists agreed) | `docs/polytopai.md` |
 

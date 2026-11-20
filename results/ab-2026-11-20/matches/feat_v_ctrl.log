@@ -1,0 +1,35 @@
+model:abd_feat: /kvm/polytopia-ai-data/ab/runs/abd_feat/ckpt_final.pt (step 300)
+model:abc_ctrl: /kvm/polytopia-ai-data/ab/ref/abc_ctrl/ckpt_final.pt (step 300)
+  model:abd_feat vs model:abc_ctrl: 0/400 games, 0s
+  model:abd_feat vs model:abc_ctrl: 9/400 games, 31s
+  model:abd_feat vs model:abc_ctrl: 34/400 games, 61s
+  model:abd_feat vs model:abc_ctrl: 61/400 games, 91s
+  model:abd_feat vs model:abc_ctrl: 75/400 games, 121s
+  model:abd_feat vs model:abc_ctrl: 98/400 games, 151s
+  model:abd_feat vs model:abc_ctrl: 123/400 games, 181s
+  model:abd_feat vs model:abc_ctrl: 138/400 games, 211s
+  model:abd_feat vs model:abc_ctrl: 152/400 games, 241s
+  model:abd_feat vs model:abc_ctrl: 183/400 games, 271s
+  model:abd_feat vs model:abc_ctrl: 197/400 games, 301s
+  model:abd_feat vs model:abc_ctrl: 219/400 games, 331s
+  model:abd_feat vs model:abc_ctrl: 234/400 games, 361s
+  model:abd_feat vs model:abc_ctrl: 244/400 games, 391s
+  model:abd_feat vs model:abc_ctrl: 260/400 games, 421s
+  model:abd_feat vs model:abc_ctrl: 276/400 games, 451s
+  model:abd_feat vs model:abc_ctrl: 285/400 games, 481s
+  model:abd_feat vs model:abc_ctrl: 302/400 games, 511s
+  model:abd_feat vs model:abc_ctrl: 316/400 games, 542s
+  model:abd_feat vs model:abc_ctrl: 328/400 games, 572s
+  model:abd_feat vs model:abc_ctrl: 334/400 games, 602s
+  model:abd_feat vs model:abc_ctrl: 342/400 games, 632s
+  model:abd_feat vs model:abc_ctrl: 354/400 games, 662s
+  model:abd_feat vs model:abc_ctrl: 364/400 games, 692s
+  model:abd_feat vs model:abc_ctrl: 367/400 games, 722s
+  model:abd_feat vs model:abc_ctrl: 377/400 games, 752s
+  model:abd_feat vs model:abc_ctrl: 379/400 games, 782s
+  model:abd_feat vs model:abc_ctrl: 382/400 games, 812s
+  model:abd_feat vs model:abc_ctrl: 384/400 games, 842s
+  model:abd_feat vs model:abc_ctrl: 385/400 games, 872s
+  model:abd_feat vs model:abc_ctrl: 391/400 games, 902s
+  model:abd_feat vs model:abc_ctrl: 397/400 games, 932s
+model:abd_feat vs model:abc_ctrl: W-L-D 214-171-15 of 400, score 55.4%, capped 15

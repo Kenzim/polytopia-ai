@@ -1,0 +1,13 @@
+model:auto_r0077: /kvm/polytopia-ai-data/runs/auto_r0077/ckpt_final.pt (step 300), 1.42M params
+  model:auto_r0077 vs retail:crazy: 0/400 games, 0s
+  model:auto_r0077 vs retail:crazy: 53/400 games, 15s
+  model:auto_r0077 vs retail:crazy: 144/400 games, 30s
+  model:auto_r0077 vs retail:crazy: 235/400 games, 45s
+  model:auto_r0077 vs retail:crazy: 324/400 games, 60s
+  model:auto_r0077 vs retail:crazy: 398/400 games, 75s
+retail:crazy: +400 games
+
+result (model against each opponent; a draw is half a win):
+  model:auto_r0077 vs retail:crazy: W-L-D 351-49-0 of 400, score 87.8%, capped 0, mean turns 24.5
+GPU peak allocated 34 MiB
+results: /kvm/polytopia-ai-data/ab/eval/r77_crazy.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/ab/eval/r77_crazy.jsonl

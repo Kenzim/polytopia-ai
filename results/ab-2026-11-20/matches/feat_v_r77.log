@@ -1,0 +1,38 @@
+model:abd_feat: /kvm/polytopia-ai-data/ab/runs/abd_feat/ckpt_final.pt (step 300)
+model:auto_r0077: /kvm/polytopia-ai-data/runs/auto_r0077/ckpt_final.pt (step 300)
+  model:abd_feat vs model:auto_r0077: 0/400 games, 0s
+  model:abd_feat vs model:auto_r0077: 5/400 games, 31s
+  model:abd_feat vs model:auto_r0077: 30/400 games, 61s
+  model:abd_feat vs model:auto_r0077: 48/400 games, 91s
+  model:abd_feat vs model:auto_r0077: 63/400 games, 121s
+  model:abd_feat vs model:auto_r0077: 74/400 games, 151s
+  model:abd_feat vs model:auto_r0077: 93/400 games, 181s
+  model:abd_feat vs model:auto_r0077: 108/400 games, 211s
+  model:abd_feat vs model:auto_r0077: 124/400 games, 241s
+  model:abd_feat vs model:auto_r0077: 139/400 games, 271s
+  model:abd_feat vs model:auto_r0077: 157/400 games, 301s
+  model:abd_feat vs model:auto_r0077: 175/400 games, 331s
+  model:abd_feat vs model:auto_r0077: 190/400 games, 361s
+  model:abd_feat vs model:auto_r0077: 202/400 games, 391s
+  model:abd_feat vs model:auto_r0077: 219/400 games, 421s
+  model:abd_feat vs model:auto_r0077: 237/400 games, 451s
+  model:abd_feat vs model:auto_r0077: 246/400 games, 482s
+  model:abd_feat vs model:auto_r0077: 258/400 games, 512s
+  model:abd_feat vs model:auto_r0077: 273/400 games, 542s
+  model:abd_feat vs model:auto_r0077: 289/400 games, 572s
+  model:abd_feat vs model:auto_r0077: 301/400 games, 602s
+  model:abd_feat vs model:auto_r0077: 318/400 games, 632s
+  model:abd_feat vs model:auto_r0077: 326/400 games, 662s
+  model:abd_feat vs model:auto_r0077: 337/400 games, 692s
+  model:abd_feat vs model:auto_r0077: 346/400 games, 722s
+  model:abd_feat vs model:auto_r0077: 357/400 games, 752s
+  model:abd_feat vs model:auto_r0077: 366/400 games, 782s
+  model:abd_feat vs model:auto_r0077: 370/400 games, 812s
+  model:abd_feat vs model:auto_r0077: 375/400 games, 842s
+  model:abd_feat vs model:auto_r0077: 383/400 games, 872s
+  model:abd_feat vs model:auto_r0077: 386/400 games, 902s
+  model:abd_feat vs model:auto_r0077: 389/400 games, 932s
+  model:abd_feat vs model:auto_r0077: 390/400 games, 962s
+  model:abd_feat vs model:auto_r0077: 394/400 games, 992s
+  model:abd_feat vs model:auto_r0077: 397/400 games, 1022s
+model:abd_feat vs model:auto_r0077: W-L-D 186-199-15 of 400, score 48.4%, capped 15

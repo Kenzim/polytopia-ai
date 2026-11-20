@@ -1,0 +1,27 @@
+model:abd_noadv: /kvm/polytopia-ai-data/ab/runs/abd_noadv/ckpt_final.pt (step 300)
+model:abc_ctrl: /kvm/polytopia-ai-data/ab/ref/abc_ctrl/ckpt_final.pt (step 300)
+  model:abd_noadv vs model:abc_ctrl: 0/400 games, 0s
+  model:abd_noadv vs model:abc_ctrl: 11/400 games, 31s
+  model:abd_noadv vs model:abc_ctrl: 34/400 games, 61s
+  model:abd_noadv vs model:abc_ctrl: 68/400 games, 91s
+  model:abd_noadv vs model:abc_ctrl: 92/400 games, 121s
+  model:abd_noadv vs model:abc_ctrl: 127/400 games, 151s
+  model:abd_noadv vs model:abc_ctrl: 151/400 games, 181s
+  model:abd_noadv vs model:abc_ctrl: 176/400 games, 211s
+  model:abd_noadv vs model:abc_ctrl: 202/400 games, 241s
+  model:abd_noadv vs model:abc_ctrl: 227/400 games, 271s
+  model:abd_noadv vs model:abc_ctrl: 242/400 games, 301s
+  model:abd_noadv vs model:abc_ctrl: 268/400 games, 331s
+  model:abd_noadv vs model:abc_ctrl: 287/400 games, 361s
+  model:abd_noadv vs model:abc_ctrl: 305/400 games, 391s
+  model:abd_noadv vs model:abc_ctrl: 321/400 games, 421s
+  model:abd_noadv vs model:abc_ctrl: 333/400 games, 451s
+  model:abd_noadv vs model:abc_ctrl: 346/400 games, 481s
+  model:abd_noadv vs model:abc_ctrl: 357/400 games, 511s
+  model:abd_noadv vs model:abc_ctrl: 364/400 games, 541s
+  model:abd_noadv vs model:abc_ctrl: 374/400 games, 571s
+  model:abd_noadv vs model:abc_ctrl: 381/400 games, 601s
+  model:abd_noadv vs model:abc_ctrl: 384/400 games, 631s
+  model:abd_noadv vs model:abc_ctrl: 389/400 games, 661s
+  model:abd_noadv vs model:abc_ctrl: 392/400 games, 691s
+model:abd_noadv vs model:abc_ctrl: W-L-D 185-205-10 of 400, score 47.5%, capped 10

@@ -1,0 +1,19 @@
+model:abd_noadv: /kvm/polytopia-ai-data/ab/runs/abd_noadv/ckpt_final.pt (step 300)
+model:auto_r0077: /kvm/polytopia-ai-data/runs/auto_r0077/ckpt_final.pt (step 300)
+  model:abd_noadv vs model:auto_r0077: 0/400 games, 0s
+  model:abd_noadv vs model:auto_r0077: 11/400 games, 30s
+  model:abd_noadv vs model:auto_r0077: 50/400 games, 60s
+  model:abd_noadv vs model:auto_r0077: 71/400 games, 91s
+  model:abd_noadv vs model:auto_r0077: 99/400 games, 121s
+  model:abd_noadv vs model:auto_r0077: 122/400 games, 151s
+  model:abd_noadv vs model:auto_r0077: 153/400 games, 181s
+  model:abd_noadv vs model:auto_r0077: 177/400 games, 211s
+  model:abd_noadv vs model:auto_r0077: 215/400 games, 241s
+  model:abd_noadv vs model:auto_r0077: 255/400 games, 271s
+  model:abd_noadv vs model:auto_r0077: 286/400 games, 301s
+  model:abd_noadv vs model:auto_r0077: 317/400 games, 331s
+  model:abd_noadv vs model:auto_r0077: 343/400 games, 361s
+  model:abd_noadv vs model:auto_r0077: 359/400 games, 391s
+  model:abd_noadv vs model:auto_r0077: 380/400 games, 421s
+  model:abd_noadv vs model:auto_r0077: 393/400 games, 451s
+model:abd_noadv vs model:auto_r0077: W-L-D 165-228-7 of 400, score 42.1%, capped 7

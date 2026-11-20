@@ -92,6 +92,7 @@ tournament play.
 | 18 Nov | Round 77 becomes champion | 55.1% against round 75; 89.0% |
 | 19 to 20 Nov | A/B of per-turn credit and of a critic that sees under the fog | Neither beats the control |
 | 20 Nov | Calibration check on 8,859 human games | Value head sound from turn 11, meaningless in the first five turns |
+| 20 Nov | A/B of engine features, and of the advantage filter switched off | Features beat the control 55.4% and are on in the loop from round 98; the filter stays on |
 
 The champions in order, each measured against the one before it over 400 games:
 
@@ -114,10 +115,10 @@ Each row is a 300-update run compared with a control from the same starting mode
 
 | Idea | Head to head against its control | Verdict |
 |---|---|---|
-| Engine-computed features as extra inputs (combat previews, threat maps and the like) | 58.2% and 63.1% on two seeds | Helps. Not yet in the live loop; a fresh A/B from round 77 is running |
+| Engine-computed features as extra inputs (combat previews, threat maps and the like) | 58.2% and 63.1% on two seeds; 55.4% from round 77 | Helps. In the live loop from round 98 |
 | Auxiliary loss: predict what is under the fog | 58.1% on one seed, 46.2% on a second | Not reproducible |
 | Features and the fog loss together | 46.4% against features alone | Worse |
-| Keep only the half of positions with the largest advantage in each update | 54.2% | Adopted: half the update cost for no loss. A fresh A/B with it off is running |
+| Keep only the half of positions with the largest advantage in each update | 54.2%; switching it off from round 77 scored 47.5% | Adopted: half the update cost for no loss |
 | Averaged weights (EMA) as the exported model | 52.1% to 53.5% | Within noise |
 | Entropy bonus decayed to zero | 53.0% | Within noise |
 | Moving KL anchor (R-NaD style) | 46.0% | Worse |
@@ -133,14 +134,17 @@ Reports with the method and the full tables: `docs/arena.md`, `docs/rl.md`, `doc
 
 ## Where it stands and what is open
 
-**Training is flat.** Rounds 78 to 96 all failed the gate, averaging 45.9% against round 77 (best 51.2%), while
-their scores against Crazy kept rising, to 89.4% on average. A lower gate would not help: the candidates are losing.
-What the diagnostics of 20 November show:
+**Training is flat.** Rounds 78 to 97 all failed the gate, averaging 46.3% against round 77 (best 53.9%, round 97),
+while their scores against Crazy kept rising, to 89.5% on average. A lower gate would not help: the candidates are
+losing. What the diagnostics of 20 November show:
 
 - A control run from round 77 scores 48.6%, 40.8%, 51.2% and 46.1% against it at updates 20, 60, 140 and 300. There
   is no steady slide, only a level a few points below round 77 from the start.
 - With both sides sampling their moves, as in training, the same control scores 52.5% against round 77. Training
   optimises sampled play, the gate measures top-move play, and the two have come apart.
+- Round 77 playing its top move beats itself sampling at temperature 1.0 by 57.6%, and is level with itself
+  sampling at 0.5 (49.8%). Training samples at 1.0, so the learner and the model opponents in its pool play
+  noticeably worse in training than the model plays live. An A/B of training at temperature 0.5 is queued.
 - Round 77's promotion was not luck: it scores 55.1% against round 75 again on fresh maps. Round 95 scores 49.9%
   against round 75, so the 18 rounds since have drifted back to round 75's level.
 
@@ -158,7 +162,7 @@ stand-in for it: the model beats the imitation 67 to 84% of the time in training
 won 9 of 199 games at the site's easier setting. The bridge can run about 950 such games an hour and feed them into
 training (`--polytopai-games`), which has not yet been tested as an A/B.
 
-Next, in order: the features and advantage-filter A/Bs from round 77, value training on both seats, an exploiter
+Next, in order: training against the PolytopAI website as an A/B (running), value training on both seats, an exploiter
 trained to beat the champion and added to the pool (league training as in AlphaStar), then throughput (the GPU is
 about 40% busy during training).
 

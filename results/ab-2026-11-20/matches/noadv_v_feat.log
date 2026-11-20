@@ -1,0 +1,35 @@
+model:abd_noadv: /kvm/polytopia-ai-data/ab/runs/abd_noadv/ckpt_final.pt (step 300)
+model:abd_feat: /kvm/polytopia-ai-data/ab/runs/abd_feat/ckpt_final.pt (step 300)
+  model:abd_noadv vs model:abd_feat: 0/400 games, 0s
+  model:abd_noadv vs model:abd_feat: 6/400 games, 30s
+  model:abd_noadv vs model:abd_feat: 29/400 games, 61s
+  model:abd_noadv vs model:abd_feat: 52/400 games, 91s
+  model:abd_noadv vs model:abd_feat: 67/400 games, 121s
+  model:abd_noadv vs model:abd_feat: 79/400 games, 151s
+  model:abd_noadv vs model:abd_feat: 107/400 games, 181s
+  model:abd_noadv vs model:abd_feat: 124/400 games, 211s
+  model:abd_noadv vs model:abd_feat: 145/400 games, 241s
+  model:abd_noadv vs model:abd_feat: 162/400 games, 271s
+  model:abd_noadv vs model:abd_feat: 189/400 games, 301s
+  model:abd_noadv vs model:abd_feat: 206/400 games, 331s
+  model:abd_noadv vs model:abd_feat: 217/400 games, 361s
+  model:abd_noadv vs model:abd_feat: 226/400 games, 391s
+  model:abd_noadv vs model:abd_feat: 241/400 games, 421s
+  model:abd_noadv vs model:abd_feat: 263/400 games, 451s
+  model:abd_noadv vs model:abd_feat: 274/400 games, 481s
+  model:abd_noadv vs model:abd_feat: 287/400 games, 512s
+  model:abd_noadv vs model:abd_feat: 302/400 games, 542s
+  model:abd_noadv vs model:abd_feat: 311/400 games, 572s
+  model:abd_noadv vs model:abd_feat: 330/400 games, 602s
+  model:abd_noadv vs model:abd_feat: 339/400 games, 632s
+  model:abd_noadv vs model:abd_feat: 352/400 games, 662s
+  model:abd_noadv vs model:abd_feat: 361/400 games, 692s
+  model:abd_noadv vs model:abd_feat: 371/400 games, 722s
+  model:abd_noadv vs model:abd_feat: 372/400 games, 752s
+  model:abd_noadv vs model:abd_feat: 379/400 games, 782s
+  model:abd_noadv vs model:abd_feat: 382/400 games, 812s
+  model:abd_noadv vs model:abd_feat: 386/400 games, 842s
+  model:abd_noadv vs model:abd_feat: 391/400 games, 872s
+  model:abd_noadv vs model:abd_feat: 395/400 games, 902s
+  model:abd_noadv vs model:abd_feat: 398/400 games, 932s
+model:abd_noadv vs model:abd_feat: W-L-D 176-210-14 of 400, score 45.8%, capped 14

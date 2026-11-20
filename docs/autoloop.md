@@ -1,14 +1,17 @@
 # Automatic training loop
 
-`tools/autoloop.py`, run by the systemd unit `polyai-autoloop.service` on the dev host (192.168.11.60), RTX 3060.
+`tools/autoloop.py`, run by the systemd unit `polyai-autoloop.service` on the RTX 4090 laptop (poly4090,
+192.168.11.41) since 16 November 2026; before that on the dev host (192.168.11.60), RTX 3060.
 
 ## What a round does
 
 1. **Train** a candidate `auto_rNNNN` from the current champion with seed NNNN, 300 updates of Might self-play.
    Recipe: the might1 config (KL 0.02 to bc3, pool of retail AIs, bc3 and own snapshots, 55/25/20 player mix)
    plus the advantage filter at 0.5 (`rec_advf`, the best recipe A/B and half the training step).
-   Engine features (`features`) and the belief auxiliary (`belief_weight`) are switches in `config.json`, off:
-   both beat plain controls on some seeds, but no features or belief model has beaten rl3 u480 head to head.
+   Engine features (`features`) and the belief auxiliary (`belief_weight`) are switches in `config.json`. Features
+   are on from round 98 (20 November 2026), after a run from round 77 with them beat its control 55.4% over 400
+   games; the belief auxiliary is off, since it did not repeat its gain on a second seed. `config.json` is read
+   when the loop starts, so a change takes effect after `systemctl restart polyai-autoloop`, best between rounds.
 2. **Gate:** 400 games (200 seeds, seats swapped) head to head against the champion, Might 1v1 suite, on a fresh
    seed block per round (`2,000,000 + 1000 × round`), so the gate cannot be overfitted to fixed seeds.
 3. **Guard:** 200 games against retail Crazy on fixed seeds (from 1,000,000); the champion's score on the same

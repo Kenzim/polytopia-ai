@@ -10,7 +10,7 @@
   "train_threads": 20,
   "torch_threads": 4,
   "need_gb": 4.0,
-  "features": false,
+  "features": true,
   "belief_weight": 0.0,
   "extra_train_args": [
     "--tf32",
