@@ -104,6 +104,8 @@ profile-guided bindings of engine 80a68d0. Round 77 scored 88.8% against Crazy i
 | `abk_champ` | The loop's pool with `self=0` and round 77 frozen at `champ=0.45` in its place | 42.2% (42.4% against `abk_ctrl2`) | 41.8% | 88.5% |
 | `abk_1v1` | `--n-players 2:100` (the loop's pool, two-player games only) | 53.8% (53.4% against `abk_ctrl2`, 58.2% against `abk_champ`) | 50.2% | 88.2% |
 | `abk_expl2` | `abi_expl` continued for 600 updates (`--init abi_expl --updates 600`, as `abi_expl`) | 52.9% (56.2% against `abk_ctrl2`, 57.4% against `abk_champ`, 49.1% against `abk_1v1`) | 51.0% | 89.9% |
+| `abl_lr1e4` | `abk_1v1` with `--lr 1e-4` | 29.0% (29.4% against `abk_1v1`) | 26.6% | 85.8% |
+| `abl_lr1e5` | `abk_1v1` with `--lr 1e-5` | 51.9% (48.8% against `abk_1v1`, 72.9% against `abl_lr1e4`) | 49.4% | 89.8% |
 
 ## Analysis value networks
 

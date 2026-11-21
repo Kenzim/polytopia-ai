@@ -1,0 +1,3 @@
+model:abk_1v1: /kvm/polytopia-ai-data/ab/runs/abk_1v1/ckpt_final.pt (step 300)
+model:abg_ctrl: /kvm/polytopia-ai-data/ab/runs/abg_ctrl/ckpt_final.pt (step 300)
+model:abk_1v1 vs model:abg_ctrl: W-L-D 214-184-2 of 400, score 53.8%, capped 2

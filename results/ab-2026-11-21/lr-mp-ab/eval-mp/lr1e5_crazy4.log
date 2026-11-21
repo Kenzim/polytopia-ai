@@ -1,0 +1,25 @@
+model:abl_lr1e5: /kvm/polytopia-ai-data/ab/runs/abl_lr1e5/ckpt_final.pt (step 300), 1.43M params
+  model:abl_lr1e5 vs retail:crazy: 0/800 games, 0s
+  model:abl_lr1e5 vs retail:crazy: 49/800 games, 15s
+  model:abl_lr1e5 vs retail:crazy: 100/800 games, 30s
+  model:abl_lr1e5 vs retail:crazy: 148/800 games, 46s
+  model:abl_lr1e5 vs retail:crazy: 186/800 games, 61s
+  model:abl_lr1e5 vs retail:crazy: 233/800 games, 76s
+  model:abl_lr1e5 vs retail:crazy: 288/800 games, 91s
+  model:abl_lr1e5 vs retail:crazy: 340/800 games, 106s
+  model:abl_lr1e5 vs retail:crazy: 399/800 games, 121s
+  model:abl_lr1e5 vs retail:crazy: 463/800 games, 136s
+  model:abl_lr1e5 vs retail:crazy: 520/800 games, 151s
+  model:abl_lr1e5 vs retail:crazy: 576/800 games, 166s
+  model:abl_lr1e5 vs retail:crazy: 638/800 games, 181s
+  model:abl_lr1e5 vs retail:crazy: 684/800 games, 196s
+  model:abl_lr1e5 vs retail:crazy: 747/800 games, 211s
+  model:abl_lr1e5 vs retail:crazy: 790/800 games, 226s
+  model:abl_lr1e5 vs retail:crazy: 798/800 games, 241s
+  model:abl_lr1e5 vs retail:crazy: 799/800 games, 256s
+retail:crazy: +800 games
+
+result (model against each opponent; a draw is half a win):
+  model:abl_lr1e5 vs retail:crazy: W-L-D 506-290-4 of 800, score 63.5%, capped 4, mean turns 39.4
+GPU peak allocated 42 MiB
+results: /kvm/polytopia-ai-data/ab/eval-mp/lr1e5_crazy4.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/ab/eval-mp/lr1e5_crazy4.jsonl

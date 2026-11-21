@@ -1,0 +1,18 @@
+model:abl_lr1e5: /kvm/polytopia-ai-data/ab/runs/abl_lr1e5/ckpt_final.pt (step 300)
+model:auto_r0077: /kvm/polytopia-ai-data/runs/auto_r0077/ckpt_final.pt (step 300)
+  model:abl_lr1e5 vs model:auto_r0077: 0/400 games, 0s
+  model:abl_lr1e5 vs model:auto_r0077: 24/400 games, 30s
+  model:abl_lr1e5 vs model:auto_r0077: 63/400 games, 60s
+  model:abl_lr1e5 vs model:auto_r0077: 103/400 games, 90s
+  model:abl_lr1e5 vs model:auto_r0077: 136/400 games, 120s
+  model:abl_lr1e5 vs model:auto_r0077: 179/400 games, 150s
+  model:abl_lr1e5 vs model:auto_r0077: 216/400 games, 180s
+  model:abl_lr1e5 vs model:auto_r0077: 242/400 games, 211s
+  model:abl_lr1e5 vs model:auto_r0077: 271/400 games, 241s
+  model:abl_lr1e5 vs model:auto_r0077: 314/400 games, 271s
+  model:abl_lr1e5 vs model:auto_r0077: 343/400 games, 301s
+  model:abl_lr1e5 vs model:auto_r0077: 363/400 games, 331s
+  model:abl_lr1e5 vs model:auto_r0077: 375/400 games, 361s
+  model:abl_lr1e5 vs model:auto_r0077: 387/400 games, 391s
+  model:abl_lr1e5 vs model:auto_r0077: 398/400 games, 421s
+model:abl_lr1e5 vs model:auto_r0077: W-L-D 194-199-7 of 400, score 49.4%, capped 7

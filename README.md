@@ -17,7 +17,7 @@ section "Where it stands and what is open" says what we know about why.
 | `python/polyai/` | the model, imitation training, PPO self-play, evaluation, search, calibration, the policy server used in live play |
 | `tools/` | the automatic training loop, A/B evaluation, reports and one-off analysis scripts |
 | `deploy/` | systemd units for the training loop and its helpers |
-| `models/` | 24 trained models with their training configuration (`models/README.md`) |
+| `models/` | 46 trained models with their training configuration (`models/README.md`) |
 | `results/` | raw game records and logs behind every number quoted here (`results/README.md`) |
 | `docs/` | design, encoding, method notes and dated experiment reports |
 
@@ -101,6 +101,7 @@ tournament play.
 | 20 Nov | A/Bs of a pool without the weak built-in levels, an exploiter of round 77, and league training with it | Pool worse (41.0%); league 51.9%, within noise; the exploiter beats every other arm |
 | 21 Nov | A/B separating the exploiter's two changes, with the control on a second seed | One-against-one games help (53.8% and 53.4% against the two controls); round 77 in place of self-play is worse (42.2%); the two control seeds are level (50.2%) |
 | 21 Nov | 3- and 4-player games against Crazy for those arms | Two-player-only training costs nothing there; the loop trains on two-player games only from round 104 |
+| 21 Nov | A/B of the learning rate (3e-5 until now) at 1e-4 and 1e-5, on the two-player recipe | 1e-4 collapses (29.4% against its control); 1e-5 is level (48.8%); 3e-5 stays |
 
 The champions in order, each measured against the one before it over 400 games:
 
@@ -148,16 +149,19 @@ Each row is a 300-update run compared with a control from the same starting mode
 | Round 77 frozen in place of self-play in the loop's pool (with features) | 42.2% (42.4% against the second control) | Worse |
 | One against one only, the loop's pool (with features) | 53.8% (53.4% against the second control) | Helps; 50.2% against round 77, and level with the controls in 3- and 4-player games against Crazy. In the live loop from round 104 |
 | The exploiter continued to 900 updates | 52.9% (56.2% against the second control) | Level with the one-against-one arm (49.1%) and with round 77 (51.0%) |
+| Learning rate 1e-4, against the one-against-one arm at 3e-5 (with features) | 29.4% | Much worse: 26.6% against round 77, entropy rose from 1.18 to 1.63, and 52.9% in 4-player games against Crazy where the others score about 61% |
+| Learning rate 1e-5, against the one-against-one arm at 3e-5 (with features) | 48.8% | Level: 49.4% against round 77, and level in 3- and 4-player games. The step size is not what holds training back |
 
 Reports with the method and the full tables: `docs/arena.md`, `docs/rl.md`, `docs/belief.md`, `docs/features-ab.md`,
 `docs/search.md`, `docs/human-data.md`, `docs/loss_autopsy.md`, `docs/autoloop.md`, `docs/collector.md`.
 
 ## Where it stands and what is open
 
-**Training is flat.** Rounds 78 to 102 all failed the gate, averaging 46.4% against round 77 (best 53.9%, round 97),
-while their scores against Crazy kept rising, to 89.5% on average. A lower gate would not help: the candidates are
-losing. Engine features, on in the loop from round 98, have not moved it: rounds 98 to 102 average 46.6%, and round
-101, the eighth round of its line, scored 38.6%. What the diagnostics of 20 and 21 November show:
+**Training is flat.** Rounds 78 to 104 all failed the gate, averaging 46.5% against round 77 (best 53.9%, round 97),
+while their scores against Crazy kept rising, to 89.4% on average. A lower gate would not help: the candidates are
+losing. Engine features, on in the loop from round 98, have not moved it: rounds 98 to 104 average 46.8%, and round
+101, the eighth round of its line, scored 38.6%. Round 104, the first on two-player games only, scored 46.8%. What
+the diagnostics of 20 and 21 November show:
 
 - A control run from round 77 scores 48.6%, 40.8%, 51.2% and 46.1% against it at updates 20, 60, 140 and 300. There
   is no steady slide, only a level a few points below round 77 from the start.
@@ -188,6 +192,8 @@ losing. Engine features, on in the loop from round 98, have not moved it: rounds
   (`docs/arena.md`), so the loop trains on two-player games only from round 104. The two control seeds scored
   50.2% against each other and 45.5% and 48.4% against round 77, so one 400-game result moves by about 3 points
   from seed alone.
+- The learning rate is not the limit. At 1e-5, a third of the 3e-5 in use, the two-player recipe scored 48.8% against
+  itself at 3e-5; at 1e-4 it collapsed (29.4%), its entropy rising from 1.18 to 1.63 as it went.
 
 **The value head cannot yet support search.** On human games it is well calibrated from turn 11 (sides it gives
 about 90% win 94%), but in the first five turns it gives 55 to 85% to whoever is to move. The cause is in the
@@ -208,9 +214,9 @@ no search; the site offers nothing weaker. Training with 8 of those games always
 to head (38.9% against its control) and no better against the site. An opponent that wins 97% of games is too strong
 to learn from by reinforcement alone.
 
-Next, in order: the learning rate, never varied from 3e-5, at 1e-4 and 1e-5 on the one-against-one recipe (running);
-whether the loop's rounds from 104 score better against round 77; then throughput (the GPU is about 40% busy during
-training).
+Next, in order: a batch twice as large (65,536 decisions an update, about 70 finished games in place of 35), against
+the two-player recipe continued for as many games (running); whether the loop's rounds from 104 score better against
+round 77; then throughput (the GPU is about 40% busy during training).
 
 ## Running it
 

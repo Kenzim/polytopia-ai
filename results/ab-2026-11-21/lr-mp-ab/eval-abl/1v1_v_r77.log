@@ -1,0 +1,3 @@
+model:abk_1v1: /kvm/polytopia-ai-data/ab/runs/abk_1v1/ckpt_final.pt (step 300)
+model:auto_r0077: /kvm/polytopia-ai-data/runs/auto_r0077/ckpt_final.pt (step 300)
+model:abk_1v1 vs model:auto_r0077: W-L-D 199-197-4 of 400, score 50.2%, capped 4

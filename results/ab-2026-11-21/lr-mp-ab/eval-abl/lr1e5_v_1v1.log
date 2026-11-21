@@ -1,0 +1,20 @@
+model:abl_lr1e5: /kvm/polytopia-ai-data/ab/runs/abl_lr1e5/ckpt_final.pt (step 300)
+model:abk_1v1: /kvm/polytopia-ai-data/ab/runs/abk_1v1/ckpt_final.pt (step 300)
+  model:abl_lr1e5 vs model:abk_1v1: 0/400 games, 0s
+  model:abl_lr1e5 vs model:abk_1v1: 20/400 games, 30s
+  model:abl_lr1e5 vs model:abk_1v1: 57/400 games, 60s
+  model:abl_lr1e5 vs model:abk_1v1: 90/400 games, 90s
+  model:abl_lr1e5 vs model:abk_1v1: 122/400 games, 120s
+  model:abl_lr1e5 vs model:abk_1v1: 148/400 games, 151s
+  model:abl_lr1e5 vs model:abk_1v1: 183/400 games, 181s
+  model:abl_lr1e5 vs model:abk_1v1: 214/400 games, 211s
+  model:abl_lr1e5 vs model:abk_1v1: 253/400 games, 241s
+  model:abl_lr1e5 vs model:abk_1v1: 281/400 games, 271s
+  model:abl_lr1e5 vs model:abk_1v1: 316/400 games, 301s
+  model:abl_lr1e5 vs model:abk_1v1: 335/400 games, 331s
+  model:abl_lr1e5 vs model:abk_1v1: 346/400 games, 361s
+  model:abl_lr1e5 vs model:abk_1v1: 362/400 games, 391s
+  model:abl_lr1e5 vs model:abk_1v1: 381/400 games, 421s
+  model:abl_lr1e5 vs model:abk_1v1: 388/400 games, 451s
+  model:abl_lr1e5 vs model:abk_1v1: 398/400 games, 481s
+model:abl_lr1e5 vs model:abk_1v1: W-L-D 194-204-2 of 400, score 48.8%, capped 2

@@ -1,0 +1,26 @@
+model:abl_lr1e4: /kvm/polytopia-ai-data/ab/runs/abl_lr1e4/ckpt_final.pt (step 300)
+model:abg_ctrl: /kvm/polytopia-ai-data/ab/runs/abg_ctrl/ckpt_final.pt (step 300)
+  model:abl_lr1e4 vs model:abg_ctrl: 0/400 games, 0s
+  model:abl_lr1e4 vs model:abg_ctrl: 18/400 games, 30s
+  model:abl_lr1e4 vs model:abg_ctrl: 44/400 games, 60s
+  model:abl_lr1e4 vs model:abg_ctrl: 66/400 games, 90s
+  model:abl_lr1e4 vs model:abg_ctrl: 93/400 games, 121s
+  model:abl_lr1e4 vs model:abg_ctrl: 118/400 games, 151s
+  model:abl_lr1e4 vs model:abg_ctrl: 139/400 games, 181s
+  model:abl_lr1e4 vs model:abg_ctrl: 159/400 games, 211s
+  model:abl_lr1e4 vs model:abg_ctrl: 198/400 games, 241s
+  model:abl_lr1e4 vs model:abg_ctrl: 216/400 games, 271s
+  model:abl_lr1e4 vs model:abg_ctrl: 239/400 games, 301s
+  model:abl_lr1e4 vs model:abg_ctrl: 262/400 games, 331s
+  model:abl_lr1e4 vs model:abg_ctrl: 282/400 games, 361s
+  model:abl_lr1e4 vs model:abg_ctrl: 301/400 games, 391s
+  model:abl_lr1e4 vs model:abg_ctrl: 318/400 games, 421s
+  model:abl_lr1e4 vs model:abg_ctrl: 333/400 games, 451s
+  model:abl_lr1e4 vs model:abg_ctrl: 354/400 games, 481s
+  model:abl_lr1e4 vs model:abg_ctrl: 372/400 games, 511s
+  model:abl_lr1e4 vs model:abg_ctrl: 375/400 games, 541s
+  model:abl_lr1e4 vs model:abg_ctrl: 384/400 games, 571s
+  model:abl_lr1e4 vs model:abg_ctrl: 391/400 games, 601s
+  model:abl_lr1e4 vs model:abg_ctrl: 397/400 games, 631s
+  model:abl_lr1e4 vs model:abg_ctrl: 399/400 games, 661s
+model:abl_lr1e4 vs model:abg_ctrl: W-L-D 115-283-2 of 400, score 29.0%, capped 2
