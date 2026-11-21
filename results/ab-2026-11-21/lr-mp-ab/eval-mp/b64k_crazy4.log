@@ -1,0 +1,37 @@
+model:abm_b64k: /kvm/polytopia-ai-data/ab/runs/abm_b64k/ckpt_final.pt (step 300), 1.43M params
+  model:abm_b64k vs retail:crazy: 0/800 games, 0s
+  model:abm_b64k vs retail:crazy: 50/800 games, 15s
+  model:abm_b64k vs retail:crazy: 94/800 games, 30s
+  model:abm_b64k vs retail:crazy: 140/800 games, 45s
+  model:abm_b64k vs retail:crazy: 172/800 games, 60s
+  model:abm_b64k vs retail:crazy: 193/800 games, 75s
+  model:abm_b64k vs retail:crazy: 231/800 games, 91s
+  model:abm_b64k vs retail:crazy: 270/800 games, 106s
+  model:abm_b64k vs retail:crazy: 312/800 games, 121s
+  model:abm_b64k vs retail:crazy: 353/800 games, 136s
+  model:abm_b64k vs retail:crazy: 389/800 games, 151s
+  model:abm_b64k vs retail:crazy: 431/800 games, 166s
+  model:abm_b64k vs retail:crazy: 475/800 games, 181s
+  model:abm_b64k vs retail:crazy: 515/800 games, 196s
+  model:abm_b64k vs retail:crazy: 551/800 games, 211s
+  model:abm_b64k vs retail:crazy: 579/800 games, 226s
+  model:abm_b64k vs retail:crazy: 625/800 games, 241s
+  model:abm_b64k vs retail:crazy: 661/800 games, 256s
+  model:abm_b64k vs retail:crazy: 690/800 games, 271s
+  model:abm_b64k vs retail:crazy: 728/800 games, 286s
+  model:abm_b64k vs retail:crazy: 757/800 games, 301s
+  model:abm_b64k vs retail:crazy: 770/800 games, 317s
+  model:abm_b64k vs retail:crazy: 778/800 games, 332s
+  model:abm_b64k vs retail:crazy: 786/800 games, 347s
+  model:abm_b64k vs retail:crazy: 787/800 games, 362s
+  model:abm_b64k vs retail:crazy: 787/800 games, 377s
+  model:abm_b64k vs retail:crazy: 791/800 games, 392s
+  model:abm_b64k vs retail:crazy: 792/800 games, 407s
+  model:abm_b64k vs retail:crazy: 795/800 games, 422s
+  model:abm_b64k vs retail:crazy: 797/800 games, 437s
+retail:crazy: +800 games
+
+result (model against each opponent; a draw is half a win):
+  model:abm_b64k vs retail:crazy: W-L-D 453-335-12 of 800, score 57.4%, capped 12, mean turns 42.2
+GPU peak allocated 41 MiB
+results: /kvm/polytopia-ai-data/ab/eval-mp/b64k_crazy4.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/ab/eval-mp/b64k_crazy4.jsonl

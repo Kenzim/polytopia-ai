@@ -273,9 +273,11 @@ error is about 1.7 points in both columns. The arms are those of `models/README.
 | `abk_expl2` (900 updates, `2:100`, against round 77 only) | 452-148-0 | 75.3% | 469-328-3 | 58.8% |
 | `abl_lr1e4` (`abk_1v1` at learning rate 1e-4) | 387-198-15 | 65.8% | 408-361-31 | 52.9% |
 | `abl_lr1e5` (`abk_1v1` at learning rate 1e-5) | 465-133-2 | 77.7% | 506-290-4 | 63.5% |
+| `abm_b64k` (`abk_1v1` at 65,536 decisions an update) | 458-142-0 | 76.3% | 453-335-12 | 57.4% |
 
 Reading: 300 updates of two-player games only cost nothing in 3- or 4-player games against Crazy; the exploiter,
 three times as long and against one opponent, is about 2 points lower, just over one standard error. So the live
 loop trains on two-player games only from round 104. Long lines of two-player rounds could still drift in
-multiplayer, so a new champion gets this check before it goes to the website. Files:
-`results/ab-2026-11-21/lr-mp-ab/eval-mp/`.
+multiplayer, so a new champion gets this check before it goes to the website. The 65,536 batch arm, the strongest
+one against one, is level with 3 players but 2.5 points below round 77 with 4 (one and a half standard errors of the
+difference): a cost to watch, not yet a measured one. Files: `results/ab-2026-11-21/lr-mp-ab/eval-mp/`.
