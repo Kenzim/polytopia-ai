@@ -1,0 +1,25 @@
+model:abk_champ: /kvm/polytopia-ai-data/ab/runs/abk_champ/ckpt_final.pt (step 300)
+model:abg_ctrl: /kvm/polytopia-ai-data/ab/runs/abg_ctrl/ckpt_final.pt (step 300)
+  model:abk_champ vs model:abg_ctrl: 0/400 games, 0s
+  model:abk_champ vs model:abg_ctrl: 13/400 games, 31s
+  model:abk_champ vs model:abg_ctrl: 43/400 games, 61s
+  model:abk_champ vs model:abg_ctrl: 81/400 games, 91s
+  model:abk_champ vs model:abg_ctrl: 112/400 games, 121s
+  model:abk_champ vs model:abg_ctrl: 131/400 games, 151s
+  model:abk_champ vs model:abg_ctrl: 160/400 games, 181s
+  model:abk_champ vs model:abg_ctrl: 183/400 games, 211s
+  model:abk_champ vs model:abg_ctrl: 205/400 games, 241s
+  model:abk_champ vs model:abg_ctrl: 228/400 games, 271s
+  model:abk_champ vs model:abg_ctrl: 247/400 games, 301s
+  model:abk_champ vs model:abg_ctrl: 271/400 games, 331s
+  model:abk_champ vs model:abg_ctrl: 295/400 games, 361s
+  model:abk_champ vs model:abg_ctrl: 310/400 games, 391s
+  model:abk_champ vs model:abg_ctrl: 331/400 games, 421s
+  model:abk_champ vs model:abg_ctrl: 342/400 games, 451s
+  model:abk_champ vs model:abg_ctrl: 349/400 games, 481s
+  model:abk_champ vs model:abg_ctrl: 363/400 games, 511s
+  model:abk_champ vs model:abg_ctrl: 374/400 games, 541s
+  model:abk_champ vs model:abg_ctrl: 380/400 games, 571s
+  model:abk_champ vs model:abg_ctrl: 389/400 games, 601s
+  model:abk_champ vs model:abg_ctrl: 398/400 games, 631s
+model:abk_champ vs model:abg_ctrl: W-L-D 167-229-4 of 400, score 42.2%, capped 4

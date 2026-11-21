@@ -1,0 +1,24 @@
+model:abk_expl2: /kvm/polytopia-ai-data/ab/runs/abk_expl2/ckpt_final.pt (step 600)
+model:abk_1v1: /kvm/polytopia-ai-data/ab/runs/abk_1v1/ckpt_final.pt (step 300)
+  model:abk_expl2 vs model:abk_1v1: 0/400 games, 0s
+  model:abk_expl2 vs model:abk_1v1: 18/400 games, 30s
+  model:abk_expl2 vs model:abk_1v1: 46/400 games, 61s
+  model:abk_expl2 vs model:abk_1v1: 85/400 games, 91s
+  model:abk_expl2 vs model:abk_1v1: 118/400 games, 121s
+  model:abk_expl2 vs model:abk_1v1: 135/400 games, 151s
+  model:abk_expl2 vs model:abk_1v1: 161/400 games, 181s
+  model:abk_expl2 vs model:abk_1v1: 184/400 games, 211s
+  model:abk_expl2 vs model:abk_1v1: 214/400 games, 241s
+  model:abk_expl2 vs model:abk_1v1: 235/400 games, 271s
+  model:abk_expl2 vs model:abk_1v1: 254/400 games, 301s
+  model:abk_expl2 vs model:abk_1v1: 279/400 games, 331s
+  model:abk_expl2 vs model:abk_1v1: 299/400 games, 361s
+  model:abk_expl2 vs model:abk_1v1: 311/400 games, 391s
+  model:abk_expl2 vs model:abk_1v1: 333/400 games, 421s
+  model:abk_expl2 vs model:abk_1v1: 348/400 games, 451s
+  model:abk_expl2 vs model:abk_1v1: 365/400 games, 481s
+  model:abk_expl2 vs model:abk_1v1: 378/400 games, 511s
+  model:abk_expl2 vs model:abk_1v1: 388/400 games, 541s
+  model:abk_expl2 vs model:abk_1v1: 394/400 games, 571s
+  model:abk_expl2 vs model:abk_1v1: 398/400 games, 601s
+model:abk_expl2 vs model:abk_1v1: W-L-D 192-199-9 of 400, score 49.1%, capped 9

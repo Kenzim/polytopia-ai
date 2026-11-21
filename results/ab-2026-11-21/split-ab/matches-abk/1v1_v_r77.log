@@ -1,0 +1,18 @@
+model:abk_1v1: /kvm/polytopia-ai-data/ab/runs/abk_1v1/ckpt_final.pt (step 300)
+model:auto_r0077: /kvm/polytopia-ai-data/runs/auto_r0077/ckpt_final.pt (step 300)
+  model:abk_1v1 vs model:auto_r0077: 0/400 games, 0s
+  model:abk_1v1 vs model:auto_r0077: 30/400 games, 30s
+  model:abk_1v1 vs model:auto_r0077: 79/400 games, 60s
+  model:abk_1v1 vs model:auto_r0077: 116/400 games, 90s
+  model:abk_1v1 vs model:auto_r0077: 160/400 games, 120s
+  model:abk_1v1 vs model:auto_r0077: 203/400 games, 151s
+  model:abk_1v1 vs model:auto_r0077: 234/400 games, 181s
+  model:abk_1v1 vs model:auto_r0077: 275/400 games, 211s
+  model:abk_1v1 vs model:auto_r0077: 304/400 games, 241s
+  model:abk_1v1 vs model:auto_r0077: 331/400 games, 271s
+  model:abk_1v1 vs model:auto_r0077: 356/400 games, 301s
+  model:abk_1v1 vs model:auto_r0077: 369/400 games, 331s
+  model:abk_1v1 vs model:auto_r0077: 383/400 games, 361s
+  model:abk_1v1 vs model:auto_r0077: 391/400 games, 391s
+  model:abk_1v1 vs model:auto_r0077: 396/400 games, 421s
+model:abk_1v1 vs model:auto_r0077: W-L-D 199-197-4 of 400, score 50.2%, capped 4

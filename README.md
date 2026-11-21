@@ -99,6 +99,7 @@ tournament play.
 | 20 Nov | A/B of value training on the opponents' positions too (`--value-opp`) | Worse, 37.0% against its control; not adopted |
 | 20 Nov | A/B without the KL anchor to the imitation model | Worse, 43.4% against its control; the anchor stays |
 | 20 Nov | A/Bs of a pool without the weak built-in levels, an exploiter of round 77, and league training with it | Pool worse (41.0%); league 51.9%, within noise; the exploiter beats every other arm |
+| 21 Nov | A/B separating the exploiter's two changes, with the control on a second seed | One-against-one games help (53.8% and 53.4% against the two controls); round 77 in place of self-play is worse (42.2%); the two control seeds are level (50.2%) |
 
 The champions in order, each measured against the one before it over 400 games:
 
@@ -140,18 +141,22 @@ Each row is a 300-update run compared with a control from the same starting mode
 | Value training on the opponents' positions too (`--value-opp 2.0`, a quarter of them, with features) | 37.0% | Worse; the value became timid and the policy weaker |
 | No KL anchor to the imitation model (`--kl-coef 0`, with features) | 43.4% | Worse; the anchor helps even though its distance stopped growing |
 | No Easy, Normal or Hard built-in AI in the pool, self-play raised from 0.45 to 0.65 (with features) | 41.0% | Worse |
-| Exploiter: one against one only, against a frozen round 77 only (with features) | 56.4% | Level with round 77 (49.2%) but beats every other arm of the day; being tested apart |
+| Exploiter: one against one only, against a frozen round 77 only (with features) | 56.4% | Level with round 77 (49.2%) but beats every other arm of the day; its edge is the one-against-one games (below) |
 | League: that exploiter in the pool at 0.15, taken from self-play (with features) | 51.9% | Within noise; 52.2% against round 77, the control 45.5% |
+| The control again on a second seed (with features) | 50.2% | Run-to-run noise: 48.4% against round 77, where the first seed scored 45.5% |
+| Round 77 frozen in place of self-play in the loop's pool (with features) | 42.2% (42.4% against the second control) | Worse |
+| One against one only, the loop's pool (with features) | 53.8% (53.4% against the second control) | Helps; 50.2% against round 77. Cost in 3- and 4-player games being measured |
+| The exploiter continued to 900 updates | 52.9% (56.2% against the second control) | Level with the one-against-one arm (49.1%) and with round 77 (51.0%) |
 
 Reports with the method and the full tables: `docs/arena.md`, `docs/rl.md`, `docs/belief.md`, `docs/features-ab.md`,
 `docs/search.md`, `docs/human-data.md`, `docs/loss_autopsy.md`, `docs/autoloop.md`, `docs/collector.md`.
 
 ## Where it stands and what is open
 
-**Training is flat.** Rounds 78 to 101 all failed the gate, averaging 46.5% against round 77 (best 53.9%, round 97),
-while their scores against Crazy kept rising, to 89.4% on average. A lower gate would not help: the candidates are
-losing. Engine features, on in the loop from round 98, have not moved it: rounds 98 to 101 average 47.4%, and round
-101, the eighth round of its line, scored 38.6%. What the diagnostics of 20 November show:
+**Training is flat.** Rounds 78 to 102 all failed the gate, averaging 46.4% against round 77 (best 53.9%, round 97),
+while their scores against Crazy kept rising, to 89.5% on average. A lower gate would not help: the candidates are
+losing. Engine features, on in the loop from round 98, have not moved it: rounds 98 to 102 average 46.6%, and round
+101, the eighth round of its line, scored 38.6%. What the diagnostics of 20 and 21 November show:
 
 - A control run from round 77 scores 48.6%, 40.8%, 51.2% and 46.1% against it at updates 20, 60, 140 and 300. There
   is no steady slide, only a level a few points below round 77 from the start.
@@ -171,9 +176,15 @@ losing. Engine features, on in the loop from round 98, have not moved it: rounds
   the Easy, Normal and Hard levels) scored 41.0% against the control. An exploiter trained one against one against
   a frozen round 77 alone never learned to beat it (49.2%; its sampled win rate rose only from 47% to 54% in 300
   updates), yet it beat every other arm of the day: the control 56.4%, the self-play arm 57.9%, the league arm
-  53.9%. Either a fixed strong opponent teaches more than copies of the learner, or one-against-one training suits
-  a one-against-one gate. Putting the exploiter in the pool (league training) scored 51.9% against the control and
-  52.2% against round 77 (control 45.5%): the best arm of the day, but within noise.
+  53.9%. Putting the exploiter in the pool (league training) scored 51.9% against the control and 52.2% against
+  round 77 (control 45.5%): the best arm of the day, but within noise.
+- The exploiter's edge is its one-against-one games, not its opponent. The loop's pool with two-player games only
+  scored 53.8% and 53.4% against two control seeds and is level with the exploiter (49.1% for the exploiter). Round
+  77 frozen in place of self-play, with the loop's mix of player counts, was worse (42.2%). The exploiter continued
+  to 900 updates still won only 50 to 56% of its training games against round 77, and scored 51.0% against it.
+  The loop's mix (`2:85,3:10,4:5` by games) gives 23% of the learner's decisions to 3- and 4-player games, which
+  neither the gate nor BPolait plays. The two control seeds scored 50.2% against each other and 45.5% and 48.4%
+  against round 77, so one 400-game result moves by about 3 points from seed alone.
 
 **The value head cannot yet support search.** On human games it is well calibrated from turn 11 (sides it gives
 about 90% win 94%), but in the first five turns it gives 55 to 85% to whoever is to move. The cause is in the
@@ -194,10 +205,9 @@ no search; the site offers nothing weaker. Training with 8 of those games always
 to head (38.9% against its control) and no better against the site. An opponent that wins 97% of games is too strong
 to learn from by reinforcement alone.
 
-Next, in order: the A/B running overnight on 20 to 21 November, which separates the exploiter's two changes (the
-loop's pool with round 77 in place of self-play; the loop's pool with one-against-one games only), runs the control
-on a second seed to measure how much one run varies, and continues the exploiter for 600 updates; then throughput
-(the GPU is about 40% busy during training).
+Next, in order: what one-against-one training costs in 3- and 4-player games (`polyai.arena --n-players`, each model
+against Crazy), which decides whether the loop drops its multiplayer games; the learning rate, never varied from
+3e-5, at 1e-4 and 1e-5 on the one-against-one recipe; then throughput (the GPU is about 40% busy during training).
 
 ## Running it
 
