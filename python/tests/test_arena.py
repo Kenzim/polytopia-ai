@@ -144,6 +144,21 @@ def test_end_to_end_on_the_engine_and_elo_reads_the_file(checkpoint, tmp_path):
     assert sum(s["n"] for s in stats.values()) == 6
 
 
+def test_a_three_player_suite_seats_the_model_once_in_every_seat(checkpoint):
+    pytest.importorskip("polyai_engine")
+    suite = Suite(seeds=2, sizes=[2], presets=[1], turn_limit=12, batch_games=2, threads=4, n_players=3)
+    agent = ModelAgent(checkpoint, None, torch.device("cpu"))
+    records = play_pairing(agent, "retail:easy", suite, log=lambda m: None)
+    assert {(r["seed"], r["swap"]) for r in records} == {(s, w) for s in (1_000_000, 1_000_001) for w in range(3)}
+    for r in records:
+        assert r["agents"] == ["model:tinyrun" if s == r["swap"] else "retail:easy" for s in range(3)]
+        assert len(r["tribes"]) == len(r["scores"]) == len(r["think_ms"]) == len(r["illegal"]) == 3
+        assert r["seat_difficulties"] == [1 if s == r["swap"] else 0 for s in range(3)]
+        assert r["winner"] in (None, 0, 1, 2)
+    s = summarise(records, "model:tinyrun", "retail:easy")
+    assert s["games"] == 6 and s["wins"] + s["losses"] + s["draws"] == 6
+
+
 def test_per_seat_difficulties_are_used_when_the_engine_offers_them():
     """The model seat plays at Normal handicap, as in polyai-arena, once VecEnv accepts `seat_difficulties`."""
     seen = []
@@ -175,3 +190,7 @@ def test_per_seat_difficulties_are_used_when_the_engine_offers_them():
     FakePe.VecEnv = FakeEnv("(n_games, seed_start, model_seats, difficulty=None)")
     Arm(FakePe, Suite(seeds=5), 2, 0, 2)
     assert seen[1][3]["difficulty"] == 2 and "seat_difficulties" not in seen[1][3]
+
+    FakePe.VecEnv = FakeEnv("(n_games, seed_start, model_seats, seat_difficulties=None, difficulty=None)")
+    Arm(FakePe, Suite(seeds=5, n_players=4), 3, 2, 2)
+    assert seen[2][2] == [2] and seen[2][3]["n_players"] == [4] and seen[2][3]["seat_difficulties"] == [3, 3, 1, 3]

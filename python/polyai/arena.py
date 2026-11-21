@@ -9,6 +9,11 @@ cancel. Setups are drawn from the seed over Tiny/Small/Normal and the five prese
 the suite. Inference is batched on the GPU (bf16 autocast), one forward pass per map size. A game that reaches
 `--turn-limit` is a capped game: a draw, `winner` null, whatever the engine's own top-score rule says.
 
+`--n-players N` (default 2) plays N-player free-for-all games instead: the model in one seat and the retail
+opponent in all the others, every seed played N times with the model once in each seat. A win is the model being the
+last one standing; a loss is any other seat winning. `summarise` and the printed result handle these files;
+`tools/elo.py` is for 1v1 files only.
+
 `--model` is a checkpoint file or a run directory (then `ckpt_final.pt`); `PATH:sample=T` plays by sampling from the
 policy at temperature T instead of the greedy move. The agent name in the results is `model:<run>` (greedy) or
 `model:<run>:sample=T`, next to `retail:<difficulty>`, the same names `polyai-arena` writes.
@@ -135,6 +140,7 @@ class Suite:
     presets: list[int] = field(default_factory=lambda: [PRESET_IDS[k] for k in MAIN_PRESETS])
     turn_limit: int = 150
     mode: int = 2  # game mode: 2 Domination, 4 Might (MODES)
+    n_players: int = 2  # players per game: the model in one seat, the opponent in all the others
     batch_games: int = 64  # games in flight per seat arm
     threads: int = 8  # VecEnv threads of both arms and torch together
 
@@ -165,10 +171,11 @@ class Arm:
         self.pe, self.suite, self.model_seat = pe, suite, model_seat
         self.seed_end = suite.seed_start + suite.seeds
         self.per_seat = _supports_seat_difficulties(pe)
-        kw = dict(n_players=[2], sizes=suite.sizes, presets=suite.presets, turn_limit=suite.turn_limit,
+        kw = dict(n_players=[suite.n_players], sizes=suite.sizes, presets=suite.presets, turn_limit=suite.turn_limit,
                   threads=env_threads, split="eval", auto_reset=True, **mode_kw(suite.mode), **feature_kw(features))
         if self.per_seat:
-            kw["seat_difficulties"] = [MODEL_SEAT_DIFFICULTY if s == model_seat else opp_difficulty for s in range(2)]
+            kw["seat_difficulties"] = [MODEL_SEAT_DIFFICULTY if s == model_seat else opp_difficulty
+                                       for s in range(suite.n_players)]
         else:
             kw["difficulty"] = opp_difficulty
         self.env = pe.VecEnv(min(suite.batch_games, suite.seeds), suite.seed_start, [model_seat], **kw)
@@ -223,8 +230,9 @@ def game_record(f: dict, pe, suite: Suite, swap: int, agents: list[str], setup: 
         "seed": int(f["seed"]), "swap": swap, "agents": agents, "tribes": [int(t) for t in f["tribes"]],
         "setup": {k: setup[k] for k in ("size", "preset", "mode", "turn_limit")},
         "winner": winner, "scores": [int(x) for x in f["scores"]], "turns": int(f["turns"]),
-        "adjudicated": capped, "capped": capped, "over": True, "commands": int(f["commands"]), "illegal": [0, 0],
-        "wall_ms": 0.0, "think_ms": [0.0, 0.0], "engine": getattr(pe, "ENGINE_COMMIT", None),
+        "adjudicated": capped, "capped": capped, "over": True, "commands": int(f["commands"]),
+        "illegal": [0] * len(agents), "wall_ms": 0.0, "think_ms": [0.0] * len(agents),
+        "engine": getattr(pe, "ENGINE_COMMIT", None),
         "game_version": getattr(pe, "GAME_VERSION", None),
         "seat_difficulties": [int(d) for d in f["difficulties"]], "model_path": model_path,
     }
@@ -241,8 +249,8 @@ def load_done(path: Path) -> set[tuple[int, int, tuple[str, ...]]]:
 
 
 def play_pairing(agent: ModelAgent, opponent: str, suite: Suite, done: set | None = None, log=print) -> list[dict]:
-    """Play `agent` against `opponent` on all seeds of the suite, both seatings; returns the new JSONL records
-    (those not already in `done`)."""
+    """Play `agent` against `opponent` on all seeds of the suite, the model once in every seat; returns the new
+    JSONL records (those not already in `done`)."""
     import polyai_engine as pe
 
     opp_difficulty = parse_opponent(opponent)
@@ -252,10 +260,11 @@ def play_pairing(agent: ModelAgent, opponent: str, suite: Suite, done: set | Non
     torch_threads = torch.get_num_threads()
     env_threads = max(1, (suite.threads - torch_threads) // 2)
     seeds = range(suite.seed_start, suite.seed_start + suite.seeds)
-    names = {0: [agent.name, opponent], 1: [opponent, agent.name]}
+    n = suite.n_players
+    names = {seat: [agent.name if s == seat else opponent for s in range(n)] for seat in range(n)}
     # A seat arm whose seeds are all in the file is skipped; a partly finished one is replayed and only the missing
     # games are returned (VecEnv hands out seeds in order, so skipping single seeds would leave slots idle).
-    todo = [swap for swap in (0, 1) if any((s, swap, tuple(names[swap])) not in done for s in seeds)]
+    todo = [swap for swap in range(n) if any((s, swap, tuple(names[swap])) not in done for s in seeds)]
     if not todo:
         return []
     if not _supports_seat_difficulties(pe):
@@ -283,11 +292,11 @@ def play_pairing(agent: ModelAgent, opponent: str, suite: Suite, done: set | Non
             if (seed, swap, tuple(names[swap])) in done:
                 continue
             if seed not in setups:
-                setups[seed] = pe.sample_setup(seed, n_players=[2], sizes=suite.sizes, presets=suite.presets,
+                setups[seed] = pe.sample_setup(seed, n_players=[n], sizes=suite.sizes, presets=suite.presets,
                                                turn_limit=suite.turn_limit, **mode_kw(suite.mode))
             r = game_record(a.finished[seed], pe, suite, swap, names[swap], setups[seed], str(agent.path))
             r["wall_ms"] = wall_ms / max(n_games, 1)
-            r["think_ms"] = [think_ms if s == swap else 0.0 for s in range(2)]
+            r["think_ms"] = [think_ms if s == swap else 0.0 for s in range(n)]
             records.append(r)
     return records
 
@@ -343,6 +352,9 @@ def main(argv: list[str] | None = None) -> int:
                                                      "(default all but waterworld)")
     ap.add_argument("--turn-limit", type=int, default=d.turn_limit, help="compute cap; a game that reaches it is a draw")
     ap.add_argument("--mode", choices=list(MODES), default="domination", help="game mode of the suite")
+    ap.add_argument("--n-players", type=int, default=d.n_players,
+                    help="players per game: the model in one seat, the opponent in the others; each seed is played "
+                         "once with the model in every seat")
     ap.add_argument("--batch-games", type=int, default=d.batch_games, help="games in flight per seat arm")
     ap.add_argument("--max-batch", type=int, default=128, help="most positions per forward pass")
     ap.add_argument("--threads", type=int, default=d.threads, help="VecEnv and torch threads together (at most 8)")
@@ -353,6 +365,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out", required=True, help="JSONL file; appended to, finished games are skipped")
     a = ap.parse_args(argv)
 
+    if a.n_players < 2:
+        raise SystemExit("--n-players must be at least 2")
     threads = max(2, min(a.threads, 8))
     torch.set_num_threads(max(1, min(a.torch_threads, threads - 1)))
     device = torch.device(a.device)
@@ -366,7 +380,8 @@ def main(argv: list[str] | None = None) -> int:
     suite = Suite(seed_start=a.seed_start, seeds=a.seeds,
                   sizes=parse_names(a.sizes, SIZE_IDS, "size") or d.sizes,
                   presets=parse_names(a.presets, PRESET_IDS, "preset") or d.presets,
-                  turn_limit=a.turn_limit, mode=MODES[a.mode], batch_games=a.batch_games, threads=threads)
+                  turn_limit=a.turn_limit, mode=MODES[a.mode], batch_games=a.batch_games, threads=threads,
+                  n_players=a.n_players)
     opponents = [o.strip() for o in a.opponent.split(",") if o.strip()]
     for o in opponents:
         parse_opponent(o)
@@ -381,6 +396,8 @@ def main(argv: list[str] | None = None) -> int:
         spec, tta = split_tta(spec)
         path, temperature = parse_model_spec(spec)
         if search_cfg is not None:  # PATH:search=K: per-turn search, played with single games (polyai.search)
+            if suite.n_players != 2:
+                raise SystemExit("search specs play 1v1 only: leave out --n-players")
             if device.type != "cpu":
                 raise SystemExit("search specs run on the CPU in worker processes: pass --device cpu")
             print(f"{path}: {search_cfg}", flush=True)
