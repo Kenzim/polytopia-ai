@@ -1,0 +1,40 @@
+model:abk_1v1: /kvm/polytopia-ai-data/ab/runs/abk_1v1/ckpt_final.pt (step 300), 1.43M params
+  model:abk_1v1 vs retail:crazy: 0/800 games, 1s
+  model:abk_1v1 vs retail:crazy: 26/800 games, 16s
+  model:abk_1v1 vs retail:crazy: 53/800 games, 31s
+  model:abk_1v1 vs retail:crazy: 88/800 games, 46s
+  model:abk_1v1 vs retail:crazy: 111/800 games, 61s
+  model:abk_1v1 vs retail:crazy: 147/800 games, 76s
+  model:abk_1v1 vs retail:crazy: 166/800 games, 91s
+  model:abk_1v1 vs retail:crazy: 178/800 games, 106s
+  model:abk_1v1 vs retail:crazy: 201/800 games, 121s
+  model:abk_1v1 vs retail:crazy: 224/800 games, 137s
+  model:abk_1v1 vs retail:crazy: 257/800 games, 152s
+  model:abk_1v1 vs retail:crazy: 290/800 games, 167s
+  model:abk_1v1 vs retail:crazy: 319/800 games, 182s
+  model:abk_1v1 vs retail:crazy: 345/800 games, 197s
+  model:abk_1v1 vs retail:crazy: 380/800 games, 212s
+  model:abk_1v1 vs retail:crazy: 416/800 games, 227s
+  model:abk_1v1 vs retail:crazy: 438/800 games, 242s
+  model:abk_1v1 vs retail:crazy: 472/800 games, 257s
+  model:abk_1v1 vs retail:crazy: 503/800 games, 272s
+  model:abk_1v1 vs retail:crazy: 530/800 games, 288s
+  model:abk_1v1 vs retail:crazy: 555/800 games, 303s
+  model:abk_1v1 vs retail:crazy: 594/800 games, 318s
+  model:abk_1v1 vs retail:crazy: 630/800 games, 333s
+  model:abk_1v1 vs retail:crazy: 663/800 games, 348s
+  model:abk_1v1 vs retail:crazy: 686/800 games, 363s
+  model:abk_1v1 vs retail:crazy: 720/800 games, 378s
+  model:abk_1v1 vs retail:crazy: 733/800 games, 393s
+  model:abk_1v1 vs retail:crazy: 765/800 games, 408s
+  model:abk_1v1 vs retail:crazy: 783/800 games, 423s
+  model:abk_1v1 vs retail:crazy: 793/800 games, 438s
+  model:abk_1v1 vs retail:crazy: 796/800 games, 453s
+  model:abk_1v1 vs retail:crazy: 796/800 games, 468s
+  model:abk_1v1 vs retail:crazy: 797/800 games, 483s
+retail:crazy: +800 games
+
+result (model against each opponent; a draw is half a win):
+  model:abk_1v1 vs retail:crazy: W-L-D 494-301-5 of 800, score 62.1%, capped 5, mean turns 40.2
+GPU peak allocated 41 MiB
+results: /kvm/polytopia-ai-data/ab/eval-mp/1v1_crazy4.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/ab/eval-mp/1v1_crazy4.jsonl

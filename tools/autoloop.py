@@ -51,7 +51,8 @@ class Config:
     ref: str = str(DATA / "runs/bc3_b6c96_v11/ckpt_final.pt")
     prefix: str = "auto_r"
     # Training recipe: the might1 config plus the advantage filter (rec_advf, the best recipe A/B). Engine features
-    # and the belief auxiliary default to off here; the live config.json turns features on (from round 98).
+    # and the belief auxiliary default to off here; the live config.json turns features on (from round 98) and sets
+    # n_players to 2:100 (from round 104).
     updates: int = 300
     games: int = 384
     rollout_steps: int = 32768

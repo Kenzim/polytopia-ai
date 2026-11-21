@@ -1,0 +1,31 @@
+model:abk_1v1: /kvm/polytopia-ai-data/ab/runs/abk_1v1/ckpt_final.pt (step 300), 1.43M params
+  model:abk_1v1 vs retail:crazy: 0/600 games, 0s
+  model:abk_1v1 vs retail:crazy: 13/600 games, 15s
+  model:abk_1v1 vs retail:crazy: 36/600 games, 30s
+  model:abk_1v1 vs retail:crazy: 70/600 games, 46s
+  model:abk_1v1 vs retail:crazy: 97/600 games, 61s
+  model:abk_1v1 vs retail:crazy: 127/600 games, 76s
+  model:abk_1v1 vs retail:crazy: 153/600 games, 91s
+  model:abk_1v1 vs retail:crazy: 180/600 games, 106s
+  model:abk_1v1 vs retail:crazy: 206/600 games, 121s
+  model:abk_1v1 vs retail:crazy: 235/600 games, 136s
+  model:abk_1v1 vs retail:crazy: 277/600 games, 152s
+  model:abk_1v1 vs retail:crazy: 294/600 games, 167s
+  model:abk_1v1 vs retail:crazy: 315/600 games, 182s
+  model:abk_1v1 vs retail:crazy: 340/600 games, 197s
+  model:abk_1v1 vs retail:crazy: 359/600 games, 212s
+  model:abk_1v1 vs retail:crazy: 386/600 games, 227s
+  model:abk_1v1 vs retail:crazy: 415/600 games, 242s
+  model:abk_1v1 vs retail:crazy: 453/600 games, 258s
+  model:abk_1v1 vs retail:crazy: 476/600 games, 273s
+  model:abk_1v1 vs retail:crazy: 499/600 games, 288s
+  model:abk_1v1 vs retail:crazy: 527/600 games, 303s
+  model:abk_1v1 vs retail:crazy: 557/600 games, 318s
+  model:abk_1v1 vs retail:crazy: 591/600 games, 333s
+  model:abk_1v1 vs retail:crazy: 599/600 games, 348s
+retail:crazy: +600 games
+
+result (model against each opponent; a draw is half a win):
+  model:abk_1v1 vs retail:crazy: W-L-D 473-125-2 of 600, score 79.0%, capped 2, mean turns 33.2
+GPU peak allocated 37 MiB
+results: /kvm/polytopia-ai-data/ab/eval-mp/1v1_crazy3.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/ab/eval-mp/1v1_crazy3.jsonl

@@ -255,3 +255,25 @@ Protocol (`tools/soup_eval.sh`): 400-game Might gate vs hrl1@300 on seeds 2,700,
 
 No soup passes the 55% gate. Capped games cluster on Continents (37 to 48 of 96) and Normal maps (27 to 36 of 112).
 Water World is never in training (default presets exclude it): every model scores about 14% against Crazy there.
+
+## Free-for-all against Crazy, 3 and 4 players (Might, 2026-11-21)
+
+Does training on two-player games only cost strength in the multiplayer games the website can seat? `python -m
+polyai.arena --n-players N --opponent retail:crazy --seeds 200 --mode might --device cuda`: the model in one seat at
+the Normal handicap, Crazy in all the others, seeds 1,000,000 to 1,000,199, each seed played once with the model in
+every seat (600 games with 3 players, 800 with 4), top move. Equal play would win a third and a quarter. One standard
+error is about 1.7 points in both columns. The arms are those of `models/README.md` (20 and 21 November).
+
+| Model | 3 players W-L-D | Score | 4 players W-L-D | Score |
+|---|---|---|---|---|
+| `auto_r0077` | 468-130-2 | 78.2% | 478-319-3 | 59.9% |
+| `abg_ctrl` (the loop's mix, `2:85,3:10,4:5`) | 468-132-0 | 78.0% | 476-316-8 | 60.0% |
+| `abk_ctrl2` (the same, seed 901) | 456-142-2 | 76.2% | 499-294-7 | 62.8% |
+| `abk_1v1` (`2:100`) | 473-125-2 | 79.0% | 494-301-5 | 62.1% |
+| `abk_expl2` (900 updates, `2:100`, against round 77 only) | 452-148-0 | 75.3% | 469-328-3 | 58.8% |
+
+Reading: 300 updates of two-player games only cost nothing in 3- or 4-player games against Crazy; the exploiter,
+three times as long and against one opponent, is about 2 points lower, just over one standard error. So the live
+loop trains on two-player games only from round 104. Long lines of two-player rounds could still drift in
+multiplayer, so a new champion gets this check before it goes to the website. Files:
+`results/ab-2026-11-21/lr-mp-ab/eval-mp/`.

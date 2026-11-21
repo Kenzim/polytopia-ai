@@ -1,0 +1,38 @@
+model:abk_expl2: /kvm/polytopia-ai-data/ab/runs/abk_expl2/ckpt_final.pt (step 600), 1.43M params
+  model:abk_expl2 vs retail:crazy: 0/800 games, 0s
+  model:abk_expl2 vs retail:crazy: 26/800 games, 16s
+  model:abk_expl2 vs retail:crazy: 51/800 games, 31s
+  model:abk_expl2 vs retail:crazy: 93/800 games, 46s
+  model:abk_expl2 vs retail:crazy: 113/800 games, 61s
+  model:abk_expl2 vs retail:crazy: 141/800 games, 76s
+  model:abk_expl2 vs retail:crazy: 163/800 games, 91s
+  model:abk_expl2 vs retail:crazy: 191/800 games, 106s
+  model:abk_expl2 vs retail:crazy: 207/800 games, 122s
+  model:abk_expl2 vs retail:crazy: 239/800 games, 137s
+  model:abk_expl2 vs retail:crazy: 255/800 games, 152s
+  model:abk_expl2 vs retail:crazy: 298/800 games, 167s
+  model:abk_expl2 vs retail:crazy: 329/800 games, 182s
+  model:abk_expl2 vs retail:crazy: 367/800 games, 198s
+  model:abk_expl2 vs retail:crazy: 403/800 games, 213s
+  model:abk_expl2 vs retail:crazy: 435/800 games, 228s
+  model:abk_expl2 vs retail:crazy: 469/800 games, 243s
+  model:abk_expl2 vs retail:crazy: 498/800 games, 260s
+  model:abk_expl2 vs retail:crazy: 523/800 games, 275s
+  model:abk_expl2 vs retail:crazy: 550/800 games, 290s
+  model:abk_expl2 vs retail:crazy: 581/800 games, 305s
+  model:abk_expl2 vs retail:crazy: 615/800 games, 321s
+  model:abk_expl2 vs retail:crazy: 640/800 games, 336s
+  model:abk_expl2 vs retail:crazy: 670/800 games, 351s
+  model:abk_expl2 vs retail:crazy: 708/800 games, 366s
+  model:abk_expl2 vs retail:crazy: 728/800 games, 381s
+  model:abk_expl2 vs retail:crazy: 750/800 games, 396s
+  model:abk_expl2 vs retail:crazy: 766/800 games, 411s
+  model:abk_expl2 vs retail:crazy: 779/800 games, 426s
+  model:abk_expl2 vs retail:crazy: 794/800 games, 441s
+  model:abk_expl2 vs retail:crazy: 797/800 games, 456s
+retail:crazy: +800 games
+
+result (model against each opponent; a draw is half a win):
+  model:abk_expl2 vs retail:crazy: W-L-D 469-328-3 of 800, score 58.8%, capped 3, mean turns 39.5
+GPU peak allocated 39 MiB
+results: /kvm/polytopia-ai-data/ab/eval-mp/expl2_crazy4.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/ab/eval-mp/expl2_crazy4.jsonl

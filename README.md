@@ -100,6 +100,7 @@ tournament play.
 | 20 Nov | A/B without the KL anchor to the imitation model | Worse, 43.4% against its control; the anchor stays |
 | 20 Nov | A/Bs of a pool without the weak built-in levels, an exploiter of round 77, and league training with it | Pool worse (41.0%); league 51.9%, within noise; the exploiter beats every other arm |
 | 21 Nov | A/B separating the exploiter's two changes, with the control on a second seed | One-against-one games help (53.8% and 53.4% against the two controls); round 77 in place of self-play is worse (42.2%); the two control seeds are level (50.2%) |
+| 21 Nov | 3- and 4-player games against Crazy for those arms | Two-player-only training costs nothing there; the loop trains on two-player games only from round 104 |
 
 The champions in order, each measured against the one before it over 400 games:
 
@@ -145,7 +146,7 @@ Each row is a 300-update run compared with a control from the same starting mode
 | League: that exploiter in the pool at 0.15, taken from self-play (with features) | 51.9% | Within noise; 52.2% against round 77, the control 45.5% |
 | The control again on a second seed (with features) | 50.2% | Run-to-run noise: 48.4% against round 77, where the first seed scored 45.5% |
 | Round 77 frozen in place of self-play in the loop's pool (with features) | 42.2% (42.4% against the second control) | Worse |
-| One against one only, the loop's pool (with features) | 53.8% (53.4% against the second control) | Helps; 50.2% against round 77. Cost in 3- and 4-player games being measured |
+| One against one only, the loop's pool (with features) | 53.8% (53.4% against the second control) | Helps; 50.2% against round 77, and level with the controls in 3- and 4-player games against Crazy. In the live loop from round 104 |
 | The exploiter continued to 900 updates | 52.9% (56.2% against the second control) | Level with the one-against-one arm (49.1%) and with round 77 (51.0%) |
 
 Reports with the method and the full tables: `docs/arena.md`, `docs/rl.md`, `docs/belief.md`, `docs/features-ab.md`,
@@ -182,9 +183,11 @@ losing. Engine features, on in the loop from round 98, have not moved it: rounds
   scored 53.8% and 53.4% against two control seeds and is level with the exploiter (49.1% for the exploiter). Round
   77 frozen in place of self-play, with the loop's mix of player counts, was worse (42.2%). The exploiter continued
   to 900 updates still won only 50 to 56% of its training games against round 77, and scored 51.0% against it.
-  The loop's mix (`2:85,3:10,4:5` by games) gives 23% of the learner's decisions to 3- and 4-player games, which
-  neither the gate nor BPolait plays. The two control seeds scored 50.2% against each other and 45.5% and 48.4%
-  against round 77, so one 400-game result moves by about 3 points from seed alone.
+  The loop's mix (`2:85,3:10,4:5` by games) gave 23% of the learner's decisions to 3- and 4-player games, which
+  neither the gate nor BPolait plays. Two-player-only training costs nothing in 3- and 4-player games against Crazy
+  (`docs/arena.md`), so the loop trains on two-player games only from round 104. The two control seeds scored
+  50.2% against each other and 45.5% and 48.4% against round 77, so one 400-game result moves by about 3 points
+  from seed alone.
 
 **The value head cannot yet support search.** On human games it is well calibrated from turn 11 (sides it gives
 about 90% win 94%), but in the first five turns it gives 55 to 85% to whoever is to move. The cause is in the
@@ -205,9 +208,9 @@ no search; the site offers nothing weaker. Training with 8 of those games always
 to head (38.9% against its control) and no better against the site. An opponent that wins 97% of games is too strong
 to learn from by reinforcement alone.
 
-Next, in order: what one-against-one training costs in 3- and 4-player games (`polyai.arena --n-players`, each model
-against Crazy), which decides whether the loop drops its multiplayer games; the learning rate, never varied from
-3e-5, at 1e-4 and 1e-5 on the one-against-one recipe; then throughput (the GPU is about 40% busy during training).
+Next, in order: the learning rate, never varied from 3e-5, at 1e-4 and 1e-5 on the one-against-one recipe (running);
+whether the loop's rounds from 104 score better against round 77; then throughput (the GPU is about 40% busy during
+training).
 
 ## Running it
 

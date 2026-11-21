@@ -1,0 +1,32 @@
+model:auto_r0077: /kvm/polytopia-ai-data/runs/auto_r0077/ckpt_final.pt (step 300), 1.42M params
+  model:auto_r0077 vs retail:crazy: 0/800 games, 0s
+  model:auto_r0077 vs retail:crazy: 39/800 games, 15s
+  model:auto_r0077 vs retail:crazy: 78/800 games, 31s
+  model:auto_r0077 vs retail:crazy: 115/800 games, 46s
+  model:auto_r0077 vs retail:crazy: 149/800 games, 61s
+  model:auto_r0077 vs retail:crazy: 180/800 games, 76s
+  model:auto_r0077 vs retail:crazy: 207/800 games, 91s
+  model:auto_r0077 vs retail:crazy: 240/800 games, 106s
+  model:auto_r0077 vs retail:crazy: 279/800 games, 122s
+  model:auto_r0077 vs retail:crazy: 322/800 games, 137s
+  model:auto_r0077 vs retail:crazy: 365/800 games, 152s
+  model:auto_r0077 vs retail:crazy: 398/800 games, 167s
+  model:auto_r0077 vs retail:crazy: 441/800 games, 182s
+  model:auto_r0077 vs retail:crazy: 483/800 games, 197s
+  model:auto_r0077 vs retail:crazy: 521/800 games, 212s
+  model:auto_r0077 vs retail:crazy: 557/800 games, 228s
+  model:auto_r0077 vs retail:crazy: 588/800 games, 243s
+  model:auto_r0077 vs retail:crazy: 627/800 games, 258s
+  model:auto_r0077 vs retail:crazy: 661/800 games, 273s
+  model:auto_r0077 vs retail:crazy: 694/800 games, 288s
+  model:auto_r0077 vs retail:crazy: 725/800 games, 303s
+  model:auto_r0077 vs retail:crazy: 756/800 games, 318s
+  model:auto_r0077 vs retail:crazy: 776/800 games, 333s
+  model:auto_r0077 vs retail:crazy: 788/800 games, 348s
+  model:auto_r0077 vs retail:crazy: 794/800 games, 363s
+retail:crazy: +800 games
+
+result (model against each opponent; a draw is half a win):
+  model:auto_r0077 vs retail:crazy: W-L-D 478-319-3 of 800, score 59.9%, capped 3, mean turns 40.0
+GPU peak allocated 38 MiB
+results: /kvm/polytopia-ai-data/ab/eval-mp/r77_crazy4.jsonl   report: python tools/elo.py /kvm/polytopia-ai-data/ab/eval-mp/r77_crazy4.jsonl
