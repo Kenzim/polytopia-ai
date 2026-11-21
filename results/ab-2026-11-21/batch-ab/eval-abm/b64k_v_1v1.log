@@ -1,0 +1,20 @@
+model:abm_b64k: /kvm/polytopia-ai-data/ab/runs/abm_b64k/ckpt_final.pt (step 300)
+model:abk_1v1: /kvm/polytopia-ai-data/ab/runs/abk_1v1/ckpt_final.pt (step 300)
+  model:abm_b64k vs model:abk_1v1: 0/400 games, 0s
+  model:abm_b64k vs model:abk_1v1: 24/400 games, 30s
+  model:abm_b64k vs model:abk_1v1: 70/400 games, 60s
+  model:abm_b64k vs model:abk_1v1: 115/400 games, 90s
+  model:abm_b64k vs model:abk_1v1: 147/400 games, 120s
+  model:abm_b64k vs model:abk_1v1: 182/400 games, 150s
+  model:abm_b64k vs model:abk_1v1: 211/400 games, 180s
+  model:abm_b64k vs model:abk_1v1: 238/400 games, 210s
+  model:abm_b64k vs model:abk_1v1: 277/400 games, 240s
+  model:abm_b64k vs model:abk_1v1: 304/400 games, 271s
+  model:abm_b64k vs model:abk_1v1: 322/400 games, 301s
+  model:abm_b64k vs model:abk_1v1: 338/400 games, 331s
+  model:abm_b64k vs model:abk_1v1: 350/400 games, 361s
+  model:abm_b64k vs model:abk_1v1: 366/400 games, 391s
+  model:abm_b64k vs model:abk_1v1: 383/400 games, 421s
+  model:abm_b64k vs model:abk_1v1: 390/400 games, 451s
+  model:abm_b64k vs model:abk_1v1: 396/400 games, 481s
+model:abm_b64k vs model:abk_1v1: W-L-D 212-181-7 of 400, score 53.9%, capped 7

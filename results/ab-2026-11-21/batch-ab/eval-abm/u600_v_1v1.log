@@ -1,0 +1,25 @@
+model:abm_u600: /kvm/polytopia-ai-data/ab/runs/abm_u600/ckpt_final.pt (step 300)
+model:abk_1v1: /kvm/polytopia-ai-data/ab/runs/abk_1v1/ckpt_final.pt (step 300)
+  model:abm_u600 vs model:abk_1v1: 0/400 games, 0s
+  model:abm_u600 vs model:abk_1v1: 13/400 games, 30s
+  model:abm_u600 vs model:abk_1v1: 43/400 games, 60s
+  model:abm_u600 vs model:abk_1v1: 70/400 games, 90s
+  model:abm_u600 vs model:abk_1v1: 102/400 games, 121s
+  model:abm_u600 vs model:abk_1v1: 126/400 games, 151s
+  model:abm_u600 vs model:abk_1v1: 159/400 games, 181s
+  model:abm_u600 vs model:abk_1v1: 190/400 games, 211s
+  model:abm_u600 vs model:abk_1v1: 209/400 games, 241s
+  model:abm_u600 vs model:abk_1v1: 236/400 games, 271s
+  model:abm_u600 vs model:abk_1v1: 254/400 games, 301s
+  model:abm_u600 vs model:abk_1v1: 281/400 games, 331s
+  model:abm_u600 vs model:abk_1v1: 302/400 games, 361s
+  model:abm_u600 vs model:abk_1v1: 316/400 games, 391s
+  model:abm_u600 vs model:abk_1v1: 326/400 games, 421s
+  model:abm_u600 vs model:abk_1v1: 334/400 games, 451s
+  model:abm_u600 vs model:abk_1v1: 350/400 games, 481s
+  model:abm_u600 vs model:abk_1v1: 359/400 games, 511s
+  model:abm_u600 vs model:abk_1v1: 372/400 games, 541s
+  model:abm_u600 vs model:abk_1v1: 382/400 games, 571s
+  model:abm_u600 vs model:abk_1v1: 389/400 games, 601s
+  model:abm_u600 vs model:abk_1v1: 396/400 games, 631s
+model:abm_u600 vs model:abk_1v1: W-L-D 202-190-8 of 400, score 51.5%, capped 8
